@@ -1,0 +1,94 @@
+@startuml
+title ChambeApp - Modelo de Datos (Entidades Clave)
+
+entity User {
+  * id
+  * rol
+  * email
+  * password_hash
+  edad_verificada
+  acepto_tyc
+  fecha_registro
+}
+
+entity Profile {
+  * user_id
+  habilidades
+  experiencia
+  zona
+  calificacion_promedio
+  verificado
+  badges
+}
+
+entity Service {
+  * id
+  * solicitante_id
+  categoria
+  descripcion
+  ubicacion
+  presupuesto
+  estado
+}
+
+entity Order {
+  * id
+  * service_id
+  * proveedor_id
+  estado
+  escrow_status
+  creado_en
+}
+
+entity Payment {
+  * id
+  * order_id
+  monto
+  comision
+  estado
+  pasarela
+  liberado_en
+}
+
+entity Subscription {
+  * id
+  * user_id
+  plan
+  estado
+  renueva_en
+}
+
+entity Rating {
+  * id
+  * order_id
+  autor_id
+  calificado_id
+  puntaje
+  comentario
+}
+
+entity Dispute {
+  * id
+  * order_id
+  motivo
+  estado
+  resuelto_en
+}
+
+entity LegalAcceptance {
+  * id
+  * user_id
+  version_tyc
+  fecha
+  ip
+}
+
+User ||--|| Profile
+User ||--o{ Service : "publica"
+User ||--o{ Subscription
+User ||--o{ Rating : "emite/recibe"
+Service ||--o| Order
+Order ||--|| Payment
+Order ||--o{ Dispute
+User ||--o{ LegalAcceptance
+@enduml

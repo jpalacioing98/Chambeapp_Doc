@@ -1,0 +1,34 @@
+@startuml
+title ChambeApp - Diagrama de Componentes (Alto Nivel)
+
+package "Cliente PWA (React + Vite)" as FE {
+  [SPA / React] as SPA
+  [Service Worker PWA] as SW
+  [Three.js R3F] as TD
+  [Store Zustand] as ST
+}
+
+package "Backend API (Flask)" as BE {
+  [Blueprints REST] as API
+  [Servicios de Negocio] as SVC
+  [Motor IA] as AI
+}
+
+database "PostgreSQL" as DB
+queue "Redis cola/cache" as RD
+[Pasarelas MercadoPago PSE] as PG
+[WebPush] as WP
+[Storage 3D Assets] as STO
+
+SPA --> SW : offline-sync
+SPA --> API : HTTPS REST JSON
+SW --> API : reintento
+TD --> STO : carga assets
+API --> SVC
+SVC --> DB
+SVC --> RD
+SVC --> AI
+SVC --> PG : cobro
+SVC --> WP : notifica
+AI --> DB : perfiles
+@enduml

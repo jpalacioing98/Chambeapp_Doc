@@ -1,0 +1,35 @@
+@startuml
+title ChambeApp - Diagrama de Despliegue (PWA)
+
+node "Navegador o Dispositivo" as CLI {
+  [PWA instalada] as PWA
+}
+
+node "Servidor App (Nginx + Gunicorn)" as SRV {
+  [Flask API] as FL
+  [Celery Worker] as CW
+}
+
+database "PostgreSQL" as DB {
+  [Esquema chambeapp] as SCH
+}
+
+queue "Redis" as RD {
+  [Broker y Cache] as RC
+}
+
+cloud "Externos" {
+  [MercadoPago PSE] as MP
+  [WebPush FCM APNs] as WPP
+  [Object Storage] as OBJ
+}
+
+PWA --> FL : HTTPS
+PWA --> WPP : suscripcion push
+FL --> SCH
+FL --> RC
+CW --> RC
+CW --> MP : pagos escrow
+CW --> WPP : notificaciones
+FL --> OBJ : assets 3D
+@enduml

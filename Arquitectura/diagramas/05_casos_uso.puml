@@ -1,0 +1,74 @@
+@startuml
+title ChambeApp - Casos de Uso por Rol (Módulos A-E + Monetización + Legal)
+
+left to right direction
+
+actor "Solicitante" as SOL
+actor "Proveedor" as PRO
+actor "Sistema (IA/Pagos)" as SYS
+
+rectangle "A. Usuarios" {
+  usecase "Registrarse (RF-01)" as UC1
+  usecase "Aceptar T&C (RF-17)" as UC2
+  usecase "Perfil + habilidades (RF-02)" as UC3
+  usecase "Calificar (RF-03)" as UC4
+}
+
+rectangle "B/C. IA + 3D" {
+  usecase "Publicar servicio (RF-04)" as UC5
+  usecase "Recibir match IA (RF-05)" as UC6
+  usecase "Ver 3D/360 (RF-06)" as UC7
+}
+
+rectangle "D. Contractual" {
+  usecase "Gestionar orden (RF-07)" as UC8
+  usecase "Pagar / escrow (RF-08)" as UC9
+  usecase "Ver historial (RF-09)" as UC10
+  usecase "Alertas formalización (RF-10)" as UC11
+}
+
+rectangle "E. Comunicación" {
+  usecase "Notificaciones push (RF-16)" as UC12
+}
+
+rectangle "Monetización" {
+  usecase "Suscripción Premium (RF-11)" as UC13
+  usecase "Verificación (RF-12)" as UC14
+  usecase "Certificado ingresos (RF-13)" as UC15
+  usecase "Valor agregado (RF-14)" as UC16
+  usecase "Comisiones (RF-15)" as UC17
+}
+
+SOL -- UC1
+SOL -- UC2
+SOL -- UC5
+SOL -- UC7
+SOL -- UC8
+SOL -- UC9
+SOL -- UC10
+SOL -- UC11
+SOL -- UC12
+SOL -- UC13
+SOL -- UC17
+
+PRO -- UC1
+PRO -- UC2
+PRO -- UC3
+PRO -- UC4
+PRO -- UC6
+PRO -- UC7
+PRO -- UC8
+PRO -- UC9
+PRO -- UC10
+PRO -- UC11
+PRO -- UC12
+PRO -- UC13
+PRO -- UC14
+PRO -- UC15
+PRO -- UC16
+PRO -- UC17
+
+SYS -- UC6
+SYS -- UC9
+SYS -- UC12
+@enduml

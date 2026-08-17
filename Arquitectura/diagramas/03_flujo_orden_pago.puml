@@ -1,0 +1,27 @@
+@startuml
+title ChambeApp - Flujo de Orden, Pago y Escrow (RF-07 / RF-08 / T&C §8)
+
+actor "Solicitante" as S
+actor "Proveedor" as P
+participant "Frontend PWA" as FE
+participant "API Flask" as API
+participant "Servicio Pagos" as SP
+database "DB Order/Payment" as DB
+participant "Worker 48h" as WK
+
+S -> FE : Publica servicio (RF-04)
+P -> FE : Acepta postulacion
+FE -> API : Crear orden Pendiente
+API -> DB : guardar orden
+P -> FE : Finaliza servicio
+FE -> API : orden Completado
+S -> FE : Confirma pago
+FE -> API : generar orden de pago
+API -> SP : retener escrow + comision
+SP -> DB : escrow_status retenido
+SP -> WK : programar liberacion 48h
+S -> FE : Confirma finalizacion
+FE -> API : liberar
+WK -> DB : tras 48h sin queja liberar neto
+SP -> P : monto neto disponible
+@enduml
