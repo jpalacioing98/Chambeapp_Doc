@@ -6,7 +6,7 @@
   "subagent_depth": 2,
   "permission": {
     "edit": "allow",
-    "bash": "ask",
+    "bash": "allow",
     "task": "allow"
   },
   "compaction": {
@@ -52,7 +52,7 @@
       "prompt": "{file:./prompts/architect.txt}",
       "permission": {
         "edit": "deny",
-        "bash": "deny",
+        "bash": "allow",
         "skill": {
           "requirements-engineering": "allow",
           "plantuml-diagram-generator": "allow",
@@ -141,12 +141,7 @@
       "prompt": "{file:./prompts/release-manager.txt}",
       "permission": {
         "bash": {
-          "*": "ask",
-          "git status *": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git add*": "ask",
-          "git commit*": "ask",
+          "*": "allow",
           "git push*": "deny"
         },
         "skill": {
@@ -164,7 +159,7 @@
       "prompt": "{file:./prompts/product-owner.txt}",
       "permission": {
         "edit": "deny",
-        "bash": "deny",
+        "bash": "allow",
         "skill": {
           "requirements-engineering": "allow",
           "business-analyst": "allow",
@@ -213,7 +208,7 @@
       "prompt": "{file:./prompts/reasoner.txt}",
       "permission": {
         "edit": "deny",
-        "bash": "deny",
+        "bash": "allow",
         "skill": {
           "requirements-engineering": "allow",
           "business-analyst": "allow",

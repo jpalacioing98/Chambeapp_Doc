@@ -11,6 +11,10 @@
 - **Solicitante (Empleador):** Persona natural o pequeño negocio que publica y contrata servicios. Sensibilidad media al precio.
 - **Empresa / Equipo:** Solicitante o proveedor con necesidades de gestión multi-usuario (plan Empresa).
 - **Sistema / Plataforma:** Componente automatizado (IA, pasarelas, notificaciones).
+- **Verificador:** Rol interno encargado de validar documentos de identidad y documentación subida por usuarios.
+- **Soporte:** Rol interno encargado de atender incidencias (PQR), restablecer accesos de usuarios y gestionar tickets.
+- **Admin:** Rol interno con panel de gestión de usuarios, moderación de servicios y órdenes, revisión de verificaciones, resolución de disputas, métricas y soporte.
+- **Superadmin:** Rol máximo con gestión de cuentas administrativas, configuración global del sistema, auditoría, publicación de términos y condiciones, y sobreescritura de recursos.
 
 ---
 
@@ -283,7 +287,42 @@
 
 ---
 
+### RF-18: Panel Administrador
+**Historia de Usuario:** Como administrador, quiero un panel de control con gestión completa, para supervisar y operar la plataforma.
+**Criterios de Aceptación:**
+1. WHEN un usuario con rol 'admin' o 'superadmin' inicia sesión THEN el sistema SHALL presentar un panel administrativo con gestión de usuarios, moderación de servicios y órdenes, revisión de verificaciones, resolución de disputas, métricas y soporte.
+2. IF la acción afecta fondos o roles THEN el sistema SHALL registrarla en auditoría.
+
+---
+
+### RF-19: Panel Superadministrador
+**Historia de Usuario:** Como superadministrador, quiero acceso total a configuración global, para gestionar la entidad operativa.
+**Criterios de Aceptación:**
+1. WHEN un usuario con rol 'superadmin' accede THEN el sistema SHALL habilitar la gestión de cuentas administrativas, configuración global del sistema, auditoría, publicación de términos y condiciones, y sobreescritura de recursos.
+2. WHEN se cambia un parámetro global THEN el sistema SHALL versionarlo y notificarlo a los administradores.
+
+---
+
+### RF-20: Rol Verificador
+**Historia de Usuario:** Como verificador, quiero recibir documentos para aprobación, para validar identidades.
+**Criterios de Aceptación:**
+1. WHEN un usuario sube documentos de identidad para verificación THEN el sistema SHALL asignarlos a la cola del rol 'verificador' para aprobación humana.
+2. WHEN el verificador aprueba THEN el sistema SHALL otorgar insignia de verificado; IF rechaza THEN el sistema SHALL solicitar reenvío con motivo.
+
+---
+
+### RF-21: Rol Soporte / PQR
+**Historia de Usuario:** Como usuario, quiero abrir incidencias y restablecer accesos, para recibir asistencia.
+**Criterios de Aceptación:**
+1. WHEN un usuario abre una incidencia (PQR) THEN el sistema SHALL crear un ticket asignable al rol 'soporte'.
+2. WHEN el soporte restablece el acceso de un usuario THEN el sistema SHALL registrar la acción en auditoría.
+
+---
+
 ## 3. Requerimientos No Funcionales
+
+### RNF-AUD (Auditoría inmutable)
+1. WHEN cualquier rol interno (verificador, soporte, admin, superadmin) ejecuta una acción privilegiada THEN el sistema SHALL persistir un registro de auditoría (actor, acción, entidad, IP, timestamp) en la misma transacción de la acción, sin posibilidad de edición posterior.
 
 ### RNF-01: Usabilidad y Accesibilidad
 1. WHEN nuevo usuario inicia THEN sistema SHALL requerir no más de 3 clics para alcanzar la funcionalidad principal (publicar/postular).
@@ -339,4 +378,4 @@
 
 ---
 
-*Versión: 1.1 — Generado con metodología de Ingeniería de Requerimientos (EARS). Incluye restricciones de Términos y Condiciones y despliegue PWA.*
+*Versión: 1.2 — Generado con metodología de Ingeniería de Requerimientos (EARS). Incluye restricciones de Términos y Condiciones y despliegue PWA. Se añadieron RF-18 a RF-21 y RNF-AUD. Roles internos completos.*
