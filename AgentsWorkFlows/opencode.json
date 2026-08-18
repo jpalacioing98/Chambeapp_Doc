@@ -1,0 +1,230 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/hy3-free",
+  "small_model": "opencode/nemotron-3.5-lightning-free",
+  "default_agent": "coordinator",
+  "subagent_depth": 2,
+  "permission": {
+    "edit": "allow",
+    "bash": "ask",
+    "task": "allow"
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 12000
+  },
+  "agent": {
+    "coordinator": {
+      "description": "Coordinador del equipo AUP que dirige el ciclo Agile Unified Process invocando los agentes de cada disciplina y enruta el trabajo a la skill correcta.",
+      "mode": "primary",
+      "model": "opencode/hy3-free",
+      "temperature": 0.2,
+      "prompt": "{file:./prompts/coordinator.txt}",
+      "permission": {
+        "skill": {
+          "find-skills": "allow",
+          "software-engineer": "allow",
+          "requirements-engineering": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        },
+        "task": {
+          "*": "allow",
+          "architect": "allow",
+          "backend": "allow",
+          "frontend": "allow",
+          "qa": "allow",
+          "devops": "allow",
+          "release-manager": "allow",
+          "product-owner": "allow",
+          "tooling": "allow",
+          "docs": "allow",
+          "reasoner": "allow"
+        }
+      }
+    },
+    "architect": {
+      "description": "Disciplina Model de AUP - comprende el negocio, el dominio y define la arquitectura, RFs y contratos de API. Usa skills de modelado y diagramas.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/architect.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": {
+          "requirements-engineering": "allow",
+          "plantuml-diagram-generator": "allow",
+          "plantuml-ascii": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "backend": {
+      "description": "Implementacion backend - transforma modelos en codigo ejecutable y pruebas. Usa skills de Flask, Firebase, MongoDB y testing.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.3,
+      "prompt": "{file:./prompts/backend.txt}",
+      "permission": {
+        "skill": {
+          "flask-api-development": "allow",
+          "python-testing-patterns": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "frontend": {
+      "description": "Implementacion frontend - UI/PWA React con pruebas. Usa skills de React, UI/UX, diseno, animacion y color.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.3,
+      "prompt": "{file:./prompts/frontend.txt}",
+      "permission": {
+        "skill": {
+          "vercel-react-best-practices": "allow",
+          "ui-ux-pro-max": "allow",
+          "frontend-design": "allow",
+          "impeccable": "allow",
+          "emil-design-eng": "allow",
+          "animate": "allow",
+          "animation-vocabulary": "allow",
+          "find-animation-opportunities": "allow",
+          "color-expert": "allow",
+          "sleek-design-mobile-apps": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "qa": {
+      "description": "Disciplina Test de AUP - evaluacion objetiva de calidad y validacion de requisitos. Usa skills de testing.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/qa.txt}",
+      "permission": {
+        "skill": {
+          "python-testing-patterns": "allow",
+          "vercel-react-best-practices": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "devops": {
+      "description": "Disciplina Deployment de AUP - planifica y ejecuta la entrega. Usa skills de Firebase y convenciones.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.2,
+      "prompt": "{file:./prompts/devops.txt}",
+      "permission": {
+        "skill": {
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "release-manager": {
+      "description": "Disciplina Configuration Management de AUP - versionado y control de cambios. Usa skill de convenciones de ingenieria.",
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/release-manager.txt}",
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "git status *": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git add*": "ask",
+          "git commit*": "ask",
+          "git push*": "deny"
+        },
+        "skill": {
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "product-owner": {
+      "description": "Disciplina Project Management de AUP - alcance, riesgos y progreso (Product Owner). Usa skills de requerimientos, analisis y redaccion.",
+      "mode": "subagent",
+      "model": "opencode/hy3-free",
+      "temperature": 0.2,
+      "prompt": "{file:./prompts/product-owner.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": {
+          "requirements-engineering": "allow",
+          "business-analyst": "allow",
+          "find-skills": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "tooling": {
+      "description": "Disciplina Environment de AUP - proceso, guias y herramientas. Usa skills de configuracion de opencode y convenciones.",
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/tooling.txt}",
+      "permission": {
+        "skill": {
+          "customize-opencode": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "docs": {
+      "description": "Soporte de documentacion - detecta divergencias codigo/documentacion y mantiene RFs, contratos y CHANGELOG. Usa skills de documentacion y redaccion.",
+      "mode": "subagent",
+      "model": "opencode/nemotron-3.5-lightning-free",
+      "temperature": 0.1,
+      "prompt": "{file:./prompts/docs.txt}",
+      "permission": {
+        "skill": {
+          "api-documentation-generator": "allow",
+          "requirements-engineering": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    },
+    "reasoner": {
+      "description": "Agente de razonamiento (MiMo) para tareas importantes: decisiones de arquitectura, analisis de alternativas, riesgos y requerimientos criticos. Usa skills de analisis y diagramas.",
+      "mode": "subagent",
+      "model": "opencode/mimo-v2.5-free",
+      "temperature": 0.2,
+      "prompt": "{file:./prompts/reasoner.txt}",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "skill": {
+          "requirements-engineering": "allow",
+          "business-analyst": "allow",
+          "plantuml-diagram-generator": "allow",
+          "plantuml-ascii": "allow",
+          "find-skills": "allow",
+          "software-engineer": "allow",
+          "caveman": "allow",
+          "*": "deny"
+        }
+      }
+    }
+  }
+}
