@@ -9,7 +9,7 @@
 
 ## RF-01: Registro y Autenticación Segmentada
 
-**HU-01:** Como usuario nuevo, quiero registrarme eligiendo mi rol (proveedor o solicitante), para acceder solo a las funciones que me corresponden.
+**HU-01:** Como usuario nuevo, quiero registrarme eligiendo mi rol (pds o solicitante), para acceder solo a las funciones que me corresponden.
 
 **Criterios de Aceptación:**
 1. WHEN usuario inicia registro THEN sistema SHALL solicitar selección de rol.
@@ -35,14 +35,14 @@
 
 ## RF-02: Perfil de Habilidades del Proveedor
 
-**HU-02:** Como proveedor, quiero registrar mis habilidades y experiencia, para recibir servicios acordes a mi perfil.
+**HU-02:** Como pds, quiero registrar mis habilidades y experiencia, para recibir solicitudes acordes a mi perfil.
 
 **Criterios de Aceptación:**
-1. WHEN proveedor edita perfil THEN sistema SHALL permitir habilidades, experiencia y categorías.
+1. WHEN pds edita perfil THEN sistema SHALL permitir habilidades, experiencia y categorías.
 2. WHEN perfil completo THEN sistema SHALL habilitar visibilidad en búsquedas.
 3. IF perfil incompleto THEN sistema SHALL limitar postulaciones según plan.
 
-**CU-02.1 Completar perfil de proveedor (Actor: Proveedor)**
+**CU-02.1 Completar perfil de pds (Actor: pds)**
 - Flujo principal:
   1. Accede a "Mi Perfil".
   2. Registra ≥1 categoría, habilidades, años de experiencia, zona.
@@ -53,15 +53,15 @@
 
 ## RF-03: Sistema de Reputación y Calificación
 
-**HU-03:** Como solicitante, quiero calificar al proveedor tras un servicio, para construir confianza en la plataforma.
+**HU-03:** Como solicitante, quiero calificar al pds tras una solicitud, para construir confianza en la plataforma.
 
 **Criterios de Aceptación:**
-1. WHEN servicio finaliza THEN sistema SHALL permitir calificación mutua.
+1. WHEN solicitud finaliza THEN sistema SHALL permitir calificación mutua.
 2. WHEN calificación registrada THEN sistema SHALL actualizar promedio.
 3. IF calificación reportada THEN sistema SHALL revisar y ocultar si aplica.
-4. WHEN servicio no completado THEN sistema SHALL bloquear calificación.
+4. WHEN solicitud no completada THEN sistema SHALL bloquear calificación.
 
-**CU-03.1 Calificar servicio (Actor: Solicitante / Proveedor)**
+**CU-03.1 Calificar solicitud (Actor: Solicitante / pds)**
 - Flujo principal:
   1. Servicio en "Completado".
   2. Usuario asigna puntaje (1–5) y comentario.
@@ -72,15 +72,15 @@
 
 ## RF-04: Publicación de Servicios por Solicitante
 
-**HU-04:** Como solicitante, quiero publicar un servicio con categoría, descripción, ubicación y presupuesto, para recibir postulaciones.
+**HU-04:** Como solicitante, quiero publicar una solicitud con categoría, descripción, ubicación y presupuesto, para recibir postulaciones.
 
 **Criterios de Aceptación:**
-1. WHEN servicio creado THEN sistema SHALL requerir categoría, descripción, ubicación.
+1. WHEN solicitante crea solicitud THEN sistema SHALL requerir categoría, descripción y ubicación.
 2. WHEN presupuesto definido THEN sistema SHALL validar mínimo $50.000.
-3. WHEN publicado THEN sistema SHALL notificar a proveedores compatibles.
+3. WHEN solicitud publicada THEN sistema SHALL notificar a proveedores compatibles.
 4. WHEN ubicación fuera de cobertura THEN sistema SHALL advertir (solo Valledupar).
 
-**CU-04.1 Publicar servicio (Actor: Solicitante)**
+**CU-04.1 Publicar solicitud (Actor: Solicitante)**
 - Flujo principal:
   1. Selecciona "Publicar servicio".
   2. Elige categoría, describe, fija ubicación (Valledupar) y presupuesto.
@@ -93,11 +93,11 @@
 
 ## RF-05: Motor de Match / Recomendación (IA)
 
-**HU-05:** Como solicitante, quiero ver proveedores sugeridos por IA ordenados por relevancia, para contratar rápido y con confianza.
+**HU-05:** Como solicitante, quiero ver pds sugeridos por IA ordenados por relevancia, para contratar rápido y con confianza.
 
 **Criterios de Aceptación:**
-1. WHEN servicio publicado THEN sistema SHALL generar ranking por similitud perfil/habilidades.
-2. WHEN proveedor busca THEN sistema SHALL mostrar servicios afines.
+1. WHEN solicitud publicada THEN sistema SHALL generar ranking por similitud perfil/habilidades.
+2. WHEN pds busca THEN sistema SHALL mostrar solicitudes afines.
 3. WHEN recomienda THEN sistema SHALL explicar criterio (transparencia).
 4. WHEN no hay coincidencias THEN sistema SHALL sugerir ampliar criterios.
 
@@ -112,10 +112,10 @@
 
 ## RF-06: Visualización Interactiva 3D / 360
 
-**HU-06:** Como solicitante, quiero explorar un escenario 3D del servicio, para reducir incertidumbre antes de contratar.
+**HU-06:** Como solicitante, quiero explorar un escenario 3D de la solicitud, para reducir incertidumbre antes de contratar.
 
 **Criterios de Aceptación:**
-1. WHEN servicio tiene recurso 3D THEN sistema SHALL renderizar escenario interactivo.
+1. WHEN solicitud tiene recurso 3D THEN sistema SHALL renderizar escenario interactivo.
 2. WHEN usuario interactúa THEN sistema SHALL permitir rotación/zoom/360.
 3. WHEN conexión <2 Mbps THEN sistema SHALL degradar a imágenes estáticas.
 4. WHEN falla carga 3D THEN sistema SHALL mostrar placeholder y reintentar.
@@ -131,16 +131,16 @@
 
 ## RF-07: Gestión Contractual y Órdenes de Trabajo
 
-**HU-07:** Como usuario, quiero crear y seguir órdenes de trabajo en tiempo real, para formalizar el servicio.
+**HU-07:** Como usuario, quiero crear y seguir órdenes de trabajo en tiempo real, para formalizar la solicitud.
 
 **Criterios de Aceptación:**
-1. WHEN solicitante acepta proveedor THEN sistema SHALL crear orden "Pendiente".
-2. WHEN proveedor acepta THEN sistema SHALL pasar a "En progreso".
-3. WHEN proveedor finaliza THEN sistema SHALL pasar a "Completado".
+1. WHEN solicitante acepta pds THEN sistema SHALL crear orden "Pendiente".
+2. WHEN pds acepta THEN sistema SHALL pasar a "En progreso".
+3. WHEN pds finaliza THEN sistema SHALL pasar a "Completado".
 4. WHEN orden cancelada THEN sistema SHALL registrar motivo y notificar.
 5. WHEN discrepan de estado THEN sistema SHALL abrir resolución/mediación.
 
-**CU-07.1 Ciclo de orden de trabajo (Actores: Solicitante, Proveedor)**
+**CU-07.1 Ciclo de orden de trabajo (Actores: Solicitante, pds)**
 - Flujo principal:
   1. Solicitante acepta postulación → orden "Pendiente".
   2. Proveedor acepta → "En progreso".
@@ -179,15 +179,15 @@
 
 ## RF-09: Historial y Trazabilidad de Ingresos
 
-**HU-09:** Como proveedor, quiero ver mi historial de ingresos, para tener registro formal de mi actividad.
+**HU-09:** Como pds, quiero ver mi historial de ingresos, para tener registro formal de mi actividad.
 
 **Criterios de Aceptación:**
-1. WHEN proveedor abre panel THEN sistema SHALL mostrar historial de ingresos.
+1. WHEN pds abre panel THEN sistema SHALL mostrar historial de ingresos.
 2. WHEN filtra por periodo THEN sistema SHALL mostrar ingresos del rango.
 3. WHEN solicita certificado THEN sistema SHALL generar documento (RF-13).
 4. WHEN ingreso registrado THEN sistema SHALL recalcular promedio mensual.
 
-**CU-09.1 Consultar historial (Actor: Proveedor)**
+**CU-09.1 Consultar historial (Actor: pds)**
 - Flujo principal:
   1. Accede a "Mis Ingresos".
   2. Visualiza lista de servicios, montos, fechas.
@@ -198,14 +198,14 @@
 
 ## RF-10: Alertas de Formalización / Enlace Legal
 
-**HU-10:** Como proveedor, quiero recibir alertas sobre seguridad social, para acceder a protección laboral.
+**HU-10:** Como pds, quiero recibir alertas sobre seguridad social, para acceder a protección laboral.
 
 **Criterios de Aceptación:**
 1. WHEN volumen de ingresos alcanzado THEN sistema SHALL alertar sobre seguridad social (Ley 1429/1562).
 2. WHEN consulta sección legal THEN sistema SHALL mostrar guías de formalización.
-3. WHEN +10 servicios/mes THEN sistema SHALL notificar descuento por volumen (RF-15).
+3. WHEN +10 solicitudes/mes THEN sistema SHALL notificar descuento por volumen (RF-15).
 
-**CU-10.1 Recibir alerta de formalización (Actor: Sistema / Proveedor)**
+**CU-10.1 Recibir alerta de formalización (Actor: Sistema / pds)**
 - Flujo principal:
   1. Sistema detecta umbral de ingresos/servicios.
   2. Envía alerta push/in-app con guía de seguridad social.
@@ -215,16 +215,16 @@
 
 ## RF-11: Suscripciones Premium
 
-**HU-11:** Como proveedor establecido, quiero una suscripción con beneficios, para conseguir más servicios.
+**HU-11:** Como pds establecido, quiero una suscripción con beneficios, para conseguir más solicitudes.
 
 **Criterios de Aceptación:**
-1. WHEN selecciona plan THEN sistema SHALL activar beneficios (Básico $15k / Pro $35k / Empresa $75k).
+1. WHEN selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Pro $35k / Empresa $75k).
 2. WHEN Pro/Empresa THEN sistema SHALL dar postulaciones ilimitadas y perfil destacado.
 3. WHEN Empresa THEN sistema SHALL habilitar equipos y múltiples cuentas.
 4. WHEN prueba 3 meses termina THEN sistema SHALL iniciar cobro.
 5. WHEN cancela THEN sistema SHALL degradar al fin del ciclo.
 
-**CU-11.1 Suscribirse a Premium (Actor: Proveedor)**
+**CU-11.1 Suscribirse a Premium (Actor: pds)**
 - Flujo principal:
   1. Elige plan y paga.
   2. Sistema activa beneficios según nivel.
@@ -255,14 +255,14 @@
 
 ## RF-13: Certificado de Ingresos
 
-**HU-13:** Como proveedor, quiero un certificado oficial de ingresos, para trámites bancarios o de vivienda.
+**HU-13:** Como pds, quiero un certificado oficial de ingresos, para trámites bancarios o de vivienda.
 
 **Criterios de Aceptación:**
-1. WHEN solicita certificado ($25k) THEN sistema SHALL generar con nombre, historial 12 meses, promedio, servicios, calificación, verificación.
+1. WHEN solicita certificado ($25k) THEN sistema SHALL generar con nombre, historial 12 meses, promedio, servicios completados, calificación, verificación.
 2. WHEN generado THEN sistema SHALL marcarlo verificado.
 3. WHEN descarga THEN sistema SHALL registrar emisión.
 
-**CU-13.1 Generar certificado (Actor: Proveedor)**
+**CU-13.1 Generar certificado (Actor: pds)**
 - Flujo principal:
   1. Solicita certificado y paga $25k.
   2. Sistema compila datos y genera PDF verificado.
@@ -273,16 +273,15 @@
 
 ## RF-14: Servicios de Valor Agregado
 
-**HU-14:** Como proveedor, quiero pagar por visibilidad y credenciales, para destacar frente a la competencia.
+**HU-14:** Como pds, quiero pagar por visibilidad y credenciales, para destacar frente a la competencia.
 
 **Criterios de Aceptación:**
 1. WHEN compra Destacado ($10k/día) THEN sistema SHALL posicionar en primeras posiciones 24h.
 2. WHEN compra Badge ($15k) THEN sistema SHALL mostrar certificación verificada.
 3. WHEN compra Portafolio ($8k/mes) THEN sistema SHALL habilitar galería.
 4. WHEN compra Push Ilimitadas ($5k/mes) THEN sistema SHALL enviar alertas en tiempo real.
-5. WHEN periodo expira THEN sistema SHALL remover beneficio.
 
-**CU-14.1 Comprar servicio adicional (Actor: Proveedor)**
+**CU-14.1 Comprar solicitud adicional (Actor: pds)**
 - Flujo principal:
   1. Selecciona servicio y paga.
   2. Sistema activa beneficio por periodo definido.
@@ -295,11 +294,10 @@
 **HU-15:** Como plataforma, quiero cobrar comisiones solo en transacción exitosa, para alinear incentivos.
 
 **Criterios de Aceptación:**
-1. WHEN servicio pagado THEN sistema SHALL cobrar 12% proveedor + 8% solicitante.
+1. WHEN solicitud pagada THEN sistema SHALL cobrar 12% pds + 8% solicitante.
 2. WHEN valor < $50.000 THEN sistema SHALL eximir comisión.
-3. WHEN proveedor >10 servicios/mes THEN sistema SHALL aplicar 10% descuento.
-4. WHEN proveedor nuevo (3 meses) THEN sistema SHALL aplicar 0% comisión.
-5. WHEN reembolso THEN sistema SHALL reversar comisiones.
+3. WHEN pds >10 solicitudes/mes THEN sistema SHALL aplicar 10% descuento.
+4. WHEN pds nuevo (3 meses) THEN sistema SHALL aplicar 0% comisión.
 
 **CU-15.1 Aplicar comisión (Actor: Sistema)**
 - Flujo principal:
@@ -317,11 +315,10 @@
 **HU-16:** Como usuario, quiero recibir notificaciones de confirmación, cancelación y actualizaciones, para estar informado.
 
 **Criterios de Aceptación:**
-1. WHEN servicio aceptado/cancelado THEN sistema SHALL notificar push a ambas partes.
+1. WHEN solicitud aceptada/cancelada THEN sistema SHALL enviar notificación push a ambas partes.
 2. WHEN nueva postulación THEN sistema SHALL notificar solicitante.
-3. WHEN orden cambia estado THEN sistema SHALL notificar involucrados.
-4. WHEN mensaje enviado THEN sistema SHALL entregarlo en tiempo real.
-5. WHEN usuario offline THEN sistema SHALL reencolar y entregar al reconectar.
+3. WHEN orden cambia de estado THEN sistema SHALL notificar involucrados.
+4. WHEN mensaje es enviado THEN sistema SHALL entregarlo en tiempo real.
 
 **CU-16.1 Enviar notificación (Actor: Sistema / Usuario)**
 - Flujo principal:

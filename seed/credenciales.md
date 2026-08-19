@@ -2,8 +2,8 @@
 
 | Rol | Email | Password | Descripción/uso |
 |---|---|---|---|
-| trabajador / proveedor | trabajador@chambeapp.com | ChambeApp123! | Acceso al panel de trabajador, visualización de sugerencias de servicio y creación de órdenes |
-| empleador / solicitante | empleador@chambeapp.com | ChambeApp123! | Acceso al panel de empleador, publicación de servicios y gestión de órdenes |
+| pds / proveedor | pds@chambeapp.com | ChambeApp123! | Acceso al panel de pds, visualización de sugerencias de solicitud y creación de órdenes |
+| solicitante | solicitante@chambeapp.com | ChambeApp123! | Acceso al panel de solicitante, creación de solicitudes y gestión de órdenes |
 | verificador | verificador@chambeapp.com | ChambeApp123! | Valida y aprueba órdenes, confirma cumplimiento de requisitos |
 | soporte | soporte@chambeapp.com | ChambeApp123! | Atiende incidencias, restablece accesos y soporte general |
 | admin | admin@chambeapp.com | ChambeApp123! | Permisos de administración general, gestión de usuarios y configuración |
