@@ -1,0 +1,14 @@
+Bueno, mira, lo que pasa es que estoy intentando decirle a mi modelo, a mi agente, que en nuestro proyecto hay una discrepancia entre los perfiles y los datos asignados. Te lo voy a decir en los términos con los que estoy trabajando el proyecto: "solicitante" y "prestador de servicios" (PDS).
+
+Este es el primer flujo:
+
+Creación de la solicitud:
+El solicitante es quien genera la solicitud de trabajo. Por ejemplo, si se le dañó una tubería de la cocina, muestra su problema mediante una imagen o un video corto.
+Postulación y oferta:
+El PDS ve la solicitud, se postula y hace una oferta (puede ser un costo fijo o un rango de precios).
+Selección:
+El solicitante revisa las opciones de los PDS que se postularon y elige el que más le convenga, ya sea por reputación, precio o preferencia personal.
+Negociación y privacidad:
+(a) Es importante recalcar que los datos sensibles (como ubicación y números de teléfono) no se revelan hasta que el solicitante acepta al PDS.
+(b) Una vez que se abre el contacto, pueden ir a un chat para negociar o el solicitante puede hacer una aceptación directa de la oferta.
+© Si van al chat, el PDS confirma el acuerdo. Si después de la negociación o por cualquier otra razón no se confirma, el estado de la solicitud vuelve a cambiar de "ocupado" o "pendiente" a estar "disponible" otra vez.
