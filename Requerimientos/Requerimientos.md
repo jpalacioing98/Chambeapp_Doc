@@ -9,7 +9,7 @@
 
 - **Proveedor de Servicio (pds):** pds informal que ofrece solicitudes ocasionales (plomería, jardinería, reparaciones, etc.). Alta sensibilidad al precio.
 - **Solicitante (solicitante):** Persona natural o pequeño negocio que crea y contrata solicitudes. Sensibilidad media al precio.
-- **Empresa / Equipo:** Solicitante o pds con necesidades de gestión multi-usuario (plan Empresa).
+
 - **Sistema / Plataforma:** Componente automatizado (IA, pasarelas, notificaciones).
 - **Verificador:** Rol interno encargado de validar documentos de identidad y documentación subida por usuarios.
 - **Soporte:** Rol interno encargado de atender incidencias (PQR), restablecer accesos de usuarios y gestionar tickets.
@@ -94,7 +94,7 @@
 2. WHEN pds cumple criterios THEN sistema SHALL sugerirlo al solicitante ordenado por relevancia y reputación.
 3. WHEN pds busca solicitudes THEN sistema SHALL mostrar los más afines a su perfil.
 4. WHEN el sistema recomienda THEN sistema SHALL explicar brevemente el criterio (transparencia algorítmica).
-5. WHEN pds tiene membresía Profesional/Empresa THEN sistema SHALL destacarlo en resultados (ver RF-11/14).
+5. WHEN pds tiene membresía Profesional THEN sistema SHALL destacarlo en resultados (ver RF-11/14).
 
 **Casos Límite:**
 - WHEN no hay pds compatibles THEN sistema SHALL mostrar mensaje de "sin coincidencias" y sugerir ampliar criterios.
@@ -143,10 +143,10 @@
 **Criterios de Aceptación:**
 1. WHEN orden pasa a "Completado" THEN sistema SHALL generar orden de pago.
 2. WHEN solicitante paga THEN sistema SHALL procesar vía MercadoPago o PSE.
-3. WHEN pago es confirmado THEN sistema SHALL retener comisión y liberar el monto en escrow (T&C §8.2).
+3. WHEN pago es confirmado THEN sistema SHALL retener comisión y transferir el monto neto al proveedor.
 4. WHEN pds solicita retiro THEN sistema SHALL procesarlo vía transferencia directa.
 5. WHEN transacción falla THEN sistema SHALL mostrar opción de reintento y conservar orden.
-6. WHEN fondos están en escrow THEN sistema SHALL liberar al pds si el solicitante confirma finalización o si transcurren 48h sin queja (T&C §8.2).
+6. WHEN pago está pendiente THEN sistema SHALL transferir al pds si el solicitante confirma finalización o si transcurren 48h sin queja.
 7. WHEN solicitante invoca retracto (5 días hábiles, Art. 47 Ley 1480) y la solicitud no ha iniciado THEN sistema SHALL revertir pago (T&C §8.5).
 
 **Casos Límite:**
@@ -190,9 +190,8 @@
 **Historia de Usuario:** Como pds establecido, quiero una suscripción que me dé beneficios, para conseguir más solicitudes.
 
 **Criterios de Aceptación:**
-1. WHEN pds selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Profesional $35k / Empresa $75k).
-2. WHEN plan es Profesional/Empresa THEN sistema SHALL permitir postulaciones ilimitadas y perfil destacado.
-3. WHEN plan es Empresa THEN sistema SHALL habilitar gestión de equipos y múltiples cuentas.
+1. WHEN pds selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Profesional $35k).
+2. WHEN plan es Profesional THEN sistema SHALL permitir postulaciones ilimitadas y perfil destacado.
 4. WHEN periodo de prueba (3 meses) finaliza THEN sistema SHALL iniciar cobro según plan.
 5. WHEN usuario cancela suscripción THEN sistema SHALL degradar beneficios al final del ciclo.
 
@@ -319,6 +318,150 @@
 
 ---
 
+### RF-22: Sistema de Desbloqueo de Información
+**Historia de Usuario:** Como PDS, quiero ver la ubicación y contactar al solicitante solo después de que el servicio sea confirmado, para proteger datos sensibles.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante confirma servicio THEN sistema SHALL desbloquear ubicación y chat para PDS
+2. IF servicio no confirmado THEN sistema SHALL mantener datos sensibles ocultos
+3. WHEN servicio cancelado THEN sistema SHALL mantener datos bloqueados
+4. WHEN PDS accede a solicitud THEN sistema SHALL mostrar solo información técnica
+
+**Casos Límite:**
+- WHEN solicitante cancela antes del desbloqueo THEN sistema SHALL mantener información oculta
+- WHEN PDS no responde en 24h THEN sistema SHALL permitir al solicitante rechazar y relanzar
+
+---
+
+### RF-23: Confirmación Dual de Finalización
+**Historia de Usuario:** Como usuario, quiero confirmar la finalización del servicio para que se procese el pago y se califique.
+
+**Criterios de Aceptación:**
+1. WHEN PDS marca servicio como completado THEN sistema SHALL solicitar confirmación al solicitante
+2. WHEN solicitante confirma THEN sistema SHALL cambiar estado a "Completado"
+3. IF solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+4. WHEN ambas partes confirman THEN sistema SHALL habilitar calificaciones y pagos
+
+**Casos Límite:**
+- WHEN solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+- WHEN hay disputa THEN sistema SHALL congelar fondos y abrir proceso de mediación
+
+---
+
+### RF-24: Gestión de Ofertas
+**Historia de Usuario:** Como PDS, quiero poder enviar, modificar y rechazar ofertas para gestionar mis postulaciones.
+
+**Criterios de Aceptación:**
+1. WHEN PDS envía oferta THEN sistema SHALL almacenar y notificar al solicitante
+2. WHEN PDS modifica oferta THEN sistema SHALL reemplazar la anterior
+3. WHEN solicitante rechaza oferta THEN sistema SHALL notificar al PDS
+4. IF solicitante cancela solicitud THEN sistema SHALL invalidar todas las ofertas
+
+**Casos Límite:**
+- WHEN PDS modifica oferta THEN sistema SHALL mantener solo la versión más reciente
+- WHEN solicitante rechaza todas las ofertas THEN sistema SHALL relanzar notificaciones
+
+---
+
+### RF-25: Sistema de Billetera Virtual
+**Historia de Usuario:** Como usuario, quiero tener una billetera virtual para recibir y pagar servicios, para gestionar mis finanzas en la plataforma.
+
+**Criterios de Aceptación:**
+1. WHEN usuario se registra THEN sistema SHALL crear billetera con saldo 0
+2. WHEN PDS completa servicio THEN sistema SHALL descontar comisión de billetera
+3. WHEN usuario solicita retiro THEN sistema SHALL transferir saldo a cuenta bancaria
+4. WHEN saldo es insuficiente THEN sistema SHALL bloquear operaciones de pago
+5. WHEN usuario deposite fondos THEN sistema SHALL acreditar saldo en tiempo real
+6. WHEN transacción ocurre THEN sistema SHALL registrar en historial de billetera
+
+**Casos Límite:**
+- WHEN saldo es negativo THEN sistema SHALL bloquear retiros y pagos
+- WHEN usuario solicita retiro mínimo $10.000 THEN sistema SHALL procesar
+- WHEN hay error en depósito THEN sistema SHALL reversar y notificar
+
+---
+
+### RF-26: Modalidad de Cobro
+**Historia de Usuario:** Como solicitante, quiero elegir la modalidad de cobro al publicar, para controlar mis costos.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante publica THEN sistema SHALL ofrecer elegir "Con Comisión" o "Sin Comisión"
+2. WHEN elige "Sin Comisión" THEN sistema SHALL requerir pago en monedas
+3. WHEN publica "Con Comisión" THEN sistema SHALL marcar solicitud como modalidad A
+4. WHEN publica "Sin Comisión" THEN sistema SHALL marcar solicitud como modalidad B
+5. WHEN PDS ve solicitud THEN sistema SHALL mostrar modalidad aplicable
+
+**Casos Límite:**
+- WHEN solicitante no elige modalidad THEN sistema SHALL usar "Con Comisión" por defecto
+- WHEN modalidad es "Sin Comisión" y PDS no tiene monedas THEN sistema SHALL bloquear oferta
+
+---
+
+### RF-27: Sistema de Monedas
+**Historia de Usuario:** Como usuario, quiero comprar monedas para usar en pagos de servicios.
+
+**Criterios de Aceptación:**
+1. WHEN usuario compra monedas THEN sistema SHALL procesar pago y acreditar
+2. WHEN usuario usa monedas THEN sistema SHALL descontar del saldo
+3. WHEN monedas son promocionales THEN sistema SHALL marcar como no reembolsables
+4. WHEN monedas expiran THEN sistema SHALL descontar automáticamente
+5. WHEN usuario ve monedas THEN sistema SHALL mostrar saldo y tipo
+
+**Casos Límite:**
+- WHEN monedas son compradas THEN sistema SHALL permitir uso ilimitado
+- WHEN monedas son ganadas THEN sistema SHALL marcar fecha de vencimiento
+- WHEN usuario cierra cuenta THEN sistema SHALL perder monedas promocionales
+
+---
+
+### RF-28: Precios Sugeridos
+**Historia de Usuario:** Como solicitante, quiero ver precios sugeridos para mi solicitud, para publicar a precio justo.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante crea solicitud THEN sistema SHALL mostrar precio promedio de mercado
+2. WHEN solicitud tiene categoría THEN sistema SHALL sugerir rango de precio
+3. WHEN precio es muy bajo THEN sistema SHALL advertir sobre subcotización
+4. WHEN precio es muy alto THEN sistema SHALL mostrar advertencia de sobreprecio
+5. WHEN usuario ajusta precio THEN sistema SHALL recalcular sugerencia
+
+**Casos Límite:**
+- WHEN no hay datos históricos THEN sistema SHALL mostrar "sin referencia"
+- WHEN categoría es nueva THEN sistema SHALL usar promedio general
+
+---
+
+### RF-29: Hitos de Pago
+**Historia de Usuario:** Como usuario, quiero dividir el pago en hitos para servicios de larga duración.
+
+**Criterios de Aceptación:**
+1. WHEN contrato es largo THEN sistema SHALL habilitar hitos
+2. WHEN solicitante aprueba entrega THEN sistema SHALL liberar pago parcial
+3. WHEN hito se aprueba THEN sistema SHALL descontar comisión proporcional
+4. WHEN hito es rechazado THEN sistema SHALL congelar pago de ese hito
+5. WHEN todos los hitos aprueban THEN sistema SHALL completar contrato
+
+**Casos Límite:**
+- WHEN hito tiene disputa THEN sistema SHALL congelar fondos
+- WHEN solicitante no responde en 48h THEN sistema SHALL auto-aprobar hito
+
+---
+
+### RF-30: Dashboard Operativo
+**Historia de Usuario:** Como PDS, quiero ver mi historial de cobros y comisiones, para controlar mis finanzas.
+
+**Criterios de Aceptación:**
+1. WHEN PDS accede a dashboard THEN sistema SHALL mostrar historial
+2. WHEN filtra por periodo THEN sistema SHALL mostrar cobros del rango
+3. WHEN solicita reporte THEN sistema SHALL generar PDF con detalle
+4. WHEN PDS ve saldo THEN sistema SHALL mostrar disponible para retiro
+5. WHEN hay transacciones THEN sistema SHALL mostrar comisiones descontadas
+
+**Casos Límite:**
+- WHEN no hay transacciones THEN sistema SHALL mostrar "sin movimientos"
+- WHEN reporte falla THEN sistema SHALL mostrar error y sugerir reintento
+
+---
+
 ## 3. Requerimientos No Funcionales
 
 ### RNF-AUD (Auditoría inmutable)
@@ -378,7 +521,7 @@
 
 ---
 
-*Versión: 1.2 — Generado con metodología de Ingeniería de Requerimientos (EARS). Incluye restricciones de Términos y Condiciones y despliegue PWA. Se añadieron RF-18 a RF-21 y RNF-AUD. Roles internos completos.
+*Versión: 2.0 — Generado con metodología de Ingeniería de Requerimientos (EARS). Incluye restricciones de Términos y Condiciones y despliegue PWA. Se añadieron RF-18 a RF-30 y RNF-AUD. Roles internos completos. Nuevo modelo de billetera virtual y modalidades de cobro.*
 
 ---Nota de modelo de interacción (por definir / futuro)---
 El solicitante crea y gestiona la solicitud; el pds aplica/oferta sobre una solicitud; el solicitante selecciona un pds, puede aceptar la oferta o negociar; al acordar se inicia el flujo para el pds (por definir).

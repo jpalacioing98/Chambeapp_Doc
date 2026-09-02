@@ -1,5 +1,5 @@
 @startuml
-title ChambeApp - Casos de Uso por Rol (Módulos A-E + Monetización + Legal)
+title ChambeApp - Casos de Uso por Rol (v2.0 - Con Billetera Virtual)
 
 left to right direction
 
@@ -22,7 +22,7 @@ rectangle "B/C. IA + 3D" {
 
 rectangle "D. Contractual" {
   usecase "Gestionar orden (RF-07)" as UC8
-  usecase "Pagar / escrow (RF-08)" as UC9
+  usecase "Pagar (RF-08)" as UC9
   usecase "Ver historial (RF-09)" as UC10
   usecase "Alertas formalización (RF-10)" as UC11
 }
@@ -39,6 +39,41 @@ rectangle "Monetización" {
   usecase "Comisiones (RF-15)" as UC17
 }
 
+rectangle "F. Billetera Virtual (RF-25)" {
+  usecase "Consultar billetera" as UC18
+  usecase "Depositar fondos" as UC19
+  usecase "Retirar fondos" as UC20
+  usecase "Ver historial transacciones" as UC21
+}
+
+rectangle "G. Sistema de Monedas (RF-27)" {
+  usecase "Comprar monedas" as UC22
+  usecase "Usar monedas (ofertar)" as UC23
+  usecase "Ver saldo monedas" as UC24
+}
+
+rectangle "H. Modalidades de Cobro (RF-26)" {
+  usecase "Elegir modalidad al publicar" as UC25
+  usecase "Ver modalidad en solicitud" as UC26
+}
+
+rectangle "I. Hitos de Pago (RF-29)" {
+  usecase "Crear hitos" as UC27
+  usecase "Aprobar hito" as UC28
+  usecase "Rechazar hito" as UC29
+}
+
+rectangle "J. Dashboard Operativo (RF-30)" {
+  usecase "Ver dashboard PDS" as UC30
+  usecase "Generar reporte PDF" as UC31
+  usecase "Ver pagos realizados" as UC32
+}
+
+rectangle "K. Precios Sugeridos (RF-28)" {
+  usecase "Ver precios sugeridos" as UC33
+  usecase "Ajustar precio" as UC34
+}
+
 SOL -- UC1
 SOL -- UC2
 SOL -- UC5
@@ -50,6 +85,17 @@ SOL -- UC11
 SOL -- UC12
 SOL -- UC13
 SOL -- UC17
+SOL -- UC18
+SOL -- UC19
+SOL -- UC20
+SOL -- UC21
+SOL -- UC25
+SOL -- UC27
+SOL -- UC28
+SOL -- UC29
+SOL -- UC32
+SOL -- UC33
+SOL -- UC34
 
 PRO -- UC1
 PRO -- UC2
@@ -67,8 +113,26 @@ PRO -- UC14
 PRO -- UC15
 PRO -- UC16
 PRO -- UC17
+PRO -- UC18
+PRO -- UC19
+PRO -- UC20
+PRO -- UC21
+PRO -- UC22
+PRO -- UC23
+PRO -- UC24
+PRO -- UC26
+PRO -- UC30
+PRO -- UC31
 
 SYS -- UC6
 SYS -- UC9
 SYS -- UC12
+SYS -- UC17
+SYS -- UC18
+SYS -- UC19
+SYS -- UC20
+SYS -- UC23
+SYS -- UC28
+SYS -- UC29
+
 @enduml

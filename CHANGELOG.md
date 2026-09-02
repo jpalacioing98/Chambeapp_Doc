@@ -2,6 +2,44 @@
 
 All notable changes to documentation will be documented in this file.
 
+## [1.3.0] - 2026-09-01
+
+### Changed
+- Monetizacion.md: Eliminado plan Empresa ($75k) - solo Básico ($15k) y Profesional ($35k)
+- Monetizacion.md: Eliminado sistema escrow - pagos directos sin retención
+- Monetizacion.md: Actualizadas proyecciones financieras
+- Terminos_y_Condiciones.md: Eliminado plan Empresa de planes de suscripción
+- Flujo_Aplicacion.md: Eliminada referencia a escrow automático
+- ANALISIS_MONETIZACION.md: Actualizado para reflejar cambios (38.5% implementado)
+
+## [1.2.0] - 2026-09-01
+
+### Added
+- Flujo de Aplicacion.md: Documento completo del flujo de la aplicación
+- RF-22: Sistema de Desbloqueo de Información (nuevo)
+- RF-23: Confirmación Dual de Finalización (nuevo)
+- RF-24: Gestión de Ofertas (nuevo)
+- HU-19: Desbloqueo de Información (nueva)
+- HU-20: Confirmación Dual (nueva)
+- HU-21: Gestión de Ofertas (nueva)
+- Actualización de matriz de trazabilidad (HU-19 a HU-21)
+
+### Changed
+- Requerimientos.md: Agregados RF-22, RF-23, RF-24
+- HistoriasDeUsuario.md: Agregadas HU-19, HU-20, HU-21
+- Monetizacion.md: Eliminado plan Empresa ($75k) - solo Básico ($15k) y Profesional ($35k)
+- Monetizacion.md: Eliminado sistema escrow - pagos directos sin retención
+- Requerimientos.md: Eliminadas referencias a plan Empresa y escrow
+- HistoriasDeUsuario.md: Eliminadas referencias a plan Empresa y escrow
+- Flujo_Aplicacion.md: Eliminada referencia a escrow automático
+- Terminos_y_Condiciones.md: Eliminado plan Empresa de planes de suscripción
+- Arquitectura_Software.md: Eliminadas referencias a escrow
+- Diagramas PlantUML: Actualizados para eliminar escrow
+- seed/test_dev.md: Eliminada referencia a escrow
+
+### Fixed
+- Completamiento de gaps críticos en flujo de aplicación
+
 ## [1.1.0] - 2026-09-01
 
 ### Added

@@ -26,7 +26,7 @@ Copiar `Chambeapp_backend/.env.example` → `Chambeapp_backend/.env` (lo que deb
 3. Trabajador ve sugerencias (match).
 4. Crear orden.
 5. Completar servicio.
-6. Pagar/escrow.
+6. Pagar.
 7. Calificar.
 8. Chatear.
 

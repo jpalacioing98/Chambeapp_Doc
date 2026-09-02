@@ -1,27 +1,82 @@
 @startuml
-title ChambeApp - Flujo de Orden, Pago y Escrow (RF-07 / RF-08 / T&C §8)
+title ChambeApp - Flujo de Orden y Pago (v2.0 - Con Billetera Virtual)
 
 actor "Solicitante" as S
 actor "Proveedor" as P
 participant "Frontend PWA" as FE
 participant "API Flask" as API
 participant "Servicio Pagos" as SP
-database "DB Order/Payment" as DB
+participant "Billetera" as WAL
+participant "Monedas" as COIN
+database "DB" as DB
 participant "Worker 48h" as WK
 
+== Publicación de Solicitud ==
+
 S -> FE : Publica servicio (RF-04)
-P -> FE : Acepta postulacion
-FE -> API : Crear orden Pendiente
-API -> DB : guardar orden
+FE -> API : Crear solicitud
+API -> DB : guardar solicitud
+API -> FE : Solicitud publicada
+
+== Oferta del PDS ==
+
+P -> FE : Acepta postulación / Enviar oferta
+FE -> API : Registrar oferta
+
+alt Modalidad B (Sin Comisión)
+  API -> COIN : Descontar 50 monedas al PDS
+  COIN -> DB : Actualizar saldo monedas
+  COIN --> API : Monedas descontadas
+else Modalidad A (Con Comisión)
+  API -> API : Registrar oferta sin costo
+end
+
+API -> DB : Guardar oferta
+API -> FE : Oferta registrada
+
+== Confirmación del Servicio ==
+
+S -> FE : Aceptar oferta / Confirmar servicio
+FE -> API : Confirmar servicio
+API -> DB : Crear orden Pendiente
+API -> FE : Servicio confirmado
+API -> P : Notificación (desbloqueo ubicación/chat)
+
+== Finalización del Servicio ==
+
 P -> FE : Finaliza servicio
-FE -> API : orden Completado
+FE -> API : Marcar orden Completado
+
 S -> FE : Confirma pago
-FE -> API : generar orden de pago
-API -> SP : retener escrow + comision
-SP -> DB : escrow_status retenido
-SP -> WK : programar liberacion 48h
-S -> FE : Confirma finalizacion
-FE -> API : liberar
-WK -> DB : tras 48h sin queja liberar neto
-SP -> P : monto neto disponible
+FE -> API : Generar orden de pago
+
+alt Modalidad A (Con Comisión)
+  API -> WAL : Descontar comisión del PDS (12%)
+  WAL -> DB : Registrar transacción comisión
+  WAL --> API : Comisión descontada
+else Modalidad B (Sin Comisión)
+  API -> API : Sin comisión
+end
+
+API -> WAL : Transferir saldo neto al PDS
+WAL -> DB : Registrar transacción pago
+WAL --> API : Saldo actualizado
+
+== Confirmación Final ==
+
+S -> FE : Confirma finalización
+FE -> API : Liberar pago
+API -> DB : Actualizar estado orden
+API -> FE : Pago procesado
+API -> P : Monto neto disponible en billetera
+
+== Retiro de Fondos (Opcional) ==
+
+P -> FE : Solicitar retiro
+FE -> API : Procesar retiro
+API -> WAL : Verificar saldo disponible
+WAL --> API : Saldo suficiente
+API -> DB : Registrar solicitud retiro
+API -> FE : Retiro en proceso
+
 @enduml

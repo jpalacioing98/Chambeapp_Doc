@@ -1,5 +1,5 @@
 @startuml
-title ChambeApp - Modelo de Datos (Entidades Clave)
+title ChambeApp - Modelo de Datos (v2.0 - Con Billetera Virtual)
 
 entity User {
   * id
@@ -36,7 +36,6 @@ entity Order {
   * service_id
   * proveedor_id
   estado
-  escrow_status
   creado_en
 }
 
@@ -83,12 +82,65 @@ entity LegalAcceptance {
   ip
 }
 
+entity Wallet {
+  * id
+  * user_id
+  saldo
+  saldo_bloqueado
+  created_at
+  updated_at
+}
+
+entity Coin {
+  * id
+  * user_id
+  cantidad
+  tipo
+  vence_en
+  created_at
+}
+
+entity Transaction {
+  * id
+  * wallet_id
+  tipo
+  monto
+  descripcion
+  referencia
+  created_at
+}
+
+entity Modalidad {
+  * id
+  * service_id
+  tipo
+  monedas_requeridas
+  created_at
+}
+
+entity Milestone {
+  * id
+  * order_id
+  numero
+  descripcion
+  monto
+  estado
+  aprobado_en
+  created_at
+}
+
 User ||--|| Profile
 User ||--o{ Service : "publica"
 User ||--o{ Subscription
 User ||--o{ Rating : "emite/recibe"
+User ||--|| Wallet
+User ||--o{ Coin
 Service ||--o| Order
+Service ||--o| Modalidad
 Order ||--|| Payment
 Order ||--o{ Dispute
+Order ||--o{ Milestone
 User ||--o{ LegalAcceptance
+Wallet ||--o{ Transaction
+
 @enduml

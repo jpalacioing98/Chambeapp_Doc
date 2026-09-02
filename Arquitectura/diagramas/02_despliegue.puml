@@ -29,7 +29,7 @@ PWA --> WPP : suscripcion push
 FL --> SCH
 FL --> RC
 CW --> RC
-CW --> MP : pagos escrow
+CW --> MP : pagos
 CW --> WPP : notificaciones
 FL --> OBJ : assets 3D
 @enduml

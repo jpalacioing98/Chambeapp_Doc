@@ -4,31 +4,11 @@
 
 ChambeApp es una plataforma digital para la contratación de servicios laborales ocasionales en Valledupar, Colombia, diseñada para conectar proveedores de servicios con solicitantes mediante tecnología inteligente (IA y visualización 3D). El objetivo principal es reducir la informalidad laboral (55%+) ofreciendo herramientas de trazabilidad de ingresos y formalización progresiva.
 
-Este documento presenta un **modelo de monetización híbrido** que combina múltiples fuentes de ingresos para garantizar sostenibilidad financiera mientras se mantiene accesible para el mercado objetivo (trabajadores informales).
+Este documento presenta un **modelo de monetización con billetera virtual** que combina comisiones por transacción, sistema de monedas y servicios de valor agregado para garantizar sostenibilidad financiera mientras se mantiene accesible para el mercado objetivo (trabajadores informales).
 
 ---
 
-## 2. Contexto del Mercado
-
-### 2.1 Problemática
-
-- **55%+** de la población ocupada en Colombia está en informalidad
-- Valledupar es una de las ciudades con mayor índice de informalidad
-- Millions de trabajadores no cuentan con seguridad social ni estabilidad laboral
-- Mercado objetivo sensible a precios
-
-### 2.2 Características del Usuario
-
-| Tipo de Usuario | Perfil | Sensibilidad al Precio |
-|-----------------|--------|----------------------|
-| Proveedor de servicio | Trabajador informal, busca empleo ocasional | Alta |
-| Solicitante | Persona natural o negocio pequeño | Media |
-
----
-
-## 3. Modelo de Monetización Híbrido
-
-### 3.1 Filosofía del Modelo
+## 2. Filosofía del Modelo
 
 Dado que el mercado objetivo son trabajadores informales con ingresos variables y sensibles a precios, el modelo de monetización debe:
 
@@ -37,317 +17,474 @@ Dado que el mercado objetivo son trabajadores informales con ingresos variables 
 3. **Ofrecer valor agregado** que justifique el pago
 4. **Escalar con el crecimiento** de la plataforma
 
----
+### 2.1 Principios Clave
 
-## 4. Fuente de Ingresos #1: Comisiones por Transacción
-
-### 4.1 Estructura de Comisiones
-
-| Tipo de Usuario | Tarifa | Base de Cálculo |
-|-----------------|--------|-----------------|
-| Proveedor de servicio | **12%** | Valor del servicio |
-| Solicitante | **8%** | Valor del servicio |
-
-### 4.2 Justificación
-
-- **Proveedor (12%)**: Asume la mayor parte de la comisión porque el solicitante (especialmente negocios pequeños) es sensible a precios adicionales
-- **Solicitante (8%)**: Incentiva a más solicitantes a publicar servicios
-- **Tarifa combinada (20%)**: Within industry standards para marketplaces (10-30%)
-
-### 4.3 Ejemplo Práctico
-
-| Concepto | Ejemplo |
-|----------|---------|
-| Valor del servicio | $200.000 COP |
-| Comisión proveedor (12%) | $24.000 COP |
-| Comisión solicitante (8%) | $16.000 COP |
-| **Total plataforma** | **$40.000 COP** |
-| Ingreso neto proveedor | $176.000 COP |
-
-### 4.4 Consideraciones
-
-- **Exención para trabajos menores a $50.000**: No se cobra comisión en micro-servicios para incentivar volumen
-- **Descuentos por volumen**: 10% de descuento en comisión si el proveedor completa +10 servicios/mes
-- **Promociones iniciales**: 0% comisión los primeros 3 meses para nuevos proveedores
+| Principio | Descripción |
+|-----------|-------------|
+| **Sin fricción de entrada** | Publicar y ofertar son gratuitos por defecto |
+| **Comisión solo al éxito** | Solo se cobra cuando el servicio se completa |
+| **Precios en pesos** | Nunca mostrar porcentajes, siempre montos netos |
+| **Transparencia total** | El usuario siempre sabe cuánto recibirá |
 
 ---
 
-## 5. Fuente de Ingresos #2: Suscripciones Premium
+## 3. Billetera Virtual
 
-### 5.1 Planes Disponibles
+### 3.1 Concepto
 
-| Plan | Precio Mensual (COP) | Público Objetivo |
-|------|---------------------|------------------|
-| Básico | $15.000 | Proveedores que inician |
-| Profesional | $35.000 | Proveedores establecidos |
-| Empresa | $75.000 | Empresas y equipos |
+La billetera virtual es el corazón del sistema de pagos. Cada usuario tiene una billetera donde recibe saldos, paga comisiones y gestiona monedas internas.
 
-### 5.2 Comparación de Beneficios
+### 3.2 Puntos Críticos de Seguridad
 
-| Beneficio | Básico | Profesional | Empresa |
-|-----------|--------|-------------|---------|
-| Perfil básico | ✓ | ✓ | ✓ |
-| Postulaciones/mes | 5 | Ilimitadas | Ilimitadas |
-| Perfil destacado en búsquedas | - | ✓ | ✓ |
-| Analytics básicos | - | ✓ | ✓ |
-| Analytics avanzados | - | - | ✓ |
-| Gestión de equipos | - | - | ✓ |
-| Múltiples cuentas de usuario | - | - | ✓ |
-| Soporte prioritario | - | - | ✓ |
-| Badgesverificados | - | 2 | 5 |
+| Punto Crítico | Descripción |
+|---------------|-------------|
+| **Cifrado de extremo a extremo** | Todos los datos financieros cifrados AES-256 |
+| **Cumplimiento PCI-DSS** | Estándares de seguridad para datos de tarjetas |
+| **Autenticación multifactor** | Requerida para transacciones financieras |
+| **Auditoría completa** | Registro inmutable de todas las operaciones |
 
-### 5.3 Justificación del Precio
+### 3.3 Sincronización y Conciliación
 
-- **Básico ($15.000)**: Equivalente a ~1 hora de trabajo informal. Accesible para usuarios que probarán la plataforma
-- **Profesional ($35.000)**: Para proveedores que generan ingresos regulares. Se recupera en 1-2 servicios
-- **Empresa ($75.000)**: Para pequeñas empresas que contratan servicios frecuentemente. Incluye herramientas de gestión
+| Característica | Descripción |
+|----------------|-------------|
+| **Saldo en tiempo real** | Actualización instantánea tras cada transacción |
+| **Conciliación automática** | Sincronización con pasarelas (Nequi, etc.) |
+| **Registro de transacciones** | Historial completo con estados |
+| **Reportes de cuadre** | Herramientas para verificar consistencia |
 
-### 5.4 Conversión Esperada
+### 3.4 Política Restrictiva de Canje
 
-| Métrica | Año 1 | Año 3 |
-|---------|-------|-------|
-| Proveedores activos | 500 | 5.000 |
-| % con suscripción Premium | 10% | 25% |
-| Ingresos mensuales suscripciones | $3.5M | $43.75M |
+> **REGLA ESTRICTA:** Las monedas o saldo promocional **NO son reembolsables** en efectivo bajo ningún motivo.
+
+| Escenario | Política |
+|-----------|----------|
+| Cierre de cuenta | Saldo promocional se pierde |
+| Error de compra | No hay reembolso en efectivo |
+| Promociones | Monedas ganadas no son canjeables |
+| Excepción | Solo saldo depositado por el usuario puede retirarse |
+
+### 3.5 Billetera Simétrica
+
+La billetera tiene **interfaz y funcionalidad idéntica** tanto para solicitantes como para prestadores de servicios (PDS):
+
+| Característica | Solicitante | PDS |
+|----------------|-------------|-----|
+| Ver saldo | ✓ | ✓ |
+| Recibir pagos | ✓ | ✓ |
+| Realizar pagos | ✓ | ✓ |
+| Historial | ✓ | ✓ |
+| Retiros | ✓ | ✓ |
+
+### 3.6 Comisión Directa al Prestador
+
+**Mecanismo de cobro:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              FLUJO DE COMISIÓN                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  1. Servicio completado                                 │
+│           ↓                                             │
+│  2. Solicitante confirma (o auto-confirmación 48h)      │
+│           ↓                                             │
+│  3. Sistema calcula comisión                            │
+│           ↓                                             │
+│  4. Comisión se DESCUENTA de billetera del PDS          │
+│           ↓                                             │
+│  5. PDS recibe monto neto en su billetera               │
+│           ↓                                             │
+│  6. PDS puede retirar a cuenta bancaria                 │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Ventaja tributaria:** La plataforma NO maneja los fondos del servicio principal, solo retiene la comisión. Esto reduce exposición tributaria y legal.
 
 ---
 
-## 6. Fuente de Ingresos #3: Servicios de Valor Agregado
+## 4. Modalidades de Cobro
 
-### 6.1 Catálogo de Servicios
+### 4.1 Modalidad A: Con Comisión (Predeterminada)
 
-| Servicio | Precio (COP) | Descripción |
-|----------|--------------|-------------|
-| **Certificado de ingresos** | $25.000/unidad | Documento oficial para trámites bancarios, declaraciones de renta,rentas. Incluye historial de ingresos verificado por la plataforma. |
-| **Verificación express** | $20.000 | Acelera el proceso de verificación de identidad de 48h a 4h. |
-| **Destacado en búsquedas** | $10.000/día | El servicio aparece en las primeras posiciones por 24 horas. |
-| **Badge de habilidad** | $15.000/badge | Certificaciones adicionales verificadas (ej: "Electricista Certificado", "Jardinero Profesional"). |
-| **Portafolio visual** | $8.000/mes | Galería de fotos de trabajos anteriores visible en el perfil. |
-| **Notificaciones push ilimitadas** | $5.000/mes | Recibe notificaciones instantáneas de nuevos servicios. |
+| Etapa | Acción | Costo |
+|-------|--------|-------|
+| **Publicación** | Solicitante publica solicitud | **$0** |
+| **Oferta** | PDS se postula | **$0** |
+| **Servicio** | Se realiza el trabajo | **$0** |
+| **Liquidación** | Servicio completado | **Comisión del PDS** |
 
-### 6.2 Certificado de Ingresos - Detalle
+**Ejemplo:**
+```
+Servicio: Plomería - $100.000 COP
+Comisión PDS (12%): $12.000 COP
+Solicitante paga: $100.000 COP
+PDS recibe: $88.000 COP
+Plataforma retiene: $12.000 COP
+```
 
-Este es el servicio con mayor potencial de ingresos porque:
+### 4.2 Modalidad B: Sin Comisión
 
-- **Demanda alta**: Los trabajadores informales necesitandocumentos para acceder a créditos bancarios, arrendar vivienda, etc.
-- **Alto valor percibido**: $25.000 COP es barato comparado con lo que cuesta obtener un certificado tradicional
-- **Margen alto**: Costo marginal casi cero (el sistema ya tiene los datos)
-- **Recurrente**: Pueden necesitarlo varias veces al año
+| Etapa | Acción | Costo |
+|-------|--------|-------|
+| **Publicación** | Solicitante publica solicitud | **$0** |
+| **Oferta** | PDS se postula | **Monedas internas** |
+| **Servicio** | Se realiza el trabajo | **$0** |
+| **Liquidación** | Servicio completado | **$0 de comisión** |
 
-**Contenido del certificado**:
-- Nombre completo del proveedor
-- Historial de ingresos (últimos 12 meses)
-- Promedio mensual
-- Servicios completados
-- Calificación promedio
-- Verificación de identidad
+**Ejemplo:**
+```
+Servicio: Plomería - $100.000 COP
+Monedas para ofertar: 50 monedas
+Solicitante paga: $100.000 COP
+PDS recibe: $100.000 COP (sin descuento)
+Plataforma retiene: $0
+```
+
+### 4.3 Comparativa de Modalidades
+
+| Aspecto | Modalidad A (Con Comisión) | Modalidad B (Sin Comisión) |
+|---------|---------------------------|---------------------------|
+| **Publicar** | Gratis | Gratis |
+| **Ofertar** | Gratis | Pago con monedas |
+| **Comisión final** | 12% del servicio | 0% |
+| **Ideal para** | Usuarios ocasionales | Usuarios frecuentes |
+| **Ingreso plataforma** | Por transacción | Por venta de monedas |
 
 ---
 
-## 7. Integración de Pagos
+## 5. Matriz de Coexistencia
 
-### 7.1 Pasarelas Integradas
+Cuando el solicitante y el prestador tienen configuraciones de cobro distintas, el sistema resuelve el conflicto bajo las siguientes reglas:
+
+### 5.1 Regla General: Predominio del Creador
+
+> **La modalidad del servicio la determina EL SOLICITANTE al publicar.**
+
+| Escenario | Resultado |
+|-----------|-----------|
+| Solicitante publica "Con Comisión" | PDS ofertará bajo regla de comisión |
+| Solicitante publica "Sin Comisión" | PDS debe pagar monedas para ofertar |
+
+### 5.2 Opción Flex / Filtro de Preferencia
+
+El PDS puede **filtrar en su feed** qué tipo de ofertas desea ver:
+
+| Filtro | Descripción |
+|--------|-------------|
+| **Todas** | Muestra publicaciones de ambos tipos |
+| **Solo Con Comisión** | Solo publicaciones donde no paga monedas |
+| **Solo Sin Comisión** | Solo publicaciones donde paga monedas (0% comisión) |
+
+### 5.3 Notificación de Transición
+
+Si un PDS configurado "Sin Comisión" entra a una publicación "Con Comisión", el sistema le notificará:
+
+> ⚠️ **"Esta solicitud aplica comisión al finalizar la labor. No se descontarán monedas de publicación."**
+
+El PDS puede decidir:
+- **Aceptar** y ofertar bajo modalidad A
+- **Rechazar** y buscar otra publicación
+
+---
+
+## 6. Sistema de Monedas
+
+### 6.1 Tipos de Monedas
+
+| Tipo | Origen | Características |
+|------|--------|-----------------|
+| **Compradas** | Compra con dinero real | Retirables, sin vencimiento |
+| **Promocionales** | Bonificaciones, eventos | No retirables, con vencimiento |
+| **Ganadas** | Completar servicios | No retirables, sin vencimiento |
+
+### 6.2 Precios de Monedas
+
+| Paquete | Precio (COP) | Monedas | Bonus |
+|---------|--------------|---------|-------|
+| Básico | $5.000 | 50 | - |
+| Estándar | $15.000 | 150 | +10% |
+| Premium | $30.000 | 350 | +17% |
+
+### 6.3 Uso de Monedas
+
+| Acción | Costo en Monedas |
+|--------|------------------|
+| Ofertar en solicitud "Sin Comisión" | 50 monedas |
+| Destacar perfil (1 día) | 20 monedas |
+| Enviar mensaje prioritario | 10 monedas |
+| Desbloquear chat | 5 monedas |
+
+---
+
+## 7. Reglas de Negocio
+
+### 7.1 Exención para Trabajos Menores
+
+| Valor del Servicio | Comisión |
+|-------------------|----------|
+| Menor a $50.000 COP | **0%** (exento) |
+| $50.000 o más | **12%** PDS |
+
+### 7.2 Descuentos por Volumen
+
+| Servicios completados/mes | Descuento en comisión |
+|--------------------------|----------------------|
+| 1-5 servicios | 0% |
+| 6-10 servicios | 5% |
+| 11-20 servicios | 10% |
+| +20 servicios | 15% |
+
+### 7.3 Promociones Iniciales
+
+| Período | Beneficio |
+|---------|-----------|
+| Primeros 3 meses nuevos PDS | 0% comisión |
+| Primeros 100 solicitantes | 50 monedas gratis |
+| Referidos exitosos | 25 monedas por referido |
+
+---
+
+## 8. Herramientas Complementarias
+
+### 8.1 Sistema de Precios Sugeridos
+
+**Funcionamiento:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              ASISTENTE DE PRECIOS                       │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Solicitante selecciona categoría: "Plomería"           │
+│           ↓                                             │
+│  Sistema consulta precios históricos:                   │
+│    - Mínimo: $30.000                                    │
+│    - Promedio: $75.000                                  │
+│    - Máximo: $150.000                                   │
+│           ↓                                             │
+│  Sugiere: "El precio promedio es $75.000"               │
+│           ↓                                             │
+│  Si el usuario pone $20.000:                            │
+│    ⚠️ "Este precio está muy bajo. Podría afectar        │
+│        la calidad del servicio."                        │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 8.2 Hitos de Pago (Milestones)
+
+Para **contratos de larga duración** (quincenales, mensuales o por avance):
+
+| Paso | Acción | Sistema |
+|------|--------|---------|
+| 1 | Solicitante crea hitos | Define entregas parciales |
+| 2 | PDS completa un hito | Notifica al solicitante |
+| 3 | Solicitante aprueba | Libera pago parcial |
+| 4 | Comisión se descuenta | Proporcional al hito |
+| 5 | Repite hasta completar | Hasta finalizar contrato |
+
+**Ejemplo:**
+```
+Contrato mensual: $400.000 COP
+Hitos: 4 semanales de $100.000
+
+Semana 1: Aprobado → PDS recibe $88.000 (comisión $12.000)
+Semana 2: Aprobado → PDS recibe $88.000 (comisión $12.000)
+Semana 3: Pendiente...
+Semana 4: Pendiente...
+```
+
+### 8.3 Dashboard Operativo
+
+El PDS tiene acceso a un panel con:
+
+| Métrica | Descripción |
+|---------|-------------|
+| **Saldo disponible** | Monto disponible para retiro |
+| **Ingresos del mes** | Total ganado en el período |
+| **Comisiones descontadas** | Total de comisiones pagadas |
+| **Servicios completados** | Cantidad de trabajos finalizados |
+| **Historial de transacciones** | Detalle de cada operación |
+| **Cuentas de cobro** | Facturas generadas automáticamente |
+
+---
+
+## 9. Integración de Pagos
+
+### 9.1 Pasarelas Integradas
 
 | Pasarela | Uso | Ventajas |
 |----------|-----|----------|
-| **MercadoPago** | Pagos principales | Amplia adopción en Colombia, múltiples métodos de pago |
-| **PSE** | Transferencias bancarias | Sin costo adicional para el usuario |
-| **Transferencias directas** | Retiros de proveedores | Para usuarios sin tarjetas |
+| **Nequi** | Pagos y retiros | Principal en Colombia, baja comisión |
+| **PSE** | Transferencias bancarias | Sin costo adicional |
+| **Efectivo** | Pago en puntos autorizados | Para usuarios sin cuenta |
 
-### 7.2 Flujo de Pagos
+### 9.2 Flujo de Pagos Completo
 
 ```
-1. Solicitante acepta servicio
-2. Selecciona método de pago
-3. Sistema genera orden de pago
-4. Pasarela procesa transacción
-5. Confirmación → Plataforma retiene comisión
-6. Monto neto → Proveedor
-7. Proveedor puede solicitar retiro
+┌─────────────────────────────────────────────────────────┐
+│              FLUJO DE PAGOS COMPLETO                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  SOLICITANTE                                            │
+│  ────────────                                           │
+│  1. Publica solicitud (gratis)                          │
+│  2. Espera ofertas                                      │
+│  3. Acepta PDS                                          │
+│  4. Servicio se realiza                                 │
+│  5. Confirma completado                                 │
+│  6. Pago se procesa                                     │
+│           ↓                                             │
+│  SISTEMA                                                │
+│  ────────                                               │
+│  7. Verifica servicio completado                        │
+│  8. Calcula comisión (si aplica)                        │
+│  9. Descuenta de billetera PDS                          │
+│  10. Transfiere saldo neto a PDS                        │
+│  11. Registra transacción                               │
+│           ↓                                             │
+│  PDS                                                    │
+│  ───                                                    │
+│  12. Recibe notificación                                │
+│  13. Ve saldo en billetera                              │
+│  14. Solicita retiro (opcional)                         │
+│  15. Recibe dinero en cuenta                            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### 7.3 Costos de Pasarela
+### 9.3 Costos de Pasarela
 
 | Pasarela | Costo por transacción |
-|----------|---------------------|
-| MercadoPago | 2.99% + $800 COP |
+|----------|----------------------|
+| Nequi | 1.5% + $500 COP |
 | PSE | 1.99% + $500 COP |
 
 ---
 
-## 8. Análisis de Unit Economics
+## 10. Fuentes de Ingresos
 
-### 8.1 Métricas Clave
+### 10.1 Resumen de Fuentes
 
-| Métrica | Definición | Objetivo Año 1 | Objetivo Año 3 |
-|---------|------------|----------------|----------------|
-| **CAC** (Costo de Adquisición) | Gasto marketing / usuarios nuevos | $8.000 COP | $5.000 COP |
-| **CLV** (Lifetime Value) | Ingresos promedio por usuario activo | $120.000 COP | $350.000 COP |
-| **LTV:CAC Ratio** | Relación valor-vida vs adquisición | 3:1 | 5:1 |
-| **Churn Rate** | % usuarios que se van mensual | 8% | 4% |
-| **Gross Margin** | Margen bruto por transacción | 60% | 75% |
+| Fuente | Descripción | % Ingresos Esperado |
+|--------|-------------|---------------------|
+| **Comisiones** | Por servicio completado | 50% |
+| **Monedas** | Venta de monedas internas | 25% |
+| **Suscripciones** | Planes Premium | 15% |
+| **Valor Agregado** | Certificados, destacados | 10% |
 
-### 8.2 Cálculo de LTV
+### 10.2 Suscripciones Premium
 
-**Supuestos Año 1**:
-- Ingreso promedio por proveedor/mes: $20.000 COP (comisiones + suscripciones)
-- Meses de actividad promedio: 6 meses
-- **CLV = $20.000 × 6 = $120.000 COP**
+| Plan | Precio Mensual (COP) | Beneficios |
+|------|---------------------|------------|
+| **Básico** | $15.000 | 5 postulaciones/mes, perfil básico |
+| **Profesional** | $35.000 | Postulaciones ilimitadas, perfil destacado |
 
-**Supuestos Año 3**:
-- Ingreso promedio por proveedor/mes: $50.000 COP
-- Meses de actividad promedio: 7 meses
-- **CLV = $50.000 × 7 = $350.000 COP**
+### 10.3 Servicios de Valor Agregado
 
-### 8.3 Punto de Equilibrio
+| Servicio | Precio (COP) |
+|----------|--------------|
+| Certificado de ingresos | $25.000 |
+| Verificación express | $20.000 |
+| Destacado en búsquedas | $10.000/día |
+| Badge de habilidad | $15.000 |
+
+---
+
+## 11. Análisis de Unit Economics
+
+### 11.1 Métricas Clave
+
+| Métrica | Objetivo Año 1 | Objetivo Año 3 |
+|---------|----------------|----------------|
+| **CAC** | $8.000 COP | $5.000 COP |
+| **LTV** | $120.000 COP | $350.000 COP |
+| **LTV:CAC** | 3:1 | 5:1 |
+| **Churn Rate** | 8% | 4% |
+| **Gross Margin** | 60% | 75% |
+
+### 11.2 Punto de Equilibrio
 
 | Concepto | Valor |
 |----------|-------|
-| Costo mensual de operación (estimado) | $8.000.000 COP |
-| Ingreso promedio por usuario activo/mes | $20.000 COP |
-| **Usuarios activos necesarios** | **400 proveedores** |
+| Costo mensual operación | $8.000.000 COP |
+| Ingreso promedio/usuario/mes | $20.000 COP |
+| **Usuarios necesarios** | **400** |
 
 ---
 
-## 9. Proyección Financiera
+## 12. Proyección Financiera
 
-### 9.1 Escenario Conservador (Año 1)
+### 12.1 Escenario Conservador (Año 1)
 
-| Fuente de Ingresos | Volumen Estimado | Ingresos (COP) |
-|-------------------|------------------|----------------|
-| **Comisiones transacciones** | 500 proveedores × 4 servicios/mes × $200.000 × 20% | $80.000.000 |
-| **Suscripciones Premium** | 100 usuarios × $25.000/mes × 12 meses | $30.000.000 |
-| **Certificados de ingresos** | 200 unidades × $25.000 | $5.000.000 |
-| **Destacados y badges** | 500 compras × $10.000 | $5.000.000 |
-| **Ingresos totales** | | **$120.000.000 COP** |
-| Costos operativos (servidores, pasarela, etc.) | | ($36.000.000) |
-| **Utilidad bruta** | | **$84.000.000 COP** |
+| Fuente | Volumen | Ingresos (COP) |
+|--------|---------|----------------|
+| Comisiones | 500 PDS × 4 × $200K × 12% | $48.000.000 |
+| Monedas | 1.000 compras × $15.000 | $15.000.000 |
+| Suscripciones | 100 × $25.000 × 12 | $30.000.000 |
+| Valor Agregado | 500 × $20.000 | $10.000.000 |
+| **Total** | | **$103.000.000** |
 
-### 9.2 Escenario Optimista (Año 3)
+### 12.2 Escenario Optimista (Año 3)
 
-| Fuente de Ingresos | Volumen Estimado | Ingresos (COP) |
-|-------------------|------------------|----------------|
-| **Comisiones transacciones** | 5.000 proveedores × 6 servicios/mes × $200.000 × 20% | $1.440.000.000 |
-| **Suscripciones Premium** | 1.500 usuarios × $40.000/mes × 12 meses | $720.000.000 |
-| **Certificados de ingresos** | 3.000 unidades × $25.000 | $75.000.000 |
-| **Destacados y badges** | 10.000 compras × $10.000 | $100.000.000 |
-| **Ingresos totales** | | **$2.335.000.000 COP** |
-| Costos operativos | | ($466.000.000) |
-| **Utilidad bruta** | | **$1.869.000.000 COP** |
-
-### 9.3 Proyección de Crecimiento
-
-| Año | Proveedores Activos | Ingresos (COP) | Utilidad (COP) |
-|-----|--------------------|----------------|-----------------|
-| 1 | 500 | $120M | $84M |
-| 2 | 2.000 | $500M | $350M |
-| 3 | 5.000 | $2.335M | $1.869M |
+| Fuente | Volumen | Ingresos (COP) |
+|--------|---------|----------------|
+| Comisiones | 5.000 PDS × 6 × $200K × 12% | $720.000.000 |
+| Monedas | 10.000 × $20.000 | $200.000.000 |
+| Suscripciones | 1.500 × $40.000 × 12 | $720.000.000 |
+| Valor Agregado | 5.000 × $25.000 | $125.000.000 |
+| **Total** | | **$1.765.000.000** |
 
 ---
 
-## 10. KPIs de Monitoreo
+## 13. KPIs de Monitoreo
 
-### 10.1 KPIs de Negocio
+### 13.1 KPIs de Negocio
 
-| KPI | Fórmula | Frecuencia | Meta |
-|-----|---------|------------|------|
-| **Take rate** | Ingresos / Valor total transacciones | Mensual | 18-22% |
-| **Net revenue retention** | Ingresos recurrentes / Mes anterior | Mensual | >95% |
-| **Gross margin** | (Ingresos - Costos) / Ingresos | Mensual | >65% |
-| **Payback period** | CAC / (Ingresos/mes) | Mensual | <6 meses |
-| **Customer LTV** | Ingresos acumulados / Usuario | Trimestral | >$100K |
+| KPI | Fórmula | Meta |
+|-----|---------|------|
+| **Take rate** | Ingresos / Valor transacciones | 15-20% |
+| **Net revenue retention** | Ingresos recurrentes mes anterior | >95% |
+| **Gross margin** | (Ingresos - Costos) / Ingresos | >65% |
 
-### 10.2 KPIs de Producto
+### 13.2 KPIs de Producto
 
-| KPI | Descripción | Meta |
-|-----|-------------|------|
-| **Transactions per user** | Promedio de servicios por proveedor/mes | >3 |
-| **Premium conversion** | % usuarios free que upgrade a premium | >10% |
-| **Certificate request rate** | % proveedores que compran certificados | >15% |
-| **Featured adoption** | % servicios que pagan por destacado | >20% |
-
-### 10.3 KPIs de Experiencia
-
-| KPI | Descripción | Meta |
-|-----|-------------|------|
-| **NPS** | Net Promoter Score | >40 |
-| **Ticket resolution time** | Tiempo promedio de soporte | <24h |
-| **Payment success rate** | % transacciones exitosas | >98% |
+| KPI | Meta |
+|-----|------|
+| Transacciones por usuario/mes | >3 |
+| Conversión Premium | >10% |
+| Uso de monedas | >40% PDS |
+| Satisfacción con pagos | >4.5/5 |
 
 ---
 
-## 11. Estrategia de Lanzamiento
+## 14. Factores de Riesgo
 
-### 11.1 Fase 1: Captación (Meses 1-3)
-
-- **Comisión 0%** para los primeros 100 proveedores
-- **Suscripción básica gratis** los primeros 3 meses
-- Marketing en redes sociales y comunidades locales de Valledupar
-
-### 11.2 Fase 2: Monetización (Meses 4-6)
-
-- Introducción gradual de comisiones (5%, luego 10%, luego 20%)
-- Lanzamiento de planes Premium
-- Promociones de certificados de ingresos
-
-### 11.3 Fase 3: Escalamiento (Meses 7-12)
-
-- Expansión a ciudades cercanas (Sincelejo, Riohacha)
-- Funciones empresariales
-- Integraciones con empresas
+| Riesgo | Probabilidad | Mitigación |
+|--------|--------------|------------|
+| Baja adopción de monedas | Media | Promociones, bonificaciones |
+| Evasión de comisiones | Baja | Monitoreo, auditoría |
+| Fraude en billeteras | Baja | KYC, límites, monitoreo |
+| Regulación financiera | Media | Asesoría legal, cumplimiento |
 
 ---
 
-## 12. Factores de Riesgo y Mitigación
+## 15. Conclusión
 
-| Riesgo | Probabilidad | Impacto | Mitigación |
-|--------|--------------|---------|------------|
-| Baja adopción por sensibilidad al precio | Alta | Alto | Modelo freemium, comisiones bajas iniciales |
-| Competencia de plataformas establecidas | Media | Alto | Diferenciación por tecnología IA y 3D |
-| Problemas con pasarelas de pago | Baja | Alto | Multi-pasarela, políticas de reembolso claras |
-| Regulación laboral compleja | Media | Medio | Asesoramiento legal, cumplimiento normativo |
-| Churn alto de usuarios | Alta | Medio | Programas de fidelización, incentivos |
+El modelo de monetización con billetera virtual de ChambeApp es **sostenible y escalable** porque:
 
----
-
-## 13. Recomendaciones
-
-### 13.1 Corto Plazo (0-6 meses)
-
-1. **Priorizar volumen sobre monetización** - Llenar la plataforma de proveedores y servicios
-2. **Lanzar versión gratuita** sin comisiones para validar product-market fit
-3. **Implementar certificados de ingresos** - Alta demanda, alto margen
-4. **Medir NPS constantemente** - La confianza es crítica en marketplaces
-
-### 13.2 Mediano Plazo (6-18 meses)
-
-1. **Introducir suscripciones Premium** cuando haya base de usuarios establecida
-2. **Aumentar comisiones gradualmente** a medida que aumenta el valor percibido
-3. **Expandir a otras ciudades** de la región Caribe
-
-### 13.3 Largo Plazo (18+ meses)
-
-1. **Integraciones empresariales** - Contratos B2B con empresas
-2. **Servicios financieros** - Microcréditos en parceria con entidades financieras
-3. **Expansión nacional** - Ciudades principales de Colombia
-
----
-
-## 14. Conclusión
-
-El modelo de monetización propuesto para ChambeApp es **sostenible y escalable** porque:
-
-1. **Diversifica fuentes de ingresos**: No depende de una sola fuente
-2. **Alinea incentivos**: Las comisiones solo se pagan cuando hay transacción exitosa
-3. **Es accesible**: Los precios están diseñados para el mercado objetivo
-4. **Genera valor real**: Los certificados de ingresos resuelven un problema real
-5. **Es escalable**: Los costos marginales son bajos mientras grows la plataforma
+1. **Sin fricción de entrada**: Publicar y ofertar son gratuitos
+2. **Comisión al éxito**: Solo se cobra cuando hay transacción exitosa
+3. **Flexibilidad**: Modalidades para diferentes perfiles de usuario
+4. **Transparencia**: Precios claros en pesos, sin sorpresas
+5. **Escalable**: Múltiples fuentes de ingresos
 
 La clave del éxito será **equilibrar la monetización con la experiencia del usuario** - too much too soon matará la adopción, mientras que too little restringirá el crecimiento.
 
 ---
 
 *Documento preparado con metodología de Business Analysis*
-*Versión: 1.0*
-*Fecha: Abril 2026*
+*Versión: 2.0 - Nuevo Modelo con Billetera Virtual*
+*Fecha: Septiembre 2026*
 *Proyecto: ChambeApp - Plataforma de Servicios Ocasionales*

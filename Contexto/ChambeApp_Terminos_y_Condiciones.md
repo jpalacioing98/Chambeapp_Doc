@@ -66,7 +66,6 @@ La Plataforma opera bajo un modelo de monetización híbrido diseñado para gara
 Adicional a la cuenta gratuita, La Plataforma ofrece suscripciones mensuales voluntarias:
 * **Plan Básico ($15.000 COP/mes):** Dirigido a proveedores que inician, permite hasta 5 postulaciones al mes.
 * **Plan Profesional ($35.000 COP/mes):** Dirigido a proveedores establecidos, ofrece postulaciones ilimitadas, perfil destacado en búsquedas y analíticas básicas.
-* **Plan Empresa ($75.000 COP/mes):** Dirigido a empresas y equipos, incluye herramientas de gestión de equipos, múltiples cuentas de usuario, analíticas avanzadas y soporte prioritario.
 * **Renovación y Cancelación:** Las suscripciones se renovarán automáticamente cada mes. El usuario podrá cancelar su suscripción en cualquier momento sin lugar a reembolsos por periodos ya facturados.
 
 **7.3. Servicios de Valor Agregado (A la carta)**

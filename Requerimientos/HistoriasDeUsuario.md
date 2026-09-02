@@ -1,9 +1,10 @@
-# Historias de Usuario y Casos de Uso — ChambeApp
+# Historias de Usuario y Casos de Uso — ChambeApp (v2.0)
 
-> Detalle de las historias de usuario y casos de uso derivados de `02_Requerimientos/Requerimientos.md` (RF-01 a RF-17).
+> Detalle de las historias de usuario y casos de uso derivados de `Requerimientos.md` (RF-01 a RF-30).
 > Formato: Historia de Usuario + Criterios de Aceptación (EARS) + Casos de Uso (flujo principal / alternos).
 > **Decisión tecnológica:** Despliegue inicial como **PWA** (no app móvil nativa). Los casos de uso asumen acceso vía navegador/instalación PWA.
-> **Marco legal:** Se incorporan restricciones de `05_Terminos_Condiciones/ChambeApp_Terminos_y_Condiciones.md` (escrow 48h, reembolsos, disputas, Habeas Data, edad 18+, naturaleza de intermediario).
+> **Marco legal:** Se incorporan restricciones de Términos y Condiciones (reembolsos, disputas, Habeas Data, edad 18+, naturaleza de intermediario).
+> **Nuevo modelo:** Incluye billetera virtual, modalidades de cobro y sistema de monedas.
 
 ---
 
@@ -218,9 +219,8 @@
 **HU-11:** Como pds establecido, quiero una suscripción con beneficios, para conseguir más solicitudes.
 
 **Criterios de Aceptación:**
-1. WHEN selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Pro $35k / Empresa $75k).
-2. WHEN Pro/Empresa THEN sistema SHALL dar postulaciones ilimitadas y perfil destacado.
-3. WHEN Empresa THEN sistema SHALL habilitar equipos y múltiples cuentas.
+1. WHEN selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Profesional $35k).
+2. WHEN Profesional THEN sistema SHALL dar postulaciones ilimitadas y perfil destacado.
 4. WHEN prueba 3 meses termina THEN sistema SHALL iniciar cobro.
 5. WHEN cancela THEN sistema SHALL degradar al fin del ciclo.
 
@@ -367,6 +367,296 @@
 
 ---
 
+## RF-22: Sistema de Desbloqueo de Información
+
+**HU-19:** Como PDS, quiero ver la ubicación y contactar al solicitante solo después de que el servicio sea confirmado, para proteger datos sensibles.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante confirma servicio THEN sistema SHALL desbloquear ubicación y chat para PDS
+2. IF servicio no confirmado THEN sistema SHALL mantener datos sensibles ocultos
+3. WHEN servicio cancelado THEN sistema SHALL mantener datos bloqueados
+4. WHEN PDS accede a solicitud THEN sistema SHALL mostrar solo información técnica
+
+**CU-19.1 Desbloquear información (Actor: Sistema)**
+- Flujo principal:
+  1. Solicitante confirma servicio.
+  2. Sistema desbloquea ubicación y chat para PDS.
+  3. PDS puede ver ubicación y contactar al solicitante.
+- Alterno: 1a. Solicitante cancela → información permanece oculta.
+
+---
+
+## RF-23: Confirmación Dual de Finalización
+
+**HU-20:** Como usuario, quiero confirmar la finalización del servicio para que se procese el pago y se califique.
+
+**Criterios de Aceptación:**
+1. WHEN PDS marca servicio como completado THEN sistema SHALL solicitar confirmación al solicitante
+2. WHEN solicitante confirma THEN sistema SHALL cambiar estado a "Completado"
+3. IF solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+4. WHEN ambas partes confirman THEN sistema SHALL habilitar calificaciones y pagos
+
+**CU-20.1 Confirmar finalización (Actor: Solicitante)**
+- Flujo principal:
+  1. PDS marca servicio como "Completado".
+  2. Sistema notifica al solicitante para confirmar.
+  3. Solicitante confirma recepción y satisfacción.
+  4. Sistema cambia estado a "Completado" y habilita pagos/calificaciones.
+- Alterno: 3a. Solicitante no confirma en 48h → sistema libera fondos automáticamente.
+
+---
+
+## RF-24: Gestión de Ofertas
+
+**HU-21:** Como PDS, quiero poder enviar, modificar y rechazar ofertas para gestionar mis postulaciones.
+
+**Criterios de Aceptación:**
+1. WHEN PDS envía oferta THEN sistema SHALL almacenar y notificar al solicitante
+2. WHEN PDS modifica oferta THEN sistema SHALL reemplazar la anterior
+3. WHEN solicitante rechaza oferta THEN sistema SHALL notificar al PDS
+4. IF solicitante cancela solicitud THEN sistema SHALL invalidar todas las ofertas
+
+**CU-21.1 Enviar oferta (Actor: PDS)**
+- Flujo principal:
+  1. PDS recibe notificación de solicitud.
+  2. Revisa detalles técnicos.
+  3. Envía oferta con propuesta (precio, tiempo, descripción).
+  4. Sistema almacena y notifica al solicitante.
+- Alterno: 3a. PDS modifica oferta → sistema reemplaza la anterior.
+
+**CU-21.2 Responder oferta (Actor: Solicitante)**
+- Flujo principal:
+  1. Solicitante revisa ofertas recibidas.
+  2. Selecciona una oferta para aceptar, rechazar o negociar.
+  3. Si acepta → se procede al flujo de confirmación (RF-23).
+  4. Si rechaza → notifica al PDS.
+  5. Si negocia → abre chat con el PDS.
+- Alterno: 4a. Solicitante rechaza todas → sistema relanza notificaciones.
+
+---
+
+## RF-25: Sistema de Billetera Virtual
+
+**HU-22:** Como usuario, quiero tener una billetera virtual para recibir y pagar servicios, para gestionar mis finanzas en la plataforma.
+
+**Criterios de Aceptación:**
+1. WHEN usuario se registra THEN sistema SHALL crear billetera con saldo 0
+2. WHEN PDS completa servicio THEN sistema SHALL descontar comisión de billetera
+3. WHEN usuario solicita retiro THEN sistema SHALL transferir saldo a cuenta bancaria
+4. WHEN saldo insuficiente THEN sistema SHALL bloquear operaciones de pago
+5. WHEN usuario deposita fondos THEN sistema SHALL acreditar saldo en tiempo real
+6. WHEN transacción ocurre THEN sistema SHALL registrar en historial de billetera
+
+**CU-22.1 Consultar billetera (Actor: Usuario)**
+- Flujo principal:
+  1. Accede a "Mi Billetera".
+  2. Visualiza saldo disponible, historial de transacciones.
+  3. Puede solicitar retiro si tiene saldo.
+- Alterno: 3a. Sin saldo → muestra "sin fondos disponibles".
+
+**CU-22.2 Depositar fondos (Actor: Usuario)**
+- Flujo principal:
+  1. Selecciona "Depositar".
+  2. Ingresa monto y método de pago.
+  3. Sistema procesa y acredita saldo.
+- Alterno: 3a. Error en pago → no acredita, notifica error.
+
+**CU-22.3 Retirar fondos (Actor: Usuario)**
+- Flujo principal:
+  1. Selecciona "Retirar".
+  2. Ingresa monto y cuenta destino.
+  3. Sistema procesa transferencia.
+- Alterno: 3a. Monto mínimo $10.000 → error. 3b. Sin saldo → bloqueado.
+
+---
+
+## RF-26: Modalidad de Cobro
+
+**HU-23:** Como solicitante, quiero elegir la modalidad de cobro al publicar, para controlar mis costos.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante publica THEN sistema SHALL ofrecer elegir "Con Comisión" o "Sin Comisión"
+2. WHEN elige "Sin Comisión" THEN sistema SHALL requerir pago en monedas
+3. WHEN publica "Con Comisión" THEN sistema SHALL marcar solicitud como modalidad A
+4. WHEN publica "Sin Comisión" THEN sistema SHALL marcar solicitud como modalidad B
+5. WHEN PDS ve solicitud THEN sistema SHALL mostrar modalidad aplicable
+
+**CU-23.1 Seleccionar modalidad (Actor: Solicitante)**
+- Flujo principal:
+  1. Al crear solicitud, sistema muestra opciones de modalidad.
+  2. Solicitante elige "Con Comisión" o "Sin Comisión".
+  3. Si elige "Sin Comisión" → sistema verifica monedas suficientes.
+  4. Sistema publica solicitud con modalidad seleccionada.
+- Alterno: 3a. Sin monedas suficientes → error, sugiere cambiar modalidad.
+
+**CU-23.2 Ver modalidad en solicitud (Actor: PDS)**
+- Flujo principal:
+  1. PDS accede a solicitud.
+  2. Sistema muestra modalidad aplicable (A o B).
+  3. Si modalidad B → sistema muestra costo en monedas.
+- Alterno: 3a. PDS no tiene monedas → puede ver pero no ofertar.
+
+---
+
+## RF-27: Sistema de Monedas
+
+**HU-24:** Como usuario, quiero comprar monedas para usar en pagos de servicios.
+
+**Criterios de Aceptación:**
+1. WHEN usuario compra monedas THEN sistema SHALL procesar pago y acreditar
+2. WHEN usuario usa monedas THEN sistema SHALL descontar del saldo
+3. WHEN monedas son promocionales THEN sistema SHALL marcar como no reembolsables
+4. WHEN monedas expiran THEN sistema SHALL descontar automáticamente
+5. WHEN usuario ve monedas THEN sistema SHALL mostrar saldo y tipo
+
+**CU-24.1 Comprar monedas (Actor: Usuario)**
+- Flujo principal:
+  1. Accede a "Tienda de Monedas".
+  2. Selecciona paquete (Básico $5k/50, Estándar $15k/150, Premium $30k/350).
+  3. Paga y recibe monedas acreditadas.
+- Alterno: 3a. Error de pago → no acredita, notifica error.
+
+**CU-24.2 Usar monedas (Actor: PDS)**
+- Flujo principal:
+  1. PDS ve solicitud "Sin Comisión".
+  2. Oferta usando monedas (50 monedas).
+  3. Sistema descuenta del saldo de monedas.
+- Alterno: 2a. Sin monedas suficientes → bloqueado, sugiere comprar.
+
+**CU-24.3 Ver historial de monedas (Actor: Usuario)**
+- Flujo principal:
+  1. Accede a "Mis Monedas".
+  2. Visualiza saldo por tipo (compradas, promocionales, ganadas).
+  3. Ve historial de transacciones de monedas.
+- Alterno: 3a. Sin movimientos → "sin transacciones".
+
+---
+
+## RF-28: Precios Sugeridos
+
+**HU-25:** Como solicitante, quiero ver precios sugeridos para mi solicitud, para publicar a precio justo.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante crea solicitud THEN sistema SHALL mostrar precio promedio de mercado
+2. WHEN solicitud tiene categoría THEN sistema SHALL sugerir rango de precio
+3. WHEN precio es muy bajo THEN sistema SHALL advertir sobre subcotización
+4. WHEN precio es muy alto THEN sistema SHALL mostrar advertencia de sobreprecio
+5. WHEN usuario ajusta precio THEN sistema SHALL recalcular sugerencia
+
+**CU-25.1 Ver precios sugeridos (Actor: Solicitante)**
+- Flujo principal:
+  1. Al crear solicitud, sistema muestra precios sugeridos por categoría.
+  2. Muestra mínimo, promedio, máximo de mercado.
+  3. Si precio actual es bajo → advierte "precio muy bajo para la calidad".
+- Alterno: 3a. Sin datos históricos → muestra "sin referencia de mercado".
+
+**CU-25.2 Ajustar precio según sugerencia (Actor: Solicitante)**
+- Flujo principal:
+  1. Solicitante ve sugerencia.
+  2. Ajusta precio basado en recomendación.
+  3. Sistema recalcula si es necesario.
+- Alterno: 2a. No ajusta → mantiene precio original con advertencia.
+
+---
+
+## RF-29: Hitos de Pago
+
+**HU-26:** Como usuario, quiero dividir el pago en hitos para servicios de larga duración.
+
+**Criterios de Aceptación:**
+1. WHEN contrato es largo THEN sistema SHALL habilitar hitos
+2. WHEN solicitante aprueba entrega THEN sistema SHALL liberar pago parcial
+3. WHEN hito se aprueba THEN sistema SHALL descontar comisión proporcional
+4. WHEN hito es rechazado THEN sistema SHALL congelar pago de ese hito
+5. WHEN todos los hitos aprueban THEN sistema SHALL completar contrato
+
+**CU-26.1 Crear hitos (Actor: Solicitante)**
+- Flujo principal:
+  1. Al crear contrato largo, sistema sugiere dividir en hitos.
+  2. Solicitante define cantidad de hitos y montos.
+  3. Sistema crea hitos con estados pendientes.
+- Alterno: 2a. No define hitos → sistema usa 1 hito único.
+
+**CU-26.2 Aprobar hito (Actor: Solicitante)**
+- Flujo principal:
+  1. PDS completa entrega de hito.
+  2. Sistema notifica al solicitante.
+  3. Solicitante aprueba → sistema libera pago parcial.
+- Alterno: 3a. Rechaza → congelar pago, abrir disputa.
+
+**CU-26.3 Ver progreso de hitos (Actor: Usuario)**
+- Flujo principal:
+  1. Accede a "Mis Contratos".
+  2. Ve lista de hitos con estados (pendiente, aprobado, rechazado).
+  3. Ve pagos liberados y pendientes.
+- Alterno: 3a. Sin hitos → muestra contrato único.
+
+---
+
+## RF-30: Dashboard Operativo
+
+**HU-27:** Como PDS, quiero ver mi historial de cobros y comisiones, para controlar mis finanzas.
+
+**Criterios de Aceptación:**
+1. WHEN PDS accede a dashboard THEN sistema SHALL mostrar historial
+2. WHEN filtra por periodo THEN sistema SHALL mostrar cobros del rango
+3. WHEN solicita reporte THEN sistema SHALL generar PDF con detalle
+4. WHEN PDS ve saldo THEN sistema SHALL mostrar disponible para retiro
+5. WHEN hay transacciones THEN sistema SHALL mostrar comisiones descontadas
+
+**CU-27.1 Ver dashboard de cobros (Actor: PDS)**
+- Flujo principal:
+  1. Accede a "Dashboard Operativo".
+  2. Ve resumen: saldo disponible, ingresos del mes, comisiones pagadas.
+  3. Ve historial de transacciones.
+- Alterno: 2a. Sin transacciones → "sin movimientos".
+
+**CU-27.2 Filtrar por periodo (Actor: PDS)**
+- Flujo principal:
+  1. Selecciona rango de fechas.
+  2. Sistema muestra cobros del periodo.
+  3. Ve detalle de cada transacción.
+- Alterno: 3a. Sin datos en periodo → "sin movimientos en este rango".
+
+**CU-27.3 Generar reporte PDF (Actor: PDS)**
+- Flujo principal:
+  1. Solicita reporte PDF.
+  2. Sistema genera documento con detalle completo.
+  3. Usuario descarga PDF.
+- Alterno: 2a. Error al generar → reintento habilitado.
+
+**HU-28:** Como solicitante, quiero ver mis pagos realizados y comisiones pagadas, para tener trazabilidad financiera.
+
+**Criterios de Aceptación:**
+1. WHEN solicitante accede a dashboard THEN sistema SHALL mostrar pagos realizados
+2. WHEN filtra por periodo THEN sistema SHALL mostrar pagos del rango
+3. WHEN ve detalle THEN sistema SHALL mostrar comisiones incluidas
+4. WHEN solicita reporte THEN sistema SHALL generar PDF
+
+**CU-28.1 Ver pagos realizados (Actor: Solicitante)**
+- Flujo principal:
+  1. Accede a "Mis Pagos".
+  2. Ve historial de pagos realizados.
+  3. Ve detalle de comisiones pagadas por servicio.
+- Alterno: 2a. Sin pagos → "sin pagos registrados".
+
+**HU-29:** Como usuario, quiero ver el estado de mi billetera y monedas, para gestionar mis recursos.
+
+**Criterios de Aceptación:**
+1. WHEN usuario accede THEN sistema SHALL mostrar saldo billetera y monedas
+2. WHEN ve monedas THEN sistema SHALL mostrar por tipo y vencimiento
+3. WHEN hay transacciones pendientes THEN sistema SHALL mostrar estado
+
+**CU-29.1 Ver estado de recursos (Actor: Usuario)**
+- Flujo principal:
+  1. Accede a "Mis Recursos".
+  2. Ve saldo billetera disponible.
+  3. Ve monedas por tipo (compradas, promocionales, ganadas).
+  4. Ve transacciones pendientes.
+- Alterno: 2a. Sin saldo → "sin fondos". 3a. Sin monedas → "sin monedas".
+
+---
+
 ## Matriz de Trazabilidad (HU → RF)
 
 | HU | RF | Módulo |
@@ -389,7 +679,18 @@
 | HU-16 | RF-16 | E. Comunicación |
 | HU-17 | RF-17 | Legal / Marco regulatorio |
 | HU-18 | RNF-07 | PWA (no funcional) |
+| HU-19 | RF-22 | Desbloqueo de Información |
+| HU-20 | RF-23 | Confirmación Dual |
+| HU-21 | RF-24 | Gestión de Ofertas |
+| HU-22 | RF-25 | Billetera Virtual |
+| HU-23 | RF-26 | Modalidad de Cobro |
+| HU-24 | RF-27 | Sistema de Monedas |
+| HU-25 | RF-28 | Precios Sugeridos |
+| HU-26 | RF-29 | Hitos de Pago |
+| HU-27 | RF-30 | Dashboard Operativo PDS |
+| HU-28 | RF-30 | Dashboard Operativo Solicitante |
+| HU-29 | RF-25 | Estado de Recursos (Billetera/Monedas) |
 
 ---
 
-*Versión: 1.0 — Derivado de `Requerimientos.md`.*
+*Versión: 2.0 — Derivado de `Requerimientos.md`. Nuevo modelo de billetera virtual y modalidades de cobro.*
