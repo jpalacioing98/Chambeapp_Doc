@@ -1,34 +1,94 @@
 @startuml
-title ChambeApp - Diagrama de Componentes (Alto Nivel)
+title ChambeApp - Diagrama de Componentes (Arquitectura Real)
+skinparam componentStyle rectangle
 
 package "Cliente PWA (React + Vite)" as FE {
-  [SPA / React] as SPA
+  [SPA React] as SPA
   [Service Worker PWA] as SW
-  [Three.js R3F] as TD
+  [Mapbox GL JS] as MAP
+  [A-Frame 360] as A3
   [Store Zustand] as ST
+  [Socket.IO Client] as SC
 }
 
-package "Backend API (Flask)" as BE {
-  [Blueprints REST] as API
-  [Servicios de Negocio] as SVC
-  [Motor IA] as AI
+package "API Gateway (Flask-Smorest, 24 blueprints)" as BE {
+  [auth / users / solicitudes] as B1
+  [contracts / ofertas / disputes] as B2
+  [ai / ai_metrics] as B3
+  [portfolio / notifications] as B4
+  [payments / wallet / subscriptions / prices] as B5
+  [chat / kyc / legal / admin / superadmin / tickets] as B6
+  [providers / onboarding / email_verification / auth_password] as B7
 }
 
-database "PostgreSQL" as DB
-queue "Redis cola/cache" as RD
-[Pasarelas MercadoPago PSE] as PG
+package "Servicios de Dominio" as DOM {
+  [TrustService] as TS
+  [CascadeManager] as CM
+  [StorageService] as SS
+  [ABTest] as AB
+  [get_recommender()] as GR
+}
+
+package "ML / Feature Layer" as ML {
+  [FeatureExtractor (22 feat)] as FEAT
+  [MLRanker (LightGBM)] as MR
+  [HybridRecommender] as HR
+  [ShadowRecommender] as SR
+  [HeuristicRecommender] as HER
+  [ThompsonBandit] as TB
+}
+
+package "Socket.IO Handlers" as SIO {
+  [notification_socket] as NS
+  [chat_socket] as CS
+  [oferta_socket] as OS
+}
+
+database "PostgreSQL + PostGIS" as DB
+queue "Redis (cache + Socket.IO MQ)" as RD
+[Celery + Beat] as CEL
+[MinIO (S3)] as MIN
+[Pasarelas MercadoPago/PSE] as PG
 [WebPush] as WP
-[Storage 3D Assets] as STO
 
-SPA --> SW : offline-sync
-SPA --> API : HTTPS REST JSON
-SW --> API : reintento
-TD --> STO : carga assets
-API --> SVC
-SVC --> DB
-SVC --> RD
-SVC --> AI
-SVC --> PG : cobro
-SVC --> WP : notifica
-AI --> DB : perfiles
+SPA --> SW : offline
+SPA --> MAP
+SPA --> A3
+SPA --> SC : ws
+SC --> NS
+SC --> CS
+SC --> OS
+SPA --> B1
+SPA --> B2
+SPA --> B3
+SPA --> B4
+SPA --> B5
+SPA --> B6
+SPA --> B7
+B3 --> GR
+GR --> HR
+GR --> SR
+GR --> HER
+HR --> FEAT
+HR --> MR
+HR --> TB
+B3 --> AB
+B4 --> SS
+B4 --> TS
+B2 --> CM
+CM --> CEL
+CM --> NS
+NS --> RD
+CEL --> RD
+B1 --> DB
+B2 --> DB
+B3 --> DB
+B4 --> DB
+B5 --> DB
+B6 --> DB
+B7 --> DB
+TS --> DB
+SS --> MIN
+B5 --> PG : cobro
+B5 --> WP : notifica
 @enduml

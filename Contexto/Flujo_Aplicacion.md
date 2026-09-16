@@ -75,20 +75,24 @@
 ### **PUNTO 2: SOLICITUDES DE SERVICIO**
 
 #### Descripción del Flujo
-- **Creación**: Solicitante crea y publica solicitudes
-- **Notificación**: Sistema notifica a PDS mediante algoritmo de recomendaciones
+- **Creación**: Solicitante crea y publica solicitudes con geocercas configurables
+- **Notificación**: Sistema notifica a PDS mediante algoritmo de recomendaciones 2-stage
 - **Algoritmo**: Debe ser justo, transparente, equitativo y balancear cargas
+- **Geofence**: Solicitante puede establecer `radio_km` (1-20 km, default 5) mediante GeofencePicker/GeofenceMap (Mapbox)
+- **Notificaciones**: Enviadas mediante cascada geoespacial (2km→5km→15km) con delays 300/600/900s
 
 #### Flujo Principal
 1. Solicitante accede a "Publicar Servicio"
 2. Selecciona categoría, describe el servicio, fija ubicación y presupuesto
-3. Sistema valida y publica la solicitud
-4. Algoritmo de recomendaciones selecciona PDS compatibles
-5. Sistema envía notificaciones a PDS seleccionados
+3. Define radio_km vía GeofenceMap/GeofencePicker (Mapbox) — default 5 km
+4. Sistema valida y publica la solicitud
+5. Motor de recomendaciones 2-stage: retrieval geoespacial (PostGIS/Haversine top_k=50) → ranking LightGBM Lambdarank
+6. Sistema envía notificaciones a PDS seleccionados mediante cascada geoespacial (2km→5km→15km)
 
 #### Flujo Alternativo
 - Si no hay PDS compatibles, sistema muestra "sin coincidencias"
 - Si ubicación fuera de cobertura, sistema advierte
+- Fallback a HeuristicRecommender si el pipeline ML falla
 
 #### Requerimientos Relacionados
 - **RF-04**: Publicación de Servicios por Solicitante
@@ -99,24 +103,29 @@
 ### **PUNTO 3: GESTIÓN DE SERVICIOS (PDS)**
 
 #### Descripción del Flujo
-- **Recepción**: PDS recibe notificación de nueva solicitud
+- **Recepción**: PDS recibe notificación en tiempo real vía Socket.IO (no polling) de nueva solicitud
 - **Oferta**: PDS hace oferta sobre el servicio
-- **Protección**: No se muestran datos sensibles (ubicación, teléfono)
+- **Protección**: No se muestran datos sensibles (ubicación, teléfono) hasta confirmación
 - **Información**: Solo información técnica del servicio
+- **Perfil PDS**: Muestra Trust Score (0-100) con badges por dimensiones (KYC, rating, contratos, portfolio, referidos)
 
 #### Flujo Principal
-1. PDS recibe notificación de nueva solicitud
-2. Revisa detalles técnicos (categoría, descripción, presupuesto)
+1. PDS recibe notificación `oferta:nueva` o `notificacion:nueva` vía Socket.IO en sala `user:<id>` (entregado <1s via Redis message_queue)
+2. Revisa detalles técnicos y Trust Score del proveedor en su perfil
 3. Envía oferta con su propuesta (precio, tiempo, descripción)
 4. Sistema almacena oferta y notifica al solicitante
+5. Solicitante revisa ofertas y selecciona o negocia
 
 #### Flujo Alternativo
 - Si PDS no está interesado, puede ignorar la notificación
 - Si PDS modifica oferta, sistema reemplaza la anterior
+- Si no hay ofertas, solicitante ve "sin ofertas recibidas"
 
 #### Requerimientos Relacionados
 - **RF-05**: Motor de Match / Recomendación (IA)
 - **RF-16**: Comunicación y Notificaciones en Tiempo Real
+- **RF-Trust-1**: Score de Confianza 0-100 con 5 dimensiones
+- **RF-Trust-2**: Sistema de Badges conectado al perfil
 
 ---
 
@@ -547,6 +556,167 @@ Contrato: $400.000 mensuales
 4. Crear dashboard operativo PDS
 
 ---
+
+## Modelo de Recomendación ML
+
+**Motor de recomendación híbrido 2-stage** para emparejar solicitantes con PDS compatibles.
+
+### Pipeline de two-stage:
+
+```
+Solicitud → get_recommender() → HybridRecommender
+  1. Retrieval: find_nearby_providers(lat, lng, 15km, top_k=50) [PostGIS/Haversine]
+  2. Feature Extraction: FeatureExtractor.extract_batch() [22 features]
+  3. ML Ranking: MLRanker.predict(X) [LightGBM Lambdarank]
+  4. Results: [{pds_id, nombre, score, ranking, explicacion, features, model_version}]
+  5. Fallback: HeuristicRecommender si ML falla o ml_ranking_enabled=false
+```
+
+### ASCII Diagram:
+
+```
+Solicitud ──▶ [Retrieval Geoespacial top_k=50]
+               │              Haversine/PostGIS
+               ▼
+          FeatureExtractor (22 features)
+               │
+               ▼
+          MLRanker (LightGBM Lambdarank)
+               │
+               ▼
+          Results with score & explicacion
+               │
+   ┌───────────┼─────────────┐
+   ▼           ▼           ▼
+Heuristic    Fallback    A/B Test
+Recommender   disabled    (ABTest group)
+```
+
+### A/B Testing y Thompson Bandit:
+
+- `ABTest.get_group(user_id)` → Asigna grupo 'A' o 'B' deterministicemente por usuario
+- `ABTest.log_recommendation()` → Registra cada recomendación para análisis posterior
+- `ABTest.get_metrics()` → Métricas por grupo: total, avg_score, tasa_aceptación
+- Cableado en ambos endpoints de `app/routes/ai.py`
+- `ThompsonBandit` para rotación inteligente de categorías sobre aciertos/fallos
+
+**Feature Flags:** `ml_ranking_enabled`, `ml_shadow_mode`
+
+---
+
+## Sistema de Confianza (Trust Score + Badges)
+
+**Score consolidado 0-100** con 5 dimensiones y niveles asociados.
+
+### 5 Dimensiones:
+
+| Dimensión | Peso | Descripción |
+|-----------|------|-------------|
+| **KYC** | 20% | Verificación de identidad y documentos |
+| **Rating** | 25% | Calificación promedio de servicios completados |
+| **Contratos** | 20% | Número de contratos finalizados exitosamente |
+| **Portfolio** | 15% | Calidad y variedad del portafolio multimedia |
+| **Referidos** | 20% | Usuarios traídos a la plataforma |
+
+### Niveles y Rangos:
+
+| Nivel | Rango | Color | Badge |
+|-------|-------|-------|-------|
+| **Experto** | 80-100 | Verde `#2ecc71` | 🥇 |
+| **Verificado** | 60-79 | Coral `#ff5a5f` | 🥈 |
+| **Confiable** | 40-59 | Coral `#ff7a7e` | 🥉 |
+| **Nuevo** | 0-39 | Gris `#807e7a` | 🌱 |
+
+### Badges Conectados:
+
+- **Badge "KYC Completa"**: Cuando KYC ≥ 80% y documentos aprobados
+- **Badge "Rating Alto"**: Cuando rating promedio ≥ 4.5/5
+- **Badge "Contratos Consistentes"**: Cuando contratos completados ≥ 10
+- **Badge "Portafolio Diverso"**: Cuando portfolio tiene ≥ 3 categorías distintas
+- **Badge "Embajador"**: Cuando referidos activos ≥ 5
+
+El Trust Score y badges se muestran en el perfil PDS vía `GET /api/v1/trust/{pds_id}` y `GET /api/v1/users/me`.
+
+---
+
+## Portafolio Multimedia y Visor 360°
+
+**Sistema de portafolio enriquecido** con upload drag-and-drop y visor interactivo.
+
+### PortfolioUploader:
+
+- **Arrastrar y soltar** (drag-and-drop) archivos a MinIO
+- **Formatos soportados**: WebP, JPEG, PNG, MP4, MOV
+- **Validación**: Tipo MIME y tamaño máximo 50MB
+- **URLs firmadas** para acceso público temporal
+- Integrado en `src/features/profile/ProfilePage.tsx`
+
+### PortfolioGallery:
+
+- **Grid responsive** de items del portafolio
+- **Miniaturas con hover** para vista previa
+- **Acciones**: Ver detalles, eliminar, marcar como favorito
+- Conectado a `GET /api/v1/portfolio/items` y `POST /api/v1/portfolio/upload`
+
+### Viewer360 (A-Frame):
+
+- **Visor panorámico** en perfil de proveedor y en solicitudes
+- **A-Frame** con entidad `<a-scene>` y `<a-sky>` o `<a-cube>`
+- Navegación: flechas direccionales o control mouse-arrastrar
+- Mostrado en `src/features/profile/ProfilePage.tsx` y `src/features/solicitudes/SolicitudDetailPage.tsx`
+- Soporte para imágenes equirectangulares y videos 360°
+
+---
+
+## Notificaciones en Tiempo Real (Socket.IO)
+
+**Cascada de notificaciones** en tiempo real vía Socket.IO con Redis message_queue.
+
+### CascadeManager:
+
+- **Fase 1**: Radio 2km, delay 300s, max 5 candidatos
+- **Fase 2**: Radio 5km, delay 600s, max 10 candidatos
+- **Fase 3**: Radio 15km, delay 900s, max 15 candidatos
+- Configuración por defecto en `DEFAULT_CONFIG`
+
+### Flujo de emisión:
+
+```
+CascadeManager.send_phase()
+  │
+  ▼
+Crear Notification (DB)
+  │
+  ▼
+socketio.emit('notificacion:nueva', notif.to_dict(), room=f'user:{notif.user_id}')
+  │
+  ▼
+Redis message_queue → servidor Flask → sala user:<id>
+  │
+  ▼
+Cliente useNotificationSocket → store update → NotificationBell
+```
+
+### Tiempo total: <1s (Cascada Celery → DB → Redis → Flask → Cliente)
+
+### Eventos Socket.IO adicionales:
+
+- **`message`** — Chat en tiempo real (room: conversation_{id})
+- **`oferta:nueva`** — Notificación de nueva oferta (room: user:{pds_id})
+- **`oferta:actualizada`** — Notificación de oferta modificada
+- **`join`** — Cliente se une a sala `user:<id>` tras validar JWT
+
+### Cliente (`useNotificationSocket`):
+
+- Suscribe al evento `notificacion:nueva` vía Socket.IO compartido
+- Al recibir, llama `addNotification(notif)` y `incrementUnread()`
+- **No usa polling** — todo push por WS
+- `NotificationBell` muestra badge de no leídas en tiempo real
+- Almacenamiento en `useNotificationsStore` (Zustand)
+
+---
+
+*Sección añadida en enriquecimiento del Flujo de Aplicación v2.1*
 
 *Documento generado automáticamente por el coordinador AUP*
 *Proyecto: ChambeApp - Plataforma de Servicios Ocasionales*

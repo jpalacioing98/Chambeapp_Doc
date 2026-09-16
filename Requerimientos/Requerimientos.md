@@ -186,18 +186,21 @@
 
 ---
 
-### RF-11: Suscripciones Premium
-**Historia de Usuario:** Como pds establecido, quiero una suscripción que me dé beneficios, para conseguir más solicitudes.
+### RF-11: Suscripciones y Planes
+**Historia de Usuario:** Como pds, quiero un plan de suscripción escalonado que me dé más visibilidad y postulaciones, para conseguir más solicitudes según mi etapa de negocio.
 
 **Criterios de Aceptación:**
-1. WHEN pds selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Profesional $35k).
-2. WHEN plan es Profesional THEN sistema SHALL permitir postulaciones ilimitadas y perfil destacado.
-4. WHEN periodo de prueba (3 meses) finaliza THEN sistema SHALL iniciar cobro según plan.
-5. WHEN usuario cancela suscripción THEN sistema SHALL degradar beneficios al final del ciclo.
+1. WHEN usuario se registra THEN sistema SHALL asignar automáticamente el plan Free (por defecto, $0) sin tarjeta.
+2. WHEN plan es Free THEN sistema SHALL limitar a 3 postulaciones por mes.
+3. WHEN pds selecciona plan Básico ($15k) THEN sistema SHALL permitir 15 postulaciones por mes y otorgar 50 monedas de bienvenida.
+4. WHEN pds selecciona plan Profesional ($35k) THEN sistema SHALL permitir postulaciones ilimitadas, perfil destacado, 150 monedas, analytics, verificación express y certificado mensual.
+5. WHEN periodo de prueba (3 meses) finaliza THEN sistema SHALL iniciar cobro según plan.
+6. WHEN usuario cancela suscripción THEN sistema SHALL degradar beneficios al final del ciclo y revertir a Free.
 
 **Casos Límite:**
 - WHEN pago de suscripción falla THEN sistema SHALL mantener plan activo hasta vencimiento y avisar.
-- WHEN pds Básico excede 5 postulaciones/mes THEN sistema SHALL bloquear hasta próximo ciclo o upgrade.
+- WHEN pds Free excede 3 postulaciones/mes THEN sistema SHALL bloquear hasta próximo ciclo o upgrade.
+- WHEN pds Básico excede 15 postulaciones/mes THEN sistema SHALL bloquear hasta próximo ciclo o upgrade a Profesional.
 
 ---
 
@@ -459,6 +462,141 @@
 **Casos Límite:**
 - WHEN no hay transacciones THEN sistema SHALL mostrar "sin movimientos"
 - WHEN reporte falla THEN sistema SHALL mostrar error y sugerir reintento
+
+---
+
+### Requerimientos de Inteligencia Artificial, Confianza, Geocerca y Tiempo Real (Implementados)
+
+### RF-ML-1: Recomendación 2 Etapas ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como usuario, quiero recibir un ranking de proveedores mediante recuperación geoespacial seguida de ranking ML, para contratar más rápido y con confianza.
+
+**Criterios de Aceptación:**
+1. WHEN una solicitud es publicada THEN el sistema SHALL ejecutar retrieval geoespacial (PostGIS/Haversine) de proveedores cercanos.
+2. WHEN se obtienen candidatos THEN el sistema SHALL aplicar ranking ML (LightGBM Lambdarank) sobre 22 features.
+3. IF el modelo ML falla THEN el sistema SHALL usar `HeuristicRecommender` como fallback.
+4. WHEN el sistema recomienda THEN sistema SHALL explicar el criterio (transparencia algorítmica).
+
+**Componentes:** `app/ai/recommender.py` (HybridRecommender), `app/ai/features.py` (FeatureExtractor 22 features), `app/ai/ml_ranker.py` (MLRanker), `app/ai/geo.py`.
+
+---
+
+### RF-ML-2: A/B Testing ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como equipo de producto, quiero comparar ML vs heurístico con asignación determinista, para medir impacto.
+
+**Criterios de Aceptación:**
+1. WHEN se genera una recomendación THEN el sistema SHALL asignar el usuario a un grupo A o B determinísticamente (`ABTest.get_group`).
+2. WHEN se asigna THEN el sistema SHALL registrar la recomendación (`log_recommendation`).
+3. WHEN se consultan métricas THEN el sistema SHALL reportar métricas por grupo (`get_metrics`).
+4. WHEN se invocan los endpoints de `app/routes/ai.py` THEN el sistema SHALL ejecutar el A/B testing cableado.
+
+**Componentes:** `app/ai/ab_testing.py` (ABTest), `app/models/recommendation_log.py`, `app/routes/ai.py`.
+
+---
+
+### RF-ML-3: Rotación con Thompson Bandit ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como sistema, quiero rotar categorías con Multi-Armed Bandit (Thompson Sampling), para equilibrar exposición.
+
+**Criterios de Aceptación:**
+1. WHEN el sistema selecciona categorías a mostrar THEN sistema SHALL usar `ThompsonBandit` para rotación inteligente.
+
+**Componentes:** `app/ai/bandit.py` (ThompsonBandit).
+
+---
+
+### RF-Trust-1: Score de Confianza ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como usuario, quiero ver un Trust Score 0-100 con dimensiones, para evaluar la confiabilidad de un proveedor.
+
+**Criterios de Aceptación:**
+1. WHEN se consulta un pds THEN el sistema SHALL calcular Trust Score 0-100 con 5 dimensiones (KYC, rating, contratos, portfolio, referidos).
+2. WHEN el score está en 80-100 THEN sistema SHALL clasificar como Experto; 60-79 Verificado; 40-59 Confiable; 0-39 Nuevo.
+
+**Componentes:** `app/models/trust.py`, `app/services/trust.py`; frontend `features/trust`.
+
+---
+
+### RF-Trust-2: Badges ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como pds, quiero insignias de logro conectadas al backend, para destacar mis credenciales.
+
+**Criterios de Aceptación:**
+1. WHEN un pds cumple criterios THEN el sistema SHALL otorgar badges conectados al backend.
+
+**Componentes:** `app/models/badges.py`; frontend `features/badges`.
+
+---
+
+### RF-Geo-1: Geocercas ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como solicitante, quiero publicar con `radio_km` configurable, para controlar la cobertura de la solicitud.
+
+**Criterios de Aceptación:**
+1. WHEN se publica una solicitud THEN el sistema SHALL aceptar `radio_km` (1-20 km, default 5) y almacenarlo.
+2. WHEN se muestra en mapa THEN sistema SHALL visualizar `GeofenceMap`/`GeofencePicker`.
+
+**Componentes:** `app/models/solicitud.py` (columna `radio_km`), `migrations/versions/002_add_solicitud_radio.py`; frontend `features/geofence`.
+
+---
+
+### RF-Geo-2: Cascada Geoespacial ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como pds, quiero recibir notificaciones en cascada 2/5/15 km, para no perder oportunidades cercanas.
+
+**Criterios de Aceptación:**
+1. WHEN una solicitud es publicada THEN el sistema SHALL iniciar cascada (2km/300s/max5, 5km/600s/max10, 15km/900s/max15).
+2. WHEN cada fase ejecuta THEN sistema SHALL notificar a proveedores cercanos.
+
+**Componentes:** `app/services/cascade.py`, `app/models/cascade.py`, `app/tasks.py` (Celery `send_phase_task`).
+
+---
+
+### RF-360-1: Visor Panorámico ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como usuario, quiero ver el portafolio en 360° (A-Frame), para evaluar mejor al proveedor.
+
+**Criterios de Aceptación:**
+1. WHEN se muestra el portafolio THEN el sistema SHALL renderizar `Viewer360` (A-Frame) en perfil y solicitudes.
+
+**Componentes:** frontend `components/Viewer360.tsx`.
+
+---
+
+### RF-UI-1: Notificaciones Real-time ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como usuario, quiero notificaciones en tiempo real vía Socket.IO, para recibir información inmediata.
+
+**Criterios de Aceptación:**
+1. WHEN ocurre un evento THEN el sistema SHALL emitir `notificacion:nueva` vía Socket.IO a sala `user:<id>`.
+2. WHEN el cliente conecta THEN sistema SHALL unirlo vía evento `join` con token (`useNotificationSocket`).
+3. WHEN se entrega THEN sistema SHALL hacerlo en <1s (reemplaza polling 30s).
+
+**Componentes:** `app/routes/notification_socket.py`, `app/services/cascade.py`; frontend `features/notifications`.
+
+---
+
+### RF-UI-2: Portfolio Upload ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como pds, quiero subir archivos (no solo URLs) a MinIO, para un portafolio más rico.
+
+**Criterios de Aceptación:**
+1. WHEN un pds sube un item THEN el sistema SHALL aceptar multipart (foto/video/doc) y guardarlo en MinIO.
+2. WHEN se lista THEN sistema SHALL mostrar items y galería pública.
+
+**Componentes:** `app/routes/portfolio.py`, `app/services/storage.py`; frontend `features/portfolio`.
+
+---
+
+### RF-ML-4: Métricas ML Dashboard ✅ IMPLEMENTADO
+
+**Historia de Usuario:** Como admin, quiero un dashboard de métricas ML y A/B, para monitorear el modelo.
+
+**Criterios de Aceptación:**
+1. WHEN un admin consulta THEN el sistema SHALL exponer `GET /api/v1/ai/metrics` y `GET /api/v1/ai/metrics/feature-importance`.
+
+**Componentes:** `app/routes/ai_metrics.py`.
 
 ---
 

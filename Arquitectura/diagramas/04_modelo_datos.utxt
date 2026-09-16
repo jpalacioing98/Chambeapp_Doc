@@ -1,0 +1,29 @@
+                                                                                                     ,-------------.                                                 
+                                                                                                     |User         |                                                 
+                                                                                                     |-------------|                                                 
+                                                                                                     |id           |                                                 
+                                                                                                     |rol          |                                                 
+                                                                                                     |email        |                                                 
+                                                                                                     |password_hash|                                                 
+                                                                                                     |verificado   |                                                 
+                                                                                                     `-------------'                                                 
+                                                                                                             |                                                       
+                                                                                                             |                                                       
+                         ,-----------.                                                                       |      ,-----------------.   ,-------------.            
+,---------------------.  |Solicitud  |   ,----------------------------------------------------------.   ,-------.   |RecommendationLog|   |PortfolioItem|   ,-------.
+|Profile              |  |-----------|   |Trust                                                     |   |Badge  |   |-----------------|   |-------------|   |Wallet |
+|---------------------|  |id         |   |----------------------------------------------------------|   |-------|   |id               |   |id           |   |-------|
+|user_id              |  |categoria  |   |user_id                                                   |   |id     |   |user_id          |   |user_id      |   |id     |
+|habilidades          |  |presupuesto|   |trust_score                                               |   |user_id|   |grupo_ab         |   |url_minio    |   |user_id|
+|calificacion_promedio|  |radio_km   |   |dimensiones (KYC, rating, contratos, portfolio, referidos)|   |tipo   |   |score            |   |tipo         |   |saldo  |
+`---------------------'  |estado     |   `----------------------------------------------------------'   `-------'   `-----------------'   `-------------'   `-------'
+                         `-----------'                                                                                                                               
+                                                                                                                                                                     
+               ,------------.   ,-------------------.                                                                                                                
+               |Order       |   |NotificationCascade|                                                                                                                
+               |------------|   |-------------------|                                                                                                                
+               |id          |   |id                 |                                                                                                                
+               |service_id  |   |solicitud_id       |                                                                                                                
+               |proveedor_id|   |fase               |                                                                                                                
+               |estado      |   |radio_km           |                                                                                                                
+               `------------'   `-------------------'                                                                                                                

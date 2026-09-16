@@ -214,24 +214,27 @@
 
 ---
 
-## RF-11: Suscripciones Premium
+## RF-11: Suscripciones y Planes
 
-**HU-11:** Como pds establecido, quiero una suscripción con beneficios, para conseguir más solicitudes.
+**HU-11:** Como pds, quiero un plan escalonado con beneficios, para conseguir más solicitudes según mi etapa de negocio.
 
 **Criterios de Aceptación:**
-1. WHEN selecciona plan THEN sistema SHALL activar beneficios según nivel (Básico $15k / Profesional $35k).
-2. WHEN Profesional THEN sistema SHALL dar postulaciones ilimitadas y perfil destacado.
-4. WHEN prueba 3 meses termina THEN sistema SHALL iniciar cobro.
-5. WHEN cancela THEN sistema SHALL degradar al fin del ciclo.
+1. WHEN se registra THEN sistema SHALL asignar automáticamente el plan Free (por defecto, $0) sin tarjeta.
+2. WHEN plan Free THEN sistema SHALL limitar a 3 postulaciones por mes.
+3. WHEN selecciona plan Básico ($15k) THEN sistema SHALL dar 15 postulaciones por mes y 50 monedas de bienvenida.
+4. WHEN selecciona plan Profesional ($35k) THEN sistema SHALL dar postulaciones ilimitadas, perfil destacado, 150 monedas, analytics, verificación express y certificado mensual.
+5. WHEN prueba 3 meses termina THEN sistema SHALL iniciar cobro.
+6. WHEN cancela THEN sistema SHALL degradar al fin del ciclo y revertir a Free.
 
-**CU-11.1 Suscribirse a Premium (Actor: pds)**
+**CU-11.1 Suscribirse a un plan (Actor: pds)**
 - Flujo principal:
   1. Elige plan y paga.
   2. Sistema activa beneficios según nivel.
   3. Tras 3 meses de prueba → cobro recurrente.
 - Alterno:
   - 3a. Pago falla → plan activo hasta vencimiento + aviso.
-  - 2b. Básico excede 5 postulaciones/mes → bloqueo hasta upgrade.
+  - 2b. Free excede 3 postulaciones/mes → bloqueo hasta upgrade a Básico o Profesional.
+  - 2c. Básico excede 15 postulaciones/mes → bloqueo hasta upgrade a Profesional.
 
 ---
 
@@ -693,4 +696,97 @@
 
 ---
 
-*Versión: 2.0 — Derivado de `Requerimientos.md`. Nuevo modelo de billetera virtual y modalidades de cobro.*
+## Requerimientos de IA, Confianza, Geocerca y Tiempo Real (Implementados)
+
+## RF-ML-1: Recomendación 2 Etapas ✅ IMPLEMENTADO
+
+**HU-30:** Como solicitante, quiero recibir un ranking de pds mediante recuperación geoespacial + ranking ML, para contratar más rápido.
+**Criterios de Aceptación:**
+1. WHEN publico una solicitud THEN el sistema SHALL rankear pds por cercanía y ML.
+2. IF el ML falla THEN sistema SHALL usar heurístico (fallback).
+**CU-30.1 Recomendación (Actor: Solicitante)**
+- Flujo principal: 1. Publica solicitud. 2. Sistema rankea pds (geoespacial + ML). 3. Muestra lista ordenada con explicación.
+
+## RF-ML-2: A/B Testing ✅ IMPLEMENTADO
+
+**HU-31:** Como equipo de producto, quiero comparar ML vs heurístico con grupos deterministas, para medir impacto.
+**Criterios de Aceptación:**
+1. WHEN se genera recomendación THEN sistema SHALL asignar grupo A/B y registrarla.
+**CU-31.1 Experimentación (Actor: Sistema)**
+- Flujo principal: 1. Asigna grupo. 2. Registra recomendación. 3. Admin consulta métricas por grupo.
+
+## RF-ML-3: Rotación con Thompson Bandit ✅ IMPLEMENTADO
+
+**HU-32:** Como sistema, quiero rotar categorías con Thompson Bandit, para equilibrar exposición.
+**Criterios de Aceptación:**
+1. WHEN se seleccionan categorías THEN sistema SHALL usar ThompsonBandit.
+**CU-32.1 Rotación (Actor: Sistema)**
+- Flujo principal: 1. Calcula pesos por Thompson Sampling. 2. Rota categorías mostradas.
+
+## RF-Trust-1: Score de Confianza ✅ IMPLEMENTADO
+
+**HU-33:** Como usuario, quiero ver el Trust Score 0-100 de un pds, para evaluar confiabilidad.
+**Criterios de Aceptación:**
+1. WHEN consulto un pds THEN sistema SHALL mostrar Trust Score y nivel (Experto/Verificado/Confiable/Nuevo).
+**CU-33.1 Ver Trust Score (Actor: Usuario)**
+- Flujo principal: 1. Abre perfil pds. 2. Sistema muestra TrustScore + desglose por dimensión.
+
+## RF-Trust-2: Badges ✅ IMPLEMENTADO
+
+**HU-34:** Como pds, quiero insignias de logro, para destacar credenciales.
+**Criterios de Aceptación:**
+1. WHEN cumplo criterios THEN sistema SHALL mostrar badges en mi perfil.
+**CU-34.1 Ver Badges (Actor: PDS)**
+- Flujo principal: 1. Completa logros. 2. Sistema otorga y muestra badges.
+
+## RF-Geo-1: Geocercas ✅ IMPLEMENTADO
+
+**HU-35:** Como solicitante, quiero publicar con radio_km configurable, para controlar cobertura.
+**Criterios de Aceptación:**
+1. WHEN publico THEN sistema SHALL aceptar radio_km y mostrar geocerca en mapa.
+**CU-35.1 Publicar con geocerca (Actor: Solicitante)**
+- Flujo principal: 1. Selecciona ubicación. 2. Ajusta radio_km (GeofencePicker). 3. Publica.
+
+## RF-Geo-2: Cascada Geoespacial ✅ IMPLEMENTADO
+
+**HU-36:** Como pds, quiero recibir notificaciones en cascada 2/5/15 km, para no perder oportunidades.
+**Criterios de Aceptación:**
+1. WHEN hay solicitud THEN sistema SHALL notificarme en cascada geoespacial.
+**CU-36.1 Notificación cascada (Actor: PDS)**
+- Flujo principal: 1. Solicitud publicada. 2. CascadeManager notifica 2km→5km→15km. 3. Recibo notificacion:nueva.
+
+## RF-360-1: Visor Panorámico ✅ IMPLEMENTADO
+
+**HU-37:** Como usuario, quiero ver portafolio en 360°, para evaluar mejor.
+**Criterios de Aceptación:**
+1. WHEN veo portafolio THEN sistema SHALL renderizar Viewer360 (A-Frame).
+**CU-37.1 Ver 360° (Actor: Usuario)**
+- Flujo principal: 1. Abre portafolio. 2. Sistema muestra visor 360° interactivo.
+
+## RF-UI-1: Notificaciones Real-time ✅ IMPLEMENTADO
+
+**HU-38:** Como usuario, quiero notificaciones en tiempo real vía Socket.IO, para info inmediata.
+**Criterios de Aceptación:**
+1. WHEN ocurre evento THEN sistema SHALL emitir notificacion:nueva a mi sala en <1s.
+**CU-38.1 Recibir notificación (Actor: Usuario)**
+- Flujo principal: 1. Cliente se une (join). 2. Servidor emite evento. 3. NotificationBell actualiza badge.
+
+## RF-UI-2: Portfolio Upload ✅ IMPLEMENTADO
+
+**HU-39:** Como pds, quiero subir archivos a MinIO, para portafolio rico.
+**Criterios de Aceptación:**
+1. WHEN subo item THEN sistema SHALL guardarlo en MinIO y mostrarlo en galería.
+**CU-39.1 Subir portafolio (Actor: PDS)**
+- Flujo principal: 1. Arrastra archivo. 2. Sistema sube a MinIO. 3. Muestra en galería.
+
+## RF-ML-4: Métricas ML Dashboard ✅ IMPLEMENTADO
+
+**HU-40:** Como admin, quiero dashboard de métricas ML y A/B, para monitorear.
+**Criterios de Aceptación:**
+1. WHEN consulto THEN sistema SHALL mostrar métricas del modelo y A/B.
+**CU-40.1 Ver métricas (Actor: Admin)**
+- Flujo principal: 1. Accede a /api/v1/ai/metrics. 2. Sistema muestra métricas + importancia de features.
+
+---
+
+*Versión: 2.0 — Derivado de `Requerimientos.md`. Incluye billetera virtual, modalidades de cobro e implementación de IA, confianza, geocerca y tiempo real.*

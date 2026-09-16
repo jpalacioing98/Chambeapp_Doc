@@ -1,35 +1,29 @@
 @startuml
-title ChambeApp - Diagrama de Despliegue (PWA)
+title ChambeApp - Diagrama de Despliegue (Produccion)
+skinparam componentStyle rectangle
 
-node "Navegador o Dispositivo" as CLI {
-  [PWA instalada] as PWA
+actor "Usuario (PWA)" as U
+
+node "Nginx (HTTPS/WSS)" as NGX
+node "Gunicorn + Flask API" as API {
+  [Flask App] as FL
+  [Socket.IO Server] as SIO
 }
+node "Celery Worker + Beat" as CEL
+node "Redis" as RD
+node "PostgreSQL + PostGIS" as DB
+node "MinIO" as MIN
+node "Static Host (PWA build)" as STAT
 
-node "Servidor App (Nginx + Gunicorn)" as SRV {
-  [Flask API] as FL
-  [Celery Worker] as CW
-}
-
-database "PostgreSQL" as DB {
-  [Esquema chambeapp] as SCH
-}
-
-queue "Redis" as RD {
-  [Broker y Cache] as RC
-}
-
-cloud "Externos" {
-  [MercadoPago PSE] as MP
-  [WebPush FCM APNs] as WPP
-  [Object Storage] as OBJ
-}
-
-PWA --> FL : HTTPS
-PWA --> WPP : suscripcion push
-FL --> SCH
-FL --> RC
-CW --> RC
-CW --> MP : pagos
-CW --> WPP : notificaciones
-FL --> OBJ : assets 3D
+U --> NGX : HTTPS/WSS
+NGX --> STAT : assets
+NGX --> FL : proxy
+NGX --> SIO : proxy ws
+FL --> DB
+FL --> RD : cache + MQ
+SIO --> RD : message_queue
+FL --> CEL : tareas
+CEL --> RD
+CEL --> MIN
+FL --> MIN : storage
 @enduml

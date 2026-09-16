@@ -1,0 +1,25 @@
+@startuml
+title ChambeApp - Cascada Geoespacial en Tiempo Real
+participant "Solicitud" as SOL
+participant "CascadeManager" as CM
+participant "Celery send_phase_task" as CEL
+participant "Notification" as N
+participant "Socket.IO" as SIO
+participant "Redis MQ" as RD
+participant "useNotificationSocket" as CL
+participant "NotificationBell" as NB
+
+SOL -> CM : start_cascade(solicitud_id)
+CM -> CEL : fase 1 (2km, 300s, max5)
+CM -> CEL : fase 2 (5km, 600s, max10)
+CM -> CEL : fase 3 (15km, 900s, max15)
+CEL -> N : crea Notification
+CEL -> SIO : emit('notificacion:nueva', room=user:<id>)
+SIO -> RD : publica
+RD -> SIO : entrega
+SIO -> CL : evento
+CL -> NB : actualiza badge
+note right of SIO
+  Tiempo total entrega < 1s
+end note
+@enduml

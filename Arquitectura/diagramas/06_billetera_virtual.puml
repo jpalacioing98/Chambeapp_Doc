@@ -1,113 +1,15 @@
-@startuml 06_billetera_virtual
-title Diagrama de Secuencia - Billetera Virtual y Pagos
-
-actor Solicitante as SOL
+@startuml
+title ChambeApp - Billetera Virtual y Monedas
+skinparam componentStyle rectangle
 actor PDS
-participant "Sistema" as SYS
-participant "Billetera" as WAL
-participant "Monedas" as COIN
-database "PostgreSQL" as DB
-
-== Publicación de Solicitud ==
-
-SOL -> SYS : Crear solicitud (modalidad A o B)
-activate SYS
-
-SYS -> DB : Guardar solicitud con modalidad
-DB --> SYS : OK
-
-if (Modalidad B (Sin Comisión)) then
-  SYS -> COIN : Verificar monedas solicitante
-  activate COIN
-  COIN --> SYS : Monedas suficientes
-  deactivate COIN
-else
-  SYS -> SYS : Publicar sin costo
-endif
-
-SYS --> SOL : Solicitud publicada
-deactivate SYS
-
-== Oferta del PDS ==
-
-PDS -> SYS : Enviar oferta
-activate SYS
-
-if (Modalidad B (Sin Comisión)) then
-  SYS -> COIN : Descontar 50 monedas al PDS
-  activate COIN
-  COIN -> DB : Actualizar saldo monedas
-  COIN --> SYS : Monedas descontadas
-  deactivate COIN
-else
-  SYS -> SYS : Registrar oferta sin costo
-endif
-
-SYS -> DB : Guardar oferta
-DB --> SYS : OK
-
-SYS --> PDS : Oferta registrada
-deactivate SYS
-
-== Confirmación del Servicio ==
-
-SOL -> SYS : Aceptar oferta / Confirmar servicio
-activate SYS
-
-SYS -> DB : Crear orden de trabajo
-DB --> SYS : OK
-
-SYS -> SOL : Servicio confirmado
-SYS -> PDS : Servicio confirmado (desbloqueo ubicación/chat)
-deactivate SYS
-
-== Finalización del Servicio ==
-
-PDS -> SYS : Marcar servicio como completado
-activate SYS
-
-SYS -> SOL : Solicitar confirmación de finalización
-
-SOL -> SYS : Confirmar recepción y satisfacción
-activate SYS
-
-SYS -> DB : Cambiar estado a "Completado"
-DB --> SYS : OK
-
-if (Modalidad A (Con Comisión)) then
-  SYS -> WAL : Descontar comisión del PDS (12%)
-  activate WAL
-  WAL -> DB : Registrar transacción comisión
-  WAL --> SYS : Comisión descontada
-  deactivate WAL
-else
-  SYS -> SYS : Sin comisión
-endif
-
-SYS -> WAL : Transferir saldo neto al PDS
-activate WAL
-WAL -> DB : Registrar transacción pago
-WAL --> SYS : Saldo actualizado
-deactivate WAL
-
-SYS --> SOL : Confirmación enviada
-SYS --> PDS : Pago procesado
-deactivate SYS
-
-== Retiro de Fondos (Opcional) ==
-
-PDS -> SYS : Solicitar retiro
-activate SYS
-
-SYS -> WAL : Verificar saldo disponible
-activate WAL
-WAL --> SYS : Saldo suficiente
-deactivate WAL
-
-SYS -> DB : Registrar solicitud de retiro
-DB --> SYS : OK
-
-SYS --> PDS : Retiro en proceso
-deactivate SYS
-
+actor Solicitante
+[Wallet] as W
+[Monedas] as M
+[Transaccion] as T
+[Pasarela Pago] as P
+PDS --> W : recibe saldo
+Solicitante --> P : paga
+P --> W : descuenta comision
+W --> M : usa monedas (modalidad B)
+W --> T : registra historial
 @enduml

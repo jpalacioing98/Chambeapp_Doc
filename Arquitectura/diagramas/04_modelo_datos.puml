@@ -1,146 +1,73 @@
 @startuml
-title ChambeApp - Modelo de Datos (v2.0 - Con Billetera Virtual)
+title ChambeApp - Modelo de Datos (Entidades Clave)
+skinparam classAttributeIconSize 0
 
-entity User {
-  * id
-  * rol
-  * email
-  * password_hash
-  edad_verificada
-  acepto_tyc
-  fecha_registro
-}
-
-entity Profile {
-  * user_id
-  habilidades
-  experiencia
-  zona
-  calificacion_promedio
+class User {
+  id
+  rol
+  email
+  password_hash
   verificado
-  badges
 }
-
-entity Service {
-  * id
-  * solicitante_id
+class Profile {
+  user_id
+  habilidades
+  calificacion_promedio
+}
+class Solicitud {
+  id
   categoria
-  descripcion
-  ubicacion
   presupuesto
+  radio_km
   estado
 }
-
-entity Order {
-  * id
-  * service_id
-  * proveedor_id
+class Order {
+  id
+  service_id
+  proveedor_id
   estado
-  creado_en
 }
-
-entity Payment {
-  * id
-  * order_id
-  monto
-  comision
-  estado
-  pasarela
-  liberado_en
+class Trust {
+  user_id
+  trust_score
+  dimensiones (KYC, rating, contratos, portfolio, referidos)
 }
-
-entity Subscription {
-  * id
-  * user_id
-  plan
-  estado
-  renueva_en
+class Badge {
+  id
+  user_id
+  tipo
 }
-
-entity Rating {
-  * id
-  * order_id
-  autor_id
-  calificado_id
-  puntaje
-  comentario
+class NotificationCascade {
+  id
+  solicitud_id
+  fase
+  radio_km
 }
-
-entity Dispute {
-  * id
-  * order_id
-  motivo
-  estado
-  resuelto_en
+class RecommendationLog {
+  id
+  user_id
+  grupo_ab
+  score
 }
-
-entity LegalAcceptance {
-  * id
-  * user_id
-  version_tyc
-  fecha
-  ip
+class PortfolioItem {
+  id
+  user_id
+  url_minio
+  tipo
 }
-
-entity Wallet {
-  * id
-  * user_id
+class Wallet {
+  id
+  user_id
   saldo
-  saldo_bloqueado
-  created_at
-  updated_at
 }
 
-entity Coin {
-  * id
-  * user_id
-  cantidad
-  tipo
-  vence_en
-  created_at
-}
-
-entity Transaction {
-  * id
-  * wallet_id
-  tipo
-  monto
-  descripcion
-  referencia
-  created_at
-}
-
-entity Modalidad {
-  * id
-  * service_id
-  tipo
-  monedas_requeridas
-  created_at
-}
-
-entity Milestone {
-  * id
-  * order_id
-  numero
-  descripcion
-  monto
-  estado
-  aprobado_en
-  created_at
-}
-
-User ||--|| Profile
-User ||--o{ Service : "publica"
-User ||--o{ Subscription
-User ||--o{ Rating : "emite/recibe"
-User ||--|| Wallet
-User ||--o{ Coin
-Service ||--o| Order
-Service ||--o| Modalidad
-Order ||--|| Payment
-Order ||--o{ Dispute
-Order ||--o{ Milestone
-User ||--o{ LegalAcceptance
-Wallet ||--o{ Transaction
-
+User "1" --> "1" Profile
+User "1" --> "*" Solicitud
+User "1" --> "1" Trust
+User "1" --> "*" Badge
+User "1" --> "1" Wallet
+User "1" --> "*" PortfolioItem
+Solicitud "1" --> "*" NotificationCascade
+Solicitud "1" --> "*" Order
+User "1" --> "*" RecommendationLog
 @enduml

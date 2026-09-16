@@ -374,12 +374,13 @@ El PDS tiene acceso a un panel con:
 | **Suscripciones** | Planes Premium | 15% |
 | **Valor Agregado** | Certificados, destacados | 10% |
 
-### 10.2 Suscripciones Premium
+### 10.2 Planes de Suscripción
 
-| Plan | Precio Mensual (COP) | Beneficios |
-|------|---------------------|------------|
-| **Básico** | $15.000 | 5 postulaciones/mes, perfil básico |
-| **Profesional** | $35.000 | Postulaciones ilimitadas, perfil destacado |
+| Plan | Precio Mensual (COP) | Postulaciones | Beneficios Clave |
+|------|---------------------|---------------|------------------|
+| **Free** | $0 | 3/mes | Publicar ilimitado, chat, KYC, billetera |
+| **Básico** | $15.000 | 15/mes | 50 monedas bienvenida, chat, KYC |
+| **Profesional** | $35.000 | Ilimitadas | Perfil destacado, 150 monedas, analytics, verificación express, certificado mensual |
 
 ### 10.3 Servicios de Valor Agregado
 

@@ -1,0 +1,26 @@
+@startuml
+title ChambeApp - Pipeline de Recomendacion ML (2 etapas)
+actor Solicitante as S
+participant "get_recommender()" as GR
+participant "HybridRecommender" as HR
+participant "find_nearby_providers()" as GEO
+participant "FeatureExtractor" as FE
+participant "MLRanker (LightGBM)" as MR
+participant "ABTest" as AB
+
+S -> GR : recommendations(service_id)
+GR -> HR : rank(solicitud)
+HR -> GEO : PostGIS/Haversine (15km, top 50)
+GEO --> HR : candidatos
+HR -> FE : extract_batch(22 features)
+FE --> HR : X
+HR -> MR : predict(X)
+MR --> HR : scores
+HR --> GR : [{user_id, score, explicacion}]
+GR -> AB : log_recommendation(grupo)
+GR --> S : ranking ordenado
+note right of HR
+  fallback: si ML falla -> HeuristicRecommender
+  shadow mode: ShadowRecommender (log, heuristic)
+end note
+@enduml

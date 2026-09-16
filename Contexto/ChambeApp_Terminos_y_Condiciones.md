@@ -62,11 +62,12 @@ La Plataforma opera bajo un modelo de monetización híbrido diseñado para gara
 * **Exención para micro-servicios:** Los servicios cuyo valor acordado sea inferior a cincuenta mil pesos colombianos ($50.000 COP) estarán exentos del cobro de comisiones para incentivar el volumen transaccional.
 * **Descuentos por volumen:** La Plataforma podrá otorgar un 10% de descuento en la comisión del Proveedor si este completa más de 10 servicios en un mes calendario.
 
-**7.2. Planes de Suscripción Premium**
-Adicional a la cuenta gratuita, La Plataforma ofrece suscripciones mensuales voluntarias:
-* **Plan Básico ($15.000 COP/mes):** Dirigido a proveedores que inician, permite hasta 5 postulaciones al mes.
-* **Plan Profesional ($35.000 COP/mes):** Dirigido a proveedores establecidos, ofrece postulaciones ilimitadas, perfil destacado en búsquedas y analíticas básicas.
-* **Renovación y Cancelación:** Las suscripciones se renovarán automáticamente cada mes. El usuario podrá cancelar su suscripción en cualquier momento sin lugar a reembolsos por periodos ya facturados.
+**7.2. Planes de Suscripción**
+La Plataforma ofrece una cuenta gratuita y suscripciones mensuales voluntarias:
+* **Plan Free ($0 COP/mes):** Cuenta gratuita por defecto para todo usuario nuevo. Permite hasta 3 postulaciones al mes, publicar solicitudes ilimitadas, chat en tiempo real, verificación de identidad (KYC) y acceso a la billetera y monedas.
+* **Plan Básico ($15.000 COP/mes):** Dirigido a proveedores que inician, permite hasta 15 postulaciones al mes e incluye 50 monedas de bienvenida.
+* **Plan Profesional ($35.000 COP/mes):** Dirigido a proveedores establecidos, ofrece postulaciones ilimitadas, perfil destacado en búsquedas, 150 monedas de bienvenida, analíticas de desempeño, verificación express incluida y certificado de ingresos mensual.
+* **Renovación y Cancelación:** Las suscripciones se renovarán automáticamente cada mes. El usuario podrá cancelar su suscripción en cualquier momento sin lugar a reembolsos por periodos ya facturados, y su cuenta revertirá al Plan Free.
 
 **7.3. Servicios de Valor Agregado (A la carta)**
 Los usuarios podrán adquirir servicios adicionales de manera individual, incluyendo:
@@ -87,10 +88,10 @@ Los usuarios podrán adquirir servicios adicionales de manera individual, incluy
 **8.1. Alcance de la Responsabilidad y Garantía Legal**
 Dado que La Plataforma opera como un intermediario tecnológico, la garantía legal sobre la calidad, idoneidad y seguridad del servicio recae exclusivamente sobre el **Trabajador/Prestador**, de conformidad con el Estatuto del Consumidor (Ley 1480 de 2011).
 
-**8.2. Sistema de Retención de Fondos (Escrow)**
-Los pagos procesados permanecerán retenidos temporalmente y solo serán liberados a la cuenta del Trabajador si:
+**8.2. Sistema de Confirmación de Pagos**
+Los pagos se procesan directamente al confirmar la finalización del servicio. El monto neto se transfiere a la cuenta del Trabajador cuando:
 * El Solicitante confirma que el servicio ha sido finalizado a satisfacción.
-* Transcurren cuarenta y ocho (48) horas desde la finalización del servicio sin que el Solicitante reporte ninguna queja.
+* Transcurren cuarenta y ocho (48) horas desde la finalización del servicio sin que el Solicitante reporte ninguna queja (auto-confirmación).
 
 **8.3. Condiciones para Devoluciones y Reembolsos**
 * **Inasistencia (No-Show):** Reembolso del 100% si el Trabajador no se presenta.

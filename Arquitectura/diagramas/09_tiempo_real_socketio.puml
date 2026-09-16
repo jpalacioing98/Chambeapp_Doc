@@ -1,0 +1,20 @@
+@startuml
+title ChambeApp - Tiempo Real (Socket.IO)
+actor Usuario as U
+participant "Cliente (useNotificationSocket)" as C
+participant "notification_socket" as NS
+participant "chat_socket" as CS
+participant "oferta_socket" as OS
+database "Redis MQ" as RD
+
+U -> C : login (JWT)
+C -> NS : join {token} -> sala user:<id>
+C -> CS : join conversacion
+C -> OS : connect (auto-join)
+NS --> C : notificacion:nueva {id,titulo,mensaje}
+CS --> C : message {conversation_id, contenido}
+OS --> C : oferta:nueva {oferta_id}
+note over NS,OS
+  eventos enrutados via Redis message_queue
+end note
+@enduml
