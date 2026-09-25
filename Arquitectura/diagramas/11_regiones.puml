@@ -1,0 +1,61 @@
+@startuml
+title ChambeApp - Regiones y Scoping Multirregion (Arquitectura Real)
+skinparam componentStyle rectangle
+
+package "Cliente PWA (React + Vite)" as FE {
+  [SPA React] as SPA
+  [Selector Region] as SEL
+}
+
+package "API Regions (Flask-Smorest)" as API {
+  [GET /api/v1/regions] as LST
+  [GET /api/v1/regions/detectar] as DET
+  [admin scoping /api/v1/admin] as ADM
+  [superadmin /regions/reindex] as REI
+}
+
+package "Servicios de Dominio" as DOM {
+  [services/region.py] as REG
+  [match_region_from_text] as MATCH
+  [assign_region] as ASSIGN
+  [contract_owned_by_region] as OWNED
+}
+
+package "Modelo de Datos" as MOD {
+  [regions\n--\nid / clave unique / nombre / descripcion / departamentos JSON] as REG_T
+  [users.region_id FK nullable --> regions] as USR_T
+}
+
+database "PostgreSQL + PostGIS" as DB
+
+SPA --> SEL : elige
+SPA --> LST : lista
+SPA --> DET : autodetecta
+SEL --> LST
+DET --> MATCH
+MATCH --> REG_T : match texto
+LST --> REG_T : lee
+ADM --> OWNED : filtra por region
+ADM --> USR_T : scoping
+REI --> MATCH : reindexa
+REI --> REG_T : actualiza
+REG --> MATCH
+REG --> ASSIGN
+REG --> OWNED
+ASSIGN --> USR_T : asigna (nunca reasigna staff)
+OWNED --> REG_T : region del solicitante duena
+OWNED --> USR_T : verifica
+REG_T --> DB
+USR_T --> DB
+
+note right of ASSIGN
+  assign_region nunca reasigna
+  usuarios staff existentes
+end note
+
+note right of OWNED
+  contract_owned_by_region:
+  la region del solicitante
+  es duena del contrato
+end note
+@enduml

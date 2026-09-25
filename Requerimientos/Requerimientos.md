@@ -131,9 +131,9 @@
 **Casos Límite:**
 - WHEN orden es cancelada tras inicio THEN sistema SHALL aplicar políticas de reembolso (T&C §8.3).
 - WHEN ambas partes discrepan de estado THEN sistema SHALL abrir proceso de disputa (T&C §8.4):
-  - WHEN solicitante reporta problema THEN sistema SHALL congelar fondos y notificar al pds en ≤48h con evidencia.
+  - WHEN solicitante reporta problema THEN sistema SHALL abrir el caso y notificar al pds en ≤48h con evidencia.
   - WHEN no hay acuerdo en 5 días hábiles THEN sistema SHALL evaluar evidencias y dictar decisión definitiva.
-- WHEN servicio defectuoso es reportado THEN sistema SHALL congelar fondos para iniciar disputa (excluye costos de materiales fuera de la app).
+- WHEN servicio defectuoso es reportado THEN sistema SHALL iniciar proceso de disputa (excluye costos de materiales fuera de la app).
 
 ---
 
@@ -143,14 +143,14 @@
 **Criterios de Aceptación:**
 1. WHEN orden pasa a "Completado" THEN sistema SHALL generar orden de pago.
 2. WHEN solicitante paga THEN sistema SHALL procesar vía MercadoPago o PSE.
-3. WHEN pago es confirmado THEN sistema SHALL retener comisión y transferir el monto neto al proveedor.
+3. WHEN pago es confirmado THEN sistema SHALL descontar la comisión de plataforma y transferir el monto neto al proveedor.
 4. WHEN pds solicita retiro THEN sistema SHALL procesarlo vía transferencia directa.
 5. WHEN transacción falla THEN sistema SHALL mostrar opción de reintento y conservar orden.
-6. WHEN pago está pendiente THEN sistema SHALL transferir al pds si el solicitante confirma finalización o si transcurren 48h sin queja.
+6. WHEN solicitante no confirma en 48h THEN sistema SHALL confirmar la finalización automáticamente.
 7. WHEN solicitante invoca retracto (5 días hábiles, Art. 47 Ley 1480) y la solicitud no ha iniciado THEN sistema SHALL revertir pago (T&C §8.5).
 
 **Casos Límite:**
-- WHEN pago es rechazado por pasarela THEN sistema SHALL notificar error y no liberar fondos.
+- WHEN pago es rechazado por pasarela THEN sistema SHALL notificar error y no transferir fondos.
 - WHEN monto es menor a $50.000 THEN sistema SHALL eximir comisión (T&C §7.1).
 - WHEN pds no tiene cuenta bancaria THEN sistema SHALL permitir retiro por transferencia directa.
 - WHEN pds no se presenta (no-show) THEN sistema SHALL reembolsar 100% al solicitante (T&C §8.3).
@@ -342,12 +342,12 @@
 **Criterios de Aceptación:**
 1. WHEN PDS marca servicio como completado THEN sistema SHALL solicitar confirmación al solicitante
 2. WHEN solicitante confirma THEN sistema SHALL cambiar estado a "Completado"
-3. IF solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+3. IF solicitante no confirma en 48h THEN sistema SHALL confirmar la finalización automáticamente
 4. WHEN ambas partes confirman THEN sistema SHALL habilitar calificaciones y pagos
 
 **Casos Límite:**
-- WHEN solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
-- WHEN hay disputa THEN sistema SHALL congelar fondos y abrir proceso de mediación
+- WHEN solicitante no confirma en 48h THEN sistema SHALL confirmar la finalización automáticamente
+- WHEN hay disputa THEN sistema SHALL abrir proceso de mediación
 
 ---
 
@@ -438,13 +438,13 @@
 
 **Criterios de Aceptación:**
 1. WHEN contrato es largo THEN sistema SHALL habilitar hitos
-2. WHEN solicitante aprueba entrega THEN sistema SHALL liberar pago parcial
+2. WHEN solicitante aprueba entrega THEN sistema SHALL registrar la aprobación del hito
 3. WHEN hito se aprueba THEN sistema SHALL descontar comisión proporcional
-4. WHEN hito es rechazado THEN sistema SHALL congelar pago de ese hito
+4. WHEN hito es rechazado THEN sistema SHALL registrar el rechazo del hito
 5. WHEN todos los hitos aprueban THEN sistema SHALL completar contrato
 
 **Casos Límite:**
-- WHEN hito tiene disputa THEN sistema SHALL congelar fondos
+- WHEN hito tiene disputa THEN sistema SHALL abrir proceso de mediación
 - WHEN solicitante no responde en 48h THEN sistema SHALL auto-aprobar hito
 
 ---
@@ -663,3 +663,22 @@
 
 ---Nota de modelo de interacción (por definir / futuro)---
 El solicitante crea y gestiona la solicitud; el pds aplica/oferta sobre una solicitud; el solicitante selecciona un pds, puede aceptar la oferta o negociar; al acordar se inicia el flujo para el pds (por definir).
+
+---
+
+## 6. Módulos y RFs adicionales (v1.8)
+
+Documentos de requerimientos por módulo que continúan la numeración tras RF-48.
+Cada archivo incluye RFs, historias de usuario y criterios de aceptación.
+
+| Módulo | RFs | Documento |
+|---|---|---|
+| Comerciante / Negocios | RF-31..RF-48 | [RF_Modulo_Comerciante.md](RF_Modulo_Comerciante.md) |
+| Chambas y Marañas (ejecución + adendas) | RF-49..RF-60 | [RF_Modulo_Chambas_Maranas.md](RF_Modulo_Chambas_Maranas.md) |
+| Oficios y Habilidades (catálogo nacional, niveles, certificación) | RF-61..RF-66 | [RF_Modulo_Oficios_Habilidades.md](RF_Modulo_Oficios_Habilidades.md) |
+| Anuncios Laborales (no vinculantes) | RF-67..RF-69 | [RF_Modulo_Anuncios_Laborales.md](RF_Modulo_Anuncios_Laborales.md) |
+| División Regional (administración por regiones) | RF-70..RF-75 | [RF_Division_Regional.md](RF_Division_Regional.md) |
+| Roles y UI por rol (niveles 1-4) | — | [Roles_y_UI.md](Roles_y_UI.md) |
+
+Los contratos de API y el modelo de datos de estos módulos están en
+`Arquitectura/Contratos_API.md` y `Arquitectura/Modelo_Datos_Actual.md`.

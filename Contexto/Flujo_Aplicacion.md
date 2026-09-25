@@ -212,13 +212,13 @@
 2. Solicitante confirma recepción y satisfacción
 3. Ambas partes califican y reseñan
 4. Sistema procesa pago (MercadoPago/PSE)
-5. Se retienen comisiones (12% PDS + 8% solicitante)
-6. Monto neto se libera al PDS
+5. Se descuentan las comisiones (12% PDS + 8% solicitante)
+6. El monto neto se transfiere al PDS
 7. Flujo se finaliza
 
 #### Flujo Alternativo
-- Si solicitante no confirma en 48h, sistema libera fondos automáticamente
-- Si hay disputa, sistema congela fondos y abre proceso de mediación
+- Si solicitante no confirma en 48h, sistema confirma la finalización automáticamente
+- Si hay disputa, sistema abre proceso de mediación
 - Si servicio es defectuoso, solicitante puede reportar y iniciar disputa
 
 #### Requerimientos Relacionados
@@ -487,7 +487,7 @@ Contrato: $400.000 mensuales
 
 **Criterios de Aceptación:**
 1. WHEN contrato es largo THEN sistema SHALL habilitar hitos
-2. WHEN solicitante aprueba entrega THEN sistema SHALL liberar pago parcial
+2. WHEN solicitante aprueba entrega THEN sistema SHALL registrar la aprobación del hito
 3. WHEN hito se aprueba THEN sistema SHALL descontar comisión proporcional
 
 ### **9.6 RF-30: Dashboard Operativo**
@@ -520,7 +520,7 @@ Contrato: $400.000 mensuales
 **Criterios de Aceptación:**
 1. WHEN PDS marca servicio como completado THEN sistema SHALL solicitar confirmación al solicitante
 2. WHEN solicitante confirma THEN sistema SHALL cambiar estado a "Completado"
-3. IF solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+3. IF solicitante no confirma en 48h THEN sistema SHALL confirmar la finalización automáticamente
 4. WHEN ambas partes confirman THEN sistema SHALL habilitar calificaciones y pagos
 
 ### **10.3 RF-24: Gestión de Ofertas**

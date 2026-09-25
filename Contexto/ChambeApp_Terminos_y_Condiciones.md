@@ -88,19 +88,17 @@ Los usuarios podrán adquirir servicios adicionales de manera individual, incluy
 **8.1. Alcance de la Responsabilidad y Garantía Legal**
 Dado que La Plataforma opera como un intermediario tecnológico, la garantía legal sobre la calidad, idoneidad y seguridad del servicio recae exclusivamente sobre el **Trabajador/Prestador**, de conformidad con el Estatuto del Consumidor (Ley 1480 de 2011).
 
-**8.2. Sistema de Confirmación de Pagos**
-Los pagos se procesan directamente al confirmar la finalización del servicio. El monto neto se transfiere a la cuenta del Trabajador cuando:
-* El Solicitante confirma que el servicio ha sido finalizado a satisfacción.
-* Transcurren cuarenta y ocho (48) horas desde la finalización del servicio sin que el Solicitante reporte ninguna queja (auto-confirmación).
+**8.2. Sistema de Pagos Directos**
+Los pagos se procesan directamente al confirmar la finalización del servicio. El monto neto se transfiere de inmediato a la cuenta del Trabajador. La Plataforma no retiene ni congela los fondos.
 
 **8.3. Condiciones para Devoluciones y Reembolsos**
 * **Inasistencia (No-Show):** Reembolso del 100% si el Trabajador no se presenta.
 * **Cancelación Anticipada:** Reembolso aplicable si el Solicitante cancela antes del desplazamiento del Trabajador (sujeto a tarifas de cancelación si el Trabajador ya está en ruta).
-* **Servicio Defectuoso:** Los fondos quedarán congelados para iniciar proceso de disputa.
+* **Servicio Defectuoso:** Se abrirá proceso de disputa para evaluar el reembolso correspondiente.
 
 **8.4. Proceso de Disputas y Quejas**
 1. **Reporte:** El Solicitante debe reportar el problema en las siguientes 48 horas aportando evidencia.
-2. **Notificación y Mediación:** La Plataforma congelará los fondos y notificará al Trabajador para mediar.
+2. **Notificación y Mediación:** La Plataforma notificará al Trabajador para mediar.
 3. **Decisión de la Plataforma:** Si no hay acuerdo en 5 días hábiles, La Plataforma evaluará las evidencias y tomará una decisión definitiva.
 4. **Exclusiones:** No se reembolsarán costos de materiales por fuera de la app ni indemnizaciones por daños a la propiedad.
 

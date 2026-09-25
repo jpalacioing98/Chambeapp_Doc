@@ -1,0 +1,55 @@
+@startuml
+title ChambeApp - Arquitectura Admin Frontend (Arquitectura Real)
+skinparam componentStyle rectangle
+
+actor verificador as VER
+actor soporte as SOP
+actor admin as ADM_U
+actor superadmin as SUP_U
+
+package "Admin FE (React 18 + Vite 6 + JS)" as AFE {
+  [SPA Admin] as SPA
+  [RequireAuth] as RA
+  [RequireRole] as RR
+  [NAV_SIDEBAR] as SB
+  [NAV_TABBAR] as TB
+  [services adminApi] as AA
+  [services kycApi] as KA
+  [services superadminApi] as SA
+}
+
+package "API Backend (Flask-Smorest)" as BE {
+  [/api/v1/admin] as B_ADM
+  [/api/v1/kyc] as B_KYC
+  [/api/v1/superadmin] as B_SUP
+}
+
+database "PostgreSQL + PostGIS" as DB
+
+VER --> SPA
+SOP --> SPA
+ADM_U --> SPA
+SUP_U --> SPA
+SPA --> RA : protege
+RA --> RR : autoriza
+RR --> SB : verificador/soporte/admin/superadmin
+RR --> TB : movil
+SB --> AA
+SB --> KA
+SB --> SA
+TB --> AA
+TB --> KA
+TB --> SA
+AA --> B_ADM : scoping region
+KA --> B_KYC : verificacion KYC
+SA --> B_SUP : superadmin global
+B_ADM --> DB
+B_KYC --> DB
+B_SUP --> DB
+
+note right of RR
+  RequireRole permite solo
+  verificador / soporte /
+  admin / superadmin
+end note
+@enduml

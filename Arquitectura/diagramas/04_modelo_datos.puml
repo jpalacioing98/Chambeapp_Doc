@@ -8,6 +8,7 @@ class User {
   email
   password_hash
   verificado
+  region_id
 }
 class Profile {
   user_id
@@ -60,6 +61,91 @@ class Wallet {
   user_id
   saldo
 }
+class Region {
+  id
+  clave
+  nombre
+  descripcion
+  departamentos
+}
+class Contract {
+  id
+  estado
+}
+class Chamba {
+  id
+  contract_id
+  estado
+  evidencias
+  adendas
+  novedades
+  pago_dual
+  rating
+}
+class Marana {
+  id
+  chamba_id
+  adenda_idx
+  estado
+}
+class MaranaOferta {
+  id
+  marana_id
+  estado
+}
+class Oferta {
+  id
+  solicitud_id
+  estado
+  contra_monto
+  mensaje
+  fecha
+  horario
+}
+class AnuncioLaboral {
+  id
+  negocio_id
+  estado
+}
+class AnuncioPostulacion {
+  id
+  anuncio_id
+  estado
+}
+class Negocio {
+  id
+  owner_id
+  tipo
+  estado
+  geom
+}
+class MerchantPreference {
+  id
+  user_id
+}
+class MerchantPaymentMethod {
+  id
+  user_id
+}
+class Habilidad {
+  id
+  nombre
+}
+class HabilidadNivel {
+  id
+  habilidad_id
+  idx
+}
+class EndosoHabilidad {
+  id
+  habilidad_id
+  user_id
+}
+class CertificacionTecnica {
+  id
+  habilidad_id
+  user_id
+}
 
 User "1" --> "1" Profile
 User "1" --> "*" Solicitud
@@ -67,7 +153,23 @@ User "1" --> "1" Trust
 User "1" --> "*" Badge
 User "1" --> "1" Wallet
 User "1" --> "*" PortfolioItem
+User "*" --> "1" Region
 Solicitud "1" --> "*" NotificationCascade
 Solicitud "1" --> "*" Order
+Solicitud "1" --> "*" Oferta
 User "1" --> "*" RecommendationLog
+Chamba "1" --> "1" Contract
+Marana "*" --> "1" Chamba
+Marana "1" --> "*" MaranaOferta
+Oferta "*" --> "1" Solicitud
+AnuncioLaboral "*" --> "1" User
+AnuncioLaboral "1" --> "*" AnuncioPostulacion
+Negocio "*" --> "1" User
+User "1" --> "*" MerchantPreference
+User "1" --> "*" MerchantPaymentMethod
+HabilidadNivel "*" --> "1" Habilidad
+EndosoHabilidad "*" --> "1" Habilidad
+EndosoHabilidad "*" --> "1" User
+CertificacionTecnica "*" --> "1" Habilidad
+CertificacionTecnica "*" --> "1" User
 @enduml

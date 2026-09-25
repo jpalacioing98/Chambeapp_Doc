@@ -159,16 +159,16 @@
 **Criterios de Aceptación:**
 1. WHEN orden "Completado" THEN sistema SHALL generar orden de pago.
 2. WHEN solicitante paga THEN sistema SHALL procesar vía MercadoPago o PSE.
-3. WHEN pago confirmado THEN sistema SHALL retener comisión y liberar neto al proveedor.
+3. WHEN pago confirmado THEN sistema SHALL descontar la comisión de plataforma y transferir el monto neto al proveedor.
 4. WHEN proveedor retira THEN sistema SHALL procesar transferencia directa.
-5. WHEN transacción falla THEN sistema SHALL permitir reintento sin liberar fondos.
+5. WHEN transacción falla THEN sistema SHALL permitir reintento sin transferir fondos.
 
 **CU-08.1 Pagar servicio (Actor: Solicitante)**
 - Flujo principal:
   1. Orden en "Completado" → generar orden de pago.
   2. Solicitante elige pasarela (MercadoPago / PSE).
-  3. Pago confirmado → retención de comisión (RF-15) + liberación de neto.
-- Alterno: 3a. Rechazo → error, sin liberar, reintento habilitado.
+  3. Pago confirmado → comisión de plataforma (RF-15) + transferencia del neto al proveedor.
+- Alterno: 3a. Rechazo → error, sin transferir fondos, reintento habilitado.
 
 **CU-08.2 Retirar fondos (Actor: Proveedor)**
 - Flujo principal:
@@ -396,7 +396,7 @@
 **Criterios de Aceptación:**
 1. WHEN PDS marca servicio como completado THEN sistema SHALL solicitar confirmación al solicitante
 2. WHEN solicitante confirma THEN sistema SHALL cambiar estado a "Completado"
-3. IF solicitante no confirma en 48h THEN sistema SHALL liberar fondos automáticamente
+3. IF solicitante no confirma en 48h THEN sistema SHALL confirmar la finalización automáticamente
 4. WHEN ambas partes confirman THEN sistema SHALL habilitar calificaciones y pagos
 
 **CU-20.1 Confirmar finalización (Actor: Solicitante)**
@@ -405,7 +405,7 @@
   2. Sistema notifica al solicitante para confirmar.
   3. Solicitante confirma recepción y satisfacción.
   4. Sistema cambia estado a "Completado" y habilita pagos/calificaciones.
-- Alterno: 3a. Solicitante no confirma en 48h → sistema libera fondos automáticamente.
+- Alterno: 3a. Solicitante no confirma en 48h → sistema confirma la finalización automáticamente.
 
 ---
 
@@ -568,9 +568,9 @@
 
 **Criterios de Aceptación:**
 1. WHEN contrato es largo THEN sistema SHALL habilitar hitos
-2. WHEN solicitante aprueba entrega THEN sistema SHALL liberar pago parcial
+2. WHEN solicitante aprueba entrega THEN sistema SHALL registrar la aprobación del hito
 3. WHEN hito se aprueba THEN sistema SHALL descontar comisión proporcional
-4. WHEN hito es rechazado THEN sistema SHALL congelar pago de ese hito
+4. WHEN hito es rechazado THEN sistema SHALL registrar el rechazo del hito
 5. WHEN todos los hitos aprueban THEN sistema SHALL completar contrato
 
 **CU-26.1 Crear hitos (Actor: Solicitante)**
@@ -584,14 +584,14 @@
 - Flujo principal:
   1. PDS completa entrega de hito.
   2. Sistema notifica al solicitante.
-  3. Solicitante aprueba → sistema libera pago parcial.
-- Alterno: 3a. Rechaza → congelar pago, abrir disputa.
+  3. Solicitante aprueba → sistema registra la aprobación del hito.
+- Alterno: 3a. Rechaza → registrar el rechazo, abrir disputa.
 
 **CU-26.3 Ver progreso de hitos (Actor: Usuario)**
 - Flujo principal:
   1. Accede a "Mis Contratos".
   2. Ve lista de hitos con estados (pendiente, aprobado, rechazado).
-  3. Ve pagos liberados y pendientes.
+  3. Ve el estado de los hitos aprobados y pendientes.
 - Alterno: 3a. Sin hitos → muestra contrato único.
 
 ---

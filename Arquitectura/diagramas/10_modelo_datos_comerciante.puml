@@ -1,0 +1,150 @@
+@startuml
+title ChambeApp - Modelo de Datos: Módulo Comerciante
+skinparam classAttributeIconSize 0
+
+' ── Entidades existentes (contexto) ──────────────────────
+
+class User {
+  id
+  rol {MERCHANT}
+  email
+  password_hash
+  verificado
+  status
+  role_version
+}
+
+class Negocio {
+  id
+  owner_id → User
+  nombre
+  slug
+  tipo {comercio,servicio,virtual,hibrido}
+  latitud / longitud
+  geom (POINT 4326)
+  categoria_principal
+  calificacion_promedio
+  verificado
+  estado {borrador,activo,...}
+}
+
+class NegocioHorario {
+  id
+  negocio_id → Negocio
+  dia_semana (0-6)
+  abierto
+  hora_apertura
+  hora_cierre
+}
+
+class NegocioRating {
+  id
+  negocio_id → Negocio
+  autor_id → User
+  puntaje (1-5)
+  comentario
+}
+
+class NegocioReporte {
+  id
+  negocio_id → Negocio
+  reporter_id → User
+  tipo
+  estado
+}
+
+class Solicitud {
+  id
+  solicitante_id → User
+  categoria
+  presupuesto
+  latitud / longitud
+  estado
+}
+
+class Oferta {
+  id
+  solicitud_id → Solicitud
+  proveedor_id → User
+  precio
+  estado
+}
+
+class Contract {
+  id
+  solicitud_id → Solicitud
+  employer_id → User
+  provider_id → User
+  estado
+}
+
+class KYCDocumento {
+  id
+  usuario_id → User
+  documento_requerido_id
+  url_archivo
+  estado {pendiente,aprobado,rechazado}
+}
+
+' ── Entidades NUEVAS ─────────────────────────────────────
+
+class MerchantPreference {
+  id
+  user_id → User [UNIQUE]
+  notif_nueva_solicitud (bool)
+  notif_nueva_resena (bool)
+  notif_estado_kyc (bool)
+  notif_pago_recibido (bool)
+  push_enabled (bool)
+  email_digest (daily/weekly/never)
+}
+
+class MerchantPaymentMethod {
+  id
+  user_id → User
+  tipo (nequi,bancolombia,efectivo,...)
+  detalle (JSONB)
+  principal (bool)
+  activo (bool)
+}
+
+' ── Relaciones ───────────────────────────────────────────
+
+User "1" --> "1" Negocio : owner
+User "1" --> "*" NegocioHorario : via Negocio
+User "1" --> "*" NegocioRating : autor
+User "1" --> "*" NegocioReporte : reporter
+
+Negocio "1" --> "7" NegocioHorario : horarios
+Negocio "1" --> "*" NegocioRating : ratings
+Negocio "1" --> "*" NegocioReporte : reportes
+
+User "1" --> "1" MerchantPreference : preferences
+User "1" --> "*" MerchantPaymentMethod : payment_methods
+
+Solicitud "1" --> "*" Oferta : ofertas
+Solicitud "1" --> "1" Contract : contrato
+Oferta "1" --> "1" User : proveedor
+
+User "1" --> "*" KYCDocumento : documentos
+
+' ── Notas ────────────────────────────────────────────────
+
+note right of MerchantPreference
+  NUEVO — Preferencias de notificación
+  del comerciante. Se crea con defaults
+  al registrar usuario merchant.
+end note
+
+note right of MerchantPaymentMethod
+  NUEVO — Métodos de pago del negocio
+  (Nequi, Bancolombia, efectivo, etc.)
+  upsert por usuario.
+end note
+
+note bottom of Negocio
+  imagenes: JSON array de URLs
+  (upload via MinIO → storage.py)
+end note
+
+@enduml

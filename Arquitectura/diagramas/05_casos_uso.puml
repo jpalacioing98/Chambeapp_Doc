@@ -4,6 +4,10 @@ left to right direction
 actor "Solicitante" as SOL
 actor "PDS" as PDS
 actor "Admin" as ADM
+actor "Merchant" as MER
+actor "Verificador" as VER
+actor "Soporte" as SOP
+actor "Superadmin" as SUP
 
 rectangle "Plataforma" {
   SOL -- (Publicar solicitud con geocerca)
@@ -17,5 +21,22 @@ rectangle "Plataforma" {
   PDS -- (Completar servicio)
   ADM -- (Ver metricas ML / A/B)
   ADM -- (Gestionar usuarios)
+  SOL -- (Ejecutar chamba: evidencias/adenda/novedad/pago dual/calificacion)
+  PDS -- (Ejecutar chamba: evidencias/adenda/novedad/pago dual/calificacion)
+  SOL -- (Lanzar marana desde adenda)
+  PDS -- (Ofertar y responder marana)
+  PDS -- (Enviar oferta y contraoferta)
+  SOL -- (Responder oferta y contraoferta)
+  MER -- (Crear negocio y gestionar horarios/imagenes)
+  MER -- (Gestionar payment-methods y preferences)
+  SOL -- (Publicar anuncio y moderar postulaciones)
+  PDS -- (Postularse a anuncio)
+  PDS -- (Certificarse: quiz y certificacion por nivel)
+  PDS -- (Recibir endoso de habilidad)
+  VER -- (Aprobar/rechazar KYC y verificaciones)
+  SOP -- (Atender tickets regionales)
+  ADM -- (Operar panel regional con scoping)
+  SUP -- (Gestionar regiones y reindex)
+  SUP -- (Gestionar admins globales y overrides)
 }
 @enduml

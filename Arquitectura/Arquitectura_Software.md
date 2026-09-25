@@ -1,4 +1,4 @@
-# Arquitectura de Software — ChambeApp (PWA) v2.0
+# Arquitectura de Software — ChambeApp (PWA) v2.1
 
 > Stack: **React + Vite (PWA)** (frontend) + **Python Flask** (backend REST API) + motor de IA y visualización 3D.
 > Alineado con los módulos de contexto, requerimientos (RF-01 a RF-30), historias de usuario, modelo de monetización con billetera virtual y marco legal.
@@ -18,7 +18,7 @@
                 │ HTTPS / REST (JSON) + WebSocket
 ┌───────────────▼─────────────────────────┐
 │  API Flask (Backend)                     │
-│  - 24 Blueprints por dominio            │
+│  - 35 blueprints REST + 3 handlers Socket.IO│
 │  - Auth (JWT) · Validación (Marshmallow)│
 │  - Servicios de negocio                  │
 │  - Socket.IO (chat, ofertas, notifs)     │
@@ -41,6 +41,12 @@
 ┌───────▼──────────────────────────────────────────────┐
 │ Integraciones: MercadoPago/PSE · WebPush             │
 │ Storage (3D/assets) · Email/SMS · Mapbox GL JS       │
+└──────────────────────────────────────────────────────┘
+         │
+┌────────▼─────────────────────────────────────────────┐
+│ Panel Admin (React 18 + Vite 6, admin frontend)      │
+│ Guards RequireAuth/RequireRole · STAFF_ROLES         │
+│ Scoping regional: admin solo opera su región         │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -72,6 +78,8 @@
 | Pagos | SDK MercadoPago + integración PSE | Pasarelas |
 | Push | pywebpush (Web Push) | Notificaciones PWA |
 | Tests | pytest (BE) · Vitest + RTL (FE) | Calidad |
+| Admin FE | React 18 + Vite 6 + JS, react-router-dom 7, axios, lucide-react, sonner | Panel staff (verificador/soporte/admin/superadmin), guards RequireAuth/RequireRole, services adminApi/kycApi/superadminApi |
+| División regional | Region + `services/region.py` + `auth/region.py` | Scoping por región, anti doble-conteo |
 
 ---
 
@@ -95,6 +103,14 @@
 | Métricas IA | `routes/ai_metrics.py` | — |
 | Monetización | `services/billing.py`, `services/subscriptions.py`, `routes/billing.py` | `features/billing` |
 | Legal / T&C | `services/legal.py`, `routes/legal.py` | `features/legal` |
+| K. Ejecución Chambas | `routes/chambas.py`, `models/chamba.py` | `features/chambas` |
+| L. Marañas (subastas internas) | `routes/maranas.py`, `models/marana.py` (Marana+MaranaOferta) | `features/maranas` |
+| M. Ofertas / Contraofertas | `routes/ofertas.py` (prefijo `/api/v1`), `models/oferta.py` | `features/ofertas` |
+| N. Anuncios laborales | `routes/anuncios.py`, `models/anuncio.py` (AnuncioLaboral+AnuncioPostulacion) | `features/anuncios` |
+| O. Negocios / Comerciante | `routes/negocios.py`, `routes/merchant.py`, `models/negocio.py` + MerchantPreference/MerchantPaymentMethod | `features/negocios` |
+| P. Oficios / Habilidades | `routes/habilidades.py`, `models/habilidad.py` (Habilidad+HabilidadNivel+EndosoHabilidad+CertificacionTecnica) | `features/habilidades` |
+| Q. División regional | `routes/regions.py`, `services/region.py`, `auth/region.py`, `models/region.py` (Region + User.region_id) | `features/regions` |
+| R. Panel admin FE | `routes/admin.py`, `routes/superadmin.py` + `Chambeapp_admin_frontend` (config/navigation.js, services adminApi/kycApi/superadminApi) | `Chambeapp_admin_frontend` (React 18 + Vite 6) |
 
 ---
 
@@ -109,7 +125,7 @@ backend/
 │   ├── config.py              # Config por entorno (dev/prod)
 │   ├── extensions.py          # db, migrate, jwt, cache
 │   ├── models/                # Entidades SQLAlchemy
-│   │   ├── user.py            # Usuario, Perfil, Verificacion
+│   │   ├── user.py            # Usuario, Perfil, Verificacion (+ region_id FK)
 │   │   ├── order.py           # Orden, Estado, Disputa
 │   │   ├── payment.py         # Pago, Reembolso
 │   │   ├── subscription.py    # Plan, Suscripcion
@@ -123,25 +139,54 @@ backend/
 │   │   ├── trust.py           # TrustScore (0-100)
 │   │   ├── badges.py          # Sistema de insignias
 │   │   ├── cascade.py         # NotificationCascade
-│   │   └── recommendation_log.py # Log de predicciones ML
+│   │   ├── recommendation_log.py # Log de predicciones ML
+│   │   ├── chamba.py          # Chamba (1:1 contracts, evidencias/adendas/novedades JSON, pago dual, rating)
+│   │   ├── marana.py          # Marana + MaranaOferta (chamba_id + adenda_idx)
+│   │   ├── oferta.py          # Oferta (pendiente/aceptada/rechazada/contraoferta/cancelada)
+│   │   ├── anuncio.py         # AnuncioLaboral + AnuncioPostulacion (negocio_id -> users.id)
+│   │   ├── negocio.py         # Negocio + NegocioHorario + NegocioRating + NegocioReporte (geom PostGIS)
+│   │   ├── merchant.py        # MerchantPreference + MerchantPaymentMethod
+│   │   ├── habilidad.py       # Habilidad + HabilidadNivel + EndosoHabilidad + CertificacionTecnica
+│   │   └── region.py          # Region (id/clave unique/nombre/descripcion/departamentos JSON)
 │   ├── schemas/               # Marshmallow (validacion)
-│   ├── routes/                # Blueprints (endpoints)
-│   │   ├── auth.py            # Registro, login, T&C (RF-01/RF-17)
-│   │   ├── users.py           # Perfil, habilidades (RF-02/03)
-│   │   ├── services.py        # Publicacion/ordenes (RF-04/07)
-│   │   ├── payments.py        # Pasarela de pagos (RF-08)
-│   │   ├── ai.py              # Match/recomendacion (RF-05)
+│   ├── routes/                # Blueprints (35 REST + 3 handlers Socket.IO)
+│   │   ├── auth.py            # Registro, login, T&C (RF-01/RF-17) — prefijo /api/v1/auth
+│   │   ├── users.py           # Perfil, user_preferences mismo prefijo /api/v1/users
+│   │   ├── solicitudes.py     # Solicitudes — prefijo /api/v1/solicitudes
+│   │   ├── contracts.py       # Contratos — prefijo /api/v1/contracts
+│   │   ├── chambas.py         # Ejecucion — prefijo /api/v1/chambas
+│   │   ├── maranas.py         # Marañas — prefijo /api/v1/maranas
+│   │   ├── ofertas.py         # Ofertas — prefijo /api/v1 (/solicitudes/<sid>/ofertas, /mis-ofertas, /ofertas/<oid>/responder)
+│   │   ├── anuncios.py        # Anuncios laborales — prefijo /api/v1/anuncios
+│   │   ├── negocios.py        # Negocios — prefijo /api/v1/negocios
+│   │   ├── merchant.py        # Comerciante — prefijo /api/v1/merchant
+│   │   ├── habilidades.py     # Oficios — prefijo /api/v1 (/habilidades, /habilidades/mis-niveles, /quiz, /certificacion, /endosar)
+│   │   ├── regions.py         # Regiones — prefijo /api/v1/regions (GET "" listar, GET /detectar?ubicacion=)
+│   │   ├── admin.py           # Panel staff con scoping regional — prefijo /api/v1/admin
+│   │   ├── superadmin.py      # Admins globales — prefijo /api/v1/superadmin
+│   │   ├── notifications.py   # Push, chat (RF-16) — prefijo /api/v1/notifications
+│   │   ├── payments.py        # Pasarela de pagos (RF-08) — prefijo /api/v1/payments
+│   │   ├── wallet.py          # Billetera Virtual (RF-25) — prefijo /api/v1/wallet
+│   │   ├── metodos_pago.py    # Métodos de pago — prefijo /api/v1/metodos-pago
+│   │   ├── subscriptions.py   # Suscripciones — prefijo /api/v1/subscriptions
+│   │   ├── prices.py          # Precios — prefijo /api/v1/prices
+│   │   ├── providers.py       # Proveedores — prefijo /api/v1/providers
+│   │   ├── onboarding.py      # Onboarding — prefijo /api/v1/onboarding
+│   │   ├── portfolio.py       # Portafolio multimedia (upload/download) — prefijo /api/v1/portfolio
+│   │   ├── trust.py           # Confianza — prefijo /api/v1/trust
+│   │   ├── kyc.py             # KYC — prefijo /api/v1/kyc
+│   │   ├── tickets.py         # Tickets — prefijo /api/v1/tickets
+│   │   ├── chat.py            # Chat — prefijo /api/v1/chat
+│   │   ├── ai.py              # Match/recomendacion (RF-05) — prefijo /api/v1/ai (ai_metrics mismo prefijo)
 │   │   ├── ai_metrics.py      # Métricas ML y A/B testing
-│   │   ├── billing.py         # Suscripciones, valor agregado (RF-11/13/14/15)
-│   │   ├── notifications.py   # Push, chat (RF-16)
-│   │   ├── notification_socket.py # Handler Socket.IO notificaciones
-│   │   ├── legal.py           # T&C, disputas, Habeas Data (RF-17)
-│   │   ├── wallet.py          # Billetera Virtual (RF-25)
+│   │   ├── legal.py           # T&C, disputas, Habeas Data (RF-17) — prefijo /api/v1/legal
 │   │   ├── coins.py           # Sistema de Monedas (RF-27)
 │   │   ├── modalidades.py     # Modalidades de Cobro (RF-26)
 │   │   ├── milestones.py      # Hitos de Pago (RF-29)
 │   │   ├── dashboard.py       # Dashboard Operativo (RF-30)
-│   │   └── portfolio.py       # Portafolio multimedia (upload/download)
+│   │   ├── chat_socket.py     # Handler Socket.IO chat
+│   │   ├── oferta_socket.py   # Handler Socket.IO ofertas
+│   │   └── notification_socket.py # Handler Socket.IO notificaciones
 │   ├── services/              # Logica de negocio
 │   │   ├── orders.py          # Ciclo de orden + disputas (RF-07)
 │   │   ├── payments.py        # Pagos directos, reembolsos (RF-08)
@@ -158,7 +203,9 @@ backend/
 │   │   ├── dashboard.py       # Logica de dashboard (RF-30)
 │   │   ├── cascade.py         # CascadeManager (geocerca 2-5-15km)
 │   │   ├── storage.py         # MinIO upload/download (portfolio, KYC)
-│   │   └── trust.py           # TrustScore service (scoring 0-100)
+│   │   ├── trust.py           # TrustScore service (scoring 0-100)
+│   │   └── region.py          # match_region_from_text, assign_region, contract_owned_by_region
+│   │   ├── auth/region.py     # region_scope_id() (scoping por JWT)
 │   ├── ai/                    # Motor de recomendacion ML
 │   │   ├── recommender.py     # HybridRecommender, ShadowRecommender, HeuristicRecommender, get_recommender()
 │   │   ├── features.py        # FeatureExtractor (22 features)
@@ -169,8 +216,13 @@ backend/
 │   └── tasks.py               # Celery tasks (cascade, retraining, health)
 ├── migrations/
 │   └── versions/
-│       ├── 001_add_postgis_trust.py   # PostGIS + TrustScore + Badges
-│       └── 002_add_solicitud_radio.py # radio_km en solicitudes
+│       ├── 001 postgis+trust, 002 radio solicitud, 003 username, 004 negocios,
+│       ├── 005 merchant rol, 006 trust_scores, 007 solicitud horario/imagenes,
+│       ├── 008 drop payment retention, 009 chamba, 010 oferta convenir,
+│       ├── 011 marana, 012 fecha_validacion, 013 anuncios, 014 regiones,
+│       ├── c3d5e7f9a1b2 oficios/habilidades, d7e9f1b3c5a7 categoria habilidades,
+│       ├── f2a1c4e8d9b0 rutas certificables, e5b8c1d4f6a9 perfil prefs+2fa,
+│       └── ac89426b23a3 foto perfil+metodos pago
 ├── scripts/
 │   └── rollout_ml.py          # Script de rollout gradual ML
 ├── tests/                     # pytest
@@ -240,7 +292,7 @@ frontend/
 - **Profile**: user_id, habilidades[], experiencia, zona, calificacion_promedio, verificado, badges[].
 - **Service**: id, solicitante_id, categoria, descripcion, ubicacion, presupuesto, estado.
 - **Order**: id, service_id, proveedor_id, estado (Pendiente/En progreso/Completado/Cancelado), creado_en.
-- **Payment**: id, order_id, monto, comision, estado, pasarela, liberado_en.
+- **Payment**: id, contract_id, monto, comision_pds, comision_solicitante, estado, pasarela.
 - **Subscription**: id, user_id, plan (Basico/Pro), estado, renueva_en.
 - **Rating**: id, order_id, autor_id, calificado_id, puntaje, comentario.
 - **Dispute**: id, order_id, motivo, evidencias[], estado, resuelto_en.
@@ -327,6 +379,23 @@ CREATE TABLE milestone (
     created_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+### **5.5 Entidades de Ejecución y Marketplace**
+
+- **Chamba** (tabla `chambas`, 1:1 con contracts): enum programada/en_proceso/en_ejecucion/pausada/pendiente_validacion/liquidacion_confirmada/finalizada; evidencias/adendas/novedades JSON; pago dual (check-in dual); rating.
+- **Marana + MaranaOferta** (tablas `maranas`/`maranas_ofertas`): estados publicado/asignado/completado/pagado/cancelado; chamba_id + adenda_idx (marana lanzada desde adenda).
+- **Oferta** (tabla `ofertas`): pendiente/aceptada/rechazada/contraoferta/cancelada; contra_monto/mensaje/fecha/horario.
+- **AnuncioLaboral + AnuncioPostulacion** (tablas `anuncios_laborales`/`anuncios_postulaciones`): publicado/cerrado; pendiente/contactado/descartado; negocio_id -> users.id.
+- **Negocio + NegocioHorario + NegocioRating + NegocioReporte** (tabla `negocios`): tipos comercio/servicio/virtual/hibrido; estados borrador/pendiente_verificacion/activo/suspendido/rechazado; geom PostGIS.
+- **MerchantPreference + MerchantPaymentMethod**: preferencias y métodos de pago del comerciante.
+- **Habilidad + HabilidadNivel + EndosoHabilidad + CertificacionTecnica** (tablas `habilidades`/`habilidad_niveles`/`endoso_habilidades`/`certificaciones_tecnicas`): quiz y certificación por nivel, endosos.
+
+### **5.6 División Regional**
+
+- **Region** (tabla `regions`): id/clave unique/nombre/descripcion/departamentos JSON.
+- **User.region_id**: FK nullable a regions.
+- **Reglas**: `services/region.py` con `match_region_from_text`, `assign_region` (usa Profile.zona, NUNCA reasigna staff admin/superadmin/verificador/soporte, NULL si sin coincidencia) y `contract_owned_by_region` (región del SOLICITANTE dueña, anti doble-conteo); `auth/region.py` con `region_scope_id()`.
+- Ver detalle operativo en S11 y diagrama `diagramas/11_regiones.puml`.
 
 ---
 
@@ -438,6 +507,147 @@ CREATE TABLE milestone (
 | Client→Server | `join` | `{token}` | Unirse a sala `user:<id>` (decodifica JWT) |
 | Client→Server | `message` | `{conversation_id, contenido}` | Enviar mensaje de chat |
 
+### **7.12 Chambas (ejecución)**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/chambas/` | Listar chambas |
+| `POST` | `/api/v1/chambas/` | Crear desde contrato (verifica código) |
+| `GET` | `/api/v1/chambas/<id>` | Detalle de chamba |
+| `PATCH` | `/api/v1/chambas/<id>/estado` | Cambiar estado (programada/en_proceso/en_ejecucion/pausada/pendiente_validacion/liquidacion_confirmada/finalizada) |
+| `POST` | `/api/v1/chambas/<id>/validacion` | Validar ejecución |
+| `POST` | `/api/v1/chambas/<id>/evidencia-entrada` | Subir evidencia de entrada |
+| `POST` | `/api/v1/chambas/<id>/evidencia-salida` | Subir evidencia de salida |
+| `POST` | `/api/v1/chambas/<id>/adenda` | Crear adenda |
+| `PATCH` | `/api/v1/chambas/<id>/adenda/<idx>` | Editar adenda |
+| `DELETE` | `/api/v1/chambas/<id>/adenda/<idx>` | Eliminar adenda |
+| `POST` | `/api/v1/chambas/<id>/novedad` | Reportar novedad |
+| `POST` | `/api/v1/chambas/<id>/pago` | Pago con check-in dual |
+| `POST` | `/api/v1/chambas/<id>/calificacion` | Calificar chamba |
+| `POST` | `/api/v1/chambas/evidencia/upload` | Subir evidencia (multipart) |
+| `GET` | `/api/v1/chambas/solicitante/<uid>` | Chambas por solicitante |
+| `GET` | `/api/v1/chambas/prestador/<uid>` | Chambas por prestador |
+| `POST` | `/api/v1/chambas/<id>/marana` | Lanzar marana desde adenda |
+
+### **7.13 Marañas**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/maranas/chamba/<chamba_id>` | Marañas por chamba |
+| `GET` | `/api/v1/maranas/` | Listar marañas |
+| `GET` | `/api/v1/maranas/<id>` | Detalle (publicado/asignado/completado/pagado/cancelado) |
+| `POST` | `/api/v1/maranas/<id>/ofertas` | Ofertar en marana |
+| `GET` | `/api/v1/maranas/<id>/ofertas` | Listar ofertas de marana |
+| `POST` | `/api/v1/maranas/<id>/responder` | Responder oferta de marana |
+| `PATCH` | `/api/v1/maranas/<id>/estado` | Cambiar estado |
+| `POST` | `/api/v1/maranas/<id>/pago` | Pagar marana |
+| `GET` | `/api/v1/maranas/solicitante/<uid>` | Marañas por solicitante |
+| `GET` | `/api/v1/maranas/prestador/<uid>` | Marañas por prestador |
+
+### **7.14 Ofertas / Contraofertas**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/v1/solicitudes/<sid>/ofertas` | Crear oferta |
+| `GET` | `/api/v1/solicitudes/<sid>/ofertas` | Listar ofertas de solicitud |
+| `GET` | `/api/v1/mis-ofertas` | Mis ofertas enviadas |
+| `POST` | `/api/v1/ofertas/<oid>/responder` | Responder (aceptada/rechazada/contraoferta con contra_monto/mensaje/fecha/horario) |
+
+### **7.15 Anuncios Laborales**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/v1/anuncios/` | Crear anuncio (publicado/cerrado) |
+| `GET` | `/api/v1/anuncios/` | Listar anuncios |
+| `GET` | `/api/v1/anuncios/negocio/<uid>` | Anuncios por negocio |
+| `GET` | `/api/v1/anuncios/<id>` | Detalle de anuncio |
+| `PATCH` | `/api/v1/anuncios/<id>/estado` | Cambiar estado |
+| `POST` | `/api/v1/anuncios/<id>/postulaciones` | Postularse |
+| `GET` | `/api/v1/anuncios/<id>/postulaciones` | Listar postulaciones (pendiente/contactado/descartado) |
+| `PATCH` | `/api/v1/anuncios/<id>/postulaciones/<pid>` | Moderar postulación |
+
+### **7.16 Negocios + Merchant**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/v1/negocios/` | Crear negocio (comercio/servicio/virtual/hibrido) |
+| `GET` | `/api/v1/negocios/` | Listar negocios |
+| `GET` | `/api/v1/negocios/<id>` | Detalle (borrador/pendiente_verificacion/activo/suspendido/rechazado) |
+| `GET` | `/api/v1/negocios/slug/<slug>` | Detalle por slug |
+| `GET` | `/api/v1/negocios/mapa` | Negocios para mapa (PostGIS) |
+| `GET` | `/api/v1/negocios/buscar` | Buscar negocios |
+| `GET` | `/api/v1/negocios/categorias` | Categorías de negocio |
+| `GET` | `/api/v1/negocios/<id>/horarios` | Listar horarios |
+| `POST` | `/api/v1/negocios/<id>/horarios` | Crear horario |
+| `POST` | `/api/v1/negocios/<id>/imagenes` | Subir imágenes (+upload) |
+| `DELETE` | `/api/v1/negocios/<id>/imagenes/<idx>` | Eliminar imagen |
+| `POST` | `/api/v1/negocios/<id>/rating` | Calificar negocio |
+| `GET` | `/api/v1/negocios/<id>/ratings` | Ratings de negocio |
+| `POST` | `/api/v1/negocios/<id>/reportar` | Reportar negocio |
+| `GET` | `/api/v1/negocios/<id>/stats` | Estadísticas de negocio |
+| `GET` | `/api/v1/merchant/payment-methods` | Listar métodos de pago del comerciante |
+| `POST` | `/api/v1/merchant/payment-methods` | Crear método de pago |
+| `PATCH` | `/api/v1/merchant/payment-methods/<id>` | Editar método de pago |
+| `DELETE` | `/api/v1/merchant/payment-methods/<id>` | Eliminar método de pago |
+| `GET` | `/api/v1/merchant/preferences` | Ver preferencias del comerciante |
+| `PATCH` | `/api/v1/merchant/preferences` | Editar preferencias del comerciante |
+
+### **7.17 Habilidades / Oficios**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/habilidades` | Lista de habilidades |
+| `POST` | `/api/v1/habilidades` | Crear habilidad (según código) |
+| `GET` | `/api/v1/habilidades/mis-niveles` | Mis niveles |
+| `POST` | `/api/v1/habilidades/<id>/nivel/<idx>/quiz` | Quiz de nivel |
+| `POST` | `/api/v1/habilidades/<id>/nivel/<idx>/certificacion` | Certificación técnica de nivel |
+| `GET` | `/api/v1/habilidades/<id>` | Detalle de habilidad |
+| `POST` | `/api/v1/habilidades/endosar` | Endosar habilidad |
+| `GET` | `/api/v1/habilidades/certificaciones` | Mis certificaciones |
+| `GET` | `/api/v1/habilidades/progreso` | Progreso de certificación |
+
+### **7.18 Regiones**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/regions` | Listar regiones (GET "" ) |
+| `GET` | `/api/v1/regions/detectar?ubicacion=` | Detectar región por texto de ubicación |
+
+### **7.19 Admin + Superadmin**
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/v1/admin/users` | Listar usuarios (scoping regional) |
+| `GET` | `/api/v1/admin/users/<id>` | Detalle de usuario en región |
+| `PATCH` | `/api/v1/admin/users/<id>/role` | Cambiar rol |
+| `PATCH` | `/api/v1/admin/users/<id>/status` | Cambiar estado |
+| `GET` | `/api/v1/admin/stats/overview` | Resumen operativo regional |
+| `GET` | `/api/v1/admin/verifications` | Cola de verificaciones |
+| `POST` | `/api/v1/admin/verifications/approve` | Aprobar verificación |
+| `POST` | `/api/v1/admin/verifications/reject` | Rechazar verificación |
+| `GET` | `/api/v1/admin/solicitudes` | Solicitudes de la región |
+| `POST` | `/api/v1/admin/solicitudes/moderate` | Moderar solicitud |
+| `GET` | `/api/v1/admin/contracts` | Contratos de la región |
+| `POST` | `/api/v1/admin/contracts/moderate` | Moderar contrato |
+| `GET` | `/api/v1/admin/disputes` | Disputas de la región |
+| `POST` | `/api/v1/admin/disputes/resolve` | Resolver disputa |
+| `GET` | `/api/v1/admin/tickets` | Tickets de la región |
+| `PATCH` | `/api/v1/admin/tickets` | Actualizar ticket |
+| `GET` | `/api/v1/admin/content/reports` | Reportes de contenido |
+| `POST` | `/api/v1/admin/content/reports/moderate` | Moderar reporte |
+| `GET` | `/api/v1/admin/staff` | Listar staff regional |
+| `POST` | `/api/v1/admin/staff` | Crear staff regional |
+| `GET` | `/api/v1/superadmin/admins` | Listar admins globales |
+| `POST` | `/api/v1/superadmin/admins` | Crear admin global |
+| `GET` | `/api/v1/superadmin/config` | Ver configuración global |
+| `GET` | `/api/v1/superadmin/audit-logs` | Logs de auditoría |
+| `GET` | `/api/v1/superadmin/legal/tyc` | T&C vigentes |
+| `POST` | `/api/v1/superadmin/override/user` | Override sobre usuario |
+| `POST` | `/api/v1/superadmin/override/contract` | Override sobre contrato |
+| `GET` | `/api/v1/superadmin/ai/params` | Parámetros IA |
+| `GET` | `/api/v1/superadmin/flags` | Feature flags |
+| `POST` | `/api/v1/superadmin/regions/reindex` | Reindexar regiones |
+
 ---
 
 ## 8. Flujo de Despliegue (PWA)
@@ -519,15 +729,15 @@ Blueprint `/api/v1/portfolio` con:
 
 ---
 
-*Versión: 2.0 — Arquitectura actualizada con billetera virtual, modalidades de cobro y sistema de monedas.
+*Versión: 2.1 — Sincronización con backend real (35 blueprints + 3 sockets, chambas/maranas/ofertas/anuncios/negocios/habilidades/regiones, panel admin FE).*
 
 ## 10. Diagramas
 
-Los diagramas se regeneraron para reflejar la arquitectura implementada (motor ML 2 etapas, geocerca en cascada, tiempo real Socket.IO, trust, portfolio, 24 blueprints). Fuente `.puml` y render ASCII `.utxt` en `diagramas/`; PNG en `diagramas/png/`.
+Los diagramas se regeneraron para reflejar la arquitectura implementada (motor ML 2 etapas, geocerca en cascada, tiempo real Socket.IO, trust, portfolio, 35 blueprints REST + 3 handlers Socket.IO). Fuente `.puml` y render ASCII `.utxt` en `diagramas/`; PNG en `diagramas/png/`.
 
 | # | Diagrama | Descripción | PNG | Fuente |
 |---|----------|-------------|-----|--------|
-| 01 | Componentes | Arquitectura de componentes real (24 blueprints, capa ML, Socket.IO, MinIO, Celery, Redis) | [png](diagramas/png/01_componentes.png) | [puml](diagramas/01_componentes.puml) |
+| 01 | Componentes | Arquitectura de componentes real (35 blueprints REST + 3 handlers Socket.IO, capa ML, Socket.IO, MinIO, Celery, Redis) | [png](diagramas/png/01_componentes.png) | [puml](diagramas/01_componentes.puml) |
 | 02 | Despliegue | Producción: Nginx, Flask/Socket.IO, Redis MQ, Celery, MinIO, PostgreSQL+PostGIS | [png](diagramas/png/02_despliegue.png) | [puml](diagramas/02_despliegue.puml) |
 | 03 | Flujo Solicitud→Pago | Solicitud→Recomendación ML→Cascada→Oferta→Contrato+Chat→Pago | [png](diagramas/png/03_flujo_orden_pago.png) | [puml](diagramas/03_flujo_orden_pago.puml) |
 | 04 | Modelo de Datos | Entidades: User, Profile, Solicitud, Order, Trust, Badge, NotificationCascade, RecommendationLog, PortfolioItem, Wallet | [png](diagramas/png/04_modelo_datos.png) | [puml](diagramas/04_modelo_datos.puml) |
@@ -536,5 +746,20 @@ Los diagramas se regeneraron para reflejar la arquitectura implementada (motor M
 | 07 | Pipeline Recomendación ML | Secuencia 2 etapas: retrieval→FeatureExtractor(22)→MLRanker→ABTest, fallback/shadow | [png](diagramas/png/07_pipeline_recomendacion.png) | [puml](diagramas/07_pipeline_recomendacion.puml) |
 | 08 | Cascada Geoespacial | Secuencia cascada 2/5/15km → Socket.IO `notificacion:nueva` → Redis MQ → <1s | [png](diagramas/png/08_cascada_geoespacial.png) | [puml](diagramas/08_cascada_geoespacial.puml) |
 | 09 | Tiempo Real (Socket.IO) | Handlers notification/chat/oferta, sala `user:<id>` | [png](diagramas/png/09_tiempo_real_socketio.png) | [puml](diagramas/09_tiempo_real_socketio.puml) |
+| 10 | Negocios / Comerciante | Negocio+horarios/ratings/reportes, MerchantPreference/MerchantPaymentMethod, anuncios+postulaciones | — | [puml](diagramas/10_modelo_datos_comerciante.puml) |
+| 11 | División regional | Region, scoping admin (`_region_user_ids`, `_assert_in_region`), `assign_region`, `region_scope_id()` | — | [puml](diagramas/11_regiones.puml) |
+| 12 | Panel admin FE | React 18 + Vite 6, guards, NAV_SIDEBAR/NAV_TABBAR, adminApi/kycApi/superadminApi | — | [puml](diagramas/12_arquitectura_admin_frontend.puml) |
 
-*Versión: 2.0 — Arquitectura actualizada con billetera virtual, modalidades de cobro y sistema de monedas.*
+## 11. División Regional
+
+- Scoping en `admin.py` con `_region_user_ids`, `_assert_in_region`, `_assert_contract_in_region`, `_assert_rating_in_region`.
+- `services/region.py`: `assign_region` usa Profile.zona y NUNCA reasigna staff; `contract_owned_by_region` evita doble-conteo (dueña = región del solicitante).
+- Superadmin gestiona admins globales y `regions/reindex`; ver `diagramas/11_regiones.puml`.
+
+## 12. Panel Admin FE
+
+- `Chambeapp_admin_frontend` (React 18 + Vite 6 + JS, react-router-dom 7, axios, lucide-react, sonner).
+- Roles `verificador/soporte/admin/superadmin`, guards `RequireAuth`/`RequireRole`, `config/navigation.js` (NAV_SIDEBAR+NAV_TABBAR).
+- Detalle completo en `Arquitectura_Admin_Frontend.md` (documento hermano, referencia normativa del frontend staff).
+
+*Versión: 2.1 — Sincronización con backend real (35 blueprints + 3 sockets, chambas/maranas/ofertas/anuncios/negocios/habilidades/regiones, panel admin FE).**

@@ -1,0 +1,57 @@
+@startuml
+title Infraestructura Regional — ChambeApp (topología objetivo)
+skinparam componentStyle rectangle
+skinparam nodeStyle rectangle
+
+package "Borde / Edge" {
+  [DNS + HTTPS] as DNS
+  [Nginx LB / Cloud LB\n(upstream backend, healthcheck /api/v1/auth/health)] as LB
+}
+
+package "Capa de aplicación (réplicas horizontales)" {
+  [Backend API\ngunicorn + eventlet (-w 1) ] as BE1
+  [Backend API\nréplica] as BE2
+  [Celery Worker] as CW
+  [Celery Beat] as CB
+}
+
+package "Capa de datos (HA)" {
+  database "PostgreSQL / PostGIS\n(Patroni: primario + réplicas + PgBouncer)" as PG {
+    [regions · users.region_id]
+    [solicitudes · contracts · chambas]
+    [audit_logs · system_configs · feature_flags]
+    [Índices: ix_users_region_id, ix_solicitudes_solicitante_id]
+  }
+  database "Redis (Sentinel HA)" as RD {
+    [cache]
+    [Socket.IO MQ]
+    [Celery broker]
+  }
+  node "MinIO (modo distribuido)\nbuckets: chambeapp-portfolio\nprefijo por región /region/<clave>/..." as MINIO
+}
+
+package "Paneles y aislamiento por rol" {
+  [PWA cliente] as PWA
+  [Panel admin\nAdmin/Verificador/Soporte\nscoped por region_id] as PANEL
+}
+
+package "Control Plane (global)" {
+  [Superadmin · Config · Flags · Auditoría\nLegal · IA · Catálogo Regiones] as CP
+}
+
+DNS --> LB
+LB --> BE1
+LB --> BE2
+BE1 --> PG
+BE2 --> PG
+BE1 --> RD
+BE2 --> RD
+CW --> RD
+CB --> RD
+BE1 --> MINIO
+BE2 --> MINIO
+PWA --> LB
+PANEL --> LB
+CP --> PG
+CP --> RD
+@enduml

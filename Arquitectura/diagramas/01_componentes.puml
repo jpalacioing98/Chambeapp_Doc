@@ -11,13 +11,15 @@ package "Cliente PWA (React + Vite)" as FE {
   [Socket.IO Client] as SC
 }
 
-package "API Gateway (Flask-Smorest, 24 blueprints)" as BE {
+package "API Gateway (Flask-Smorest, 36 blueprints)" as BE {
   [auth / users / solicitudes] as B1
   [contracts / ofertas / disputes] as B2
   [ai / ai_metrics] as B3
   [portfolio / notifications] as B4
   [payments / wallet / subscriptions / prices] as B5
   [chat / kyc / legal / admin / superadmin / tickets] as B6
+  [chambas / maranas / habilidades / anuncios] as B7
+  [negocios / merchant / regions / metodos-pago] as B8
   [providers / onboarding / email_verification / auth_password] as B7
 }
 
