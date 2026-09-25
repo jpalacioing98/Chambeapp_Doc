@@ -53,7 +53,7 @@ Transformar el sistema de recomendación actual (`HeuristicRecommender` con 3 va
 - Dependencias: `boto3`, `Pillow`
 - Servicio: `app/services/storage.py` — upload imágenes (WEBP 800px), videos, KYC (PDF), delete
 - Modelo: `app/models/portfolio.py` — `PortfolioItem` con campos título, tipo, categoría, s3_key, url, estado moderación
-- Endpoints: `app/routes/portfolio.py` — upload, lista, detalle, delete
+- Endpoints: `app/controllers/portfolio.py` — upload, lista, detalle, delete
 - Script migración: `migrations/scripts/migrate_kyc.py` — base64 → MinIO
 
 ### Fase 3: Motor ML y Features (Semanas 5-6)
@@ -90,9 +90,9 @@ Transformar el sistema de recomendación actual (`HeuristicRecommender` con 3 va
 **Decisiones técnicas clave:**
 - NotificationCascade: `app/models/cascade.py` — modelo con config_json `[{radius_km, delay_seconds, max_candidates}]`, 3 fases (2km/5km/15km)
 - CascadeManager: `app/services/cascade.py` — tareas Celery `_send_phase` con delays escalonados (300s/600s/900s)
-- A/B Testing framework: `app/ai/ab_testing.py` — ya cableado en `app/routes/ai.py` y `app/routes/ai_metrics.py`
+- A/B Testing framework: `app/ai/ab_testing.py` — ya cableado en `app/controllers/ai.py` y `app/controllers/ai_metrics.py`
 - Visor 360°: `src/components/Viewer360.tsx` — A-Frame, `aframe` dependencia
-- Socket.IO handler: `app/routes/notification_socket.py` — eventos `nueva_notificación` en tiempo real, Redis como message queue
+- Socket.IO handler: `app/controllers/notification_socket.py` — eventos `nueva_notificación` en tiempo real, Redis como message queue
 
 ### Fase 6: Rollout y Monitoreo (Semanas 11-12)
 **Objetivo:** Rollout gradual + dashboard de métricas + alertas salud modelo.

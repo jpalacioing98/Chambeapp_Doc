@@ -1,6 +1,6 @@
 # Roles y UI — Síntesis 6 roles (Admin, Superadmin, Soporte, Verificador, PDS, Solicitante)
 
-> Síntesis de `ROLE_*.md` (6) de raíz. No copia verbatim; tabla consolidada. Verificado contra `Chambeapp_frontend/src` y `Chambeapp_backend/app/routes/*`. Fecha 2026-09-25.
+> Síntesis de `ROLE_*.md` (6) de raíz. No copia verbatim; tabla consolidada. Verificado contra `Chambeapp_frontend/src` y `Chambeapp_backend/app/controllers/*`. Fecha 2026-09-25.
 
 ## Tabla matriz roles → nivel → módulos → rutas → APIs
 

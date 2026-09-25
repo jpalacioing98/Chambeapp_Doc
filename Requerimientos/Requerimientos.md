@@ -489,9 +489,9 @@
 1. WHEN se genera una recomendación THEN el sistema SHALL asignar el usuario a un grupo A o B determinísticamente (`ABTest.get_group`).
 2. WHEN se asigna THEN el sistema SHALL registrar la recomendación (`log_recommendation`).
 3. WHEN se consultan métricas THEN el sistema SHALL reportar métricas por grupo (`get_metrics`).
-4. WHEN se invocan los endpoints de `app/routes/ai.py` THEN el sistema SHALL ejecutar el A/B testing cableado.
+4. WHEN se invocan los endpoints de `app/controllers/ai.py` THEN el sistema SHALL ejecutar el A/B testing cableado.
 
-**Componentes:** `app/ai/ab_testing.py` (ABTest), `app/models/recommendation_log.py`, `app/routes/ai.py`.
+**Componentes:** `app/ai/ab_testing.py` (ABTest), `app/models/recommendation_log.py`, `app/controllers/ai.py`.
 
 ---
 
@@ -573,7 +573,7 @@
 2. WHEN el cliente conecta THEN sistema SHALL unirlo vía evento `join` con token (`useNotificationSocket`).
 3. WHEN se entrega THEN sistema SHALL hacerlo en <1s (reemplaza polling 30s).
 
-**Componentes:** `app/routes/notification_socket.py`, `app/services/cascade.py`; frontend `features/notifications`.
+**Componentes:** `app/controllers/notification_socket.py`, `app/services/cascade.py`; frontend `features/notifications`.
 
 ---
 
@@ -585,7 +585,7 @@
 1. WHEN un pds sube un item THEN el sistema SHALL aceptar multipart (foto/video/doc) y guardarlo en MinIO.
 2. WHEN se lista THEN sistema SHALL mostrar items y galería pública.
 
-**Componentes:** `app/routes/portfolio.py`, `app/services/storage.py`; frontend `features/portfolio`.
+**Componentes:** `app/controllers/portfolio.py`, `app/services/storage.py`; frontend `features/portfolio`.
 
 ---
 
@@ -596,7 +596,7 @@
 **Criterios de Aceptación:**
 1. WHEN un admin consulta THEN el sistema SHALL exponer `GET /api/v1/ai/metrics` y `GET /api/v1/ai/metrics/feature-importance`.
 
-**Componentes:** `app/routes/ai_metrics.py`.
+**Componentes:** `app/controllers/ai_metrics.py`.
 
 ---
 

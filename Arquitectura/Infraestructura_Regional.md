@@ -79,7 +79,7 @@ Panels          PWA cliente + Panel admin (roles scoped por region_id) → LB
 Índices que sostienen el scope regional (ya en migración `014_regiones` y modelos):
 - `users.region_id` (`ix_users_region_id`)
 - Los filtros regionales se hacen por subconsultas sobre `users.id` (ver
-  `app/routes/admin.py`, `_region_user_ids`); con volumen, valorar **particionado
+  `app/controllers/admin.py`, `_region_user_ids`); con volumen, valorar **particionado
   por región** en las tablas calientes (`solicitudes`, `tickets`, `contracts`).
 
 ### 2.4 Control plane (global)

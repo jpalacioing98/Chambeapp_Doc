@@ -1,6 +1,6 @@
 # RF División Regional — RF-70 a RF-75
 
-> Fuente: `CHANGELOG.md` (Fase 4: Division regional + Mitigación), verificado contra `app/models/region.py`, `app/models/user.py` (`users.region_id` FK), `app/routes/regions.py`, `app/routes/superadmin.py`, `app/routes/admin.py`, `app/routes/kyc.py`, `app/routes/tickets.py`, `app/services/region.py`, `app/data/seed_regions.py`, migración `014_regiones`.
+> Fuente: `CHANGELOG.md` (Fase 4: Division regional + Mitigación), verificado contra `app/models/region.py`, `app/models/user.py` (`users.region_id` FK), `app/controllers/regions.py`, `app/controllers/superadmin.py`, `app/controllers/admin.py`, `app/controllers/kyc.py`, `app/controllers/tickets.py`, `app/services/region.py`, `app/data/seed_regions.py`, migración `014_regiones`.
 > Numeración continúa RF-69. EARS. Implementado (24 tests `test_regiones.py`).
 
 ## Modelo

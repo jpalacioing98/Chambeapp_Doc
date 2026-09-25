@@ -597,7 +597,7 @@ Recommender   disabled    (ABTest group)
 - `ABTest.get_group(user_id)` → Asigna grupo 'A' o 'B' deterministicemente por usuario
 - `ABTest.log_recommendation()` → Registra cada recomendación para análisis posterior
 - `ABTest.get_metrics()` → Métricas por grupo: total, avg_score, tasa_aceptación
-- Cableado en ambos endpoints de `app/routes/ai.py`
+- Cableado en ambos endpoints de `app/controllers/ai.py`
 - `ThompsonBandit` para rotación inteligente de categorías sobre aciertos/fallos
 
 **Feature Flags:** `ml_ranking_enabled`, `ml_shadow_mode`

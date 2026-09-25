@@ -126,30 +126,30 @@ ChambueApp es una plataforma de marketplace de servicios (Chamberos/PDS) que con
 
 | # | Blueprint | Prefijo | Archivo |
 |---|-----------|---------|---------|
-| 1 | auth | /api/v1/auth | app/routes/auth.py |
-| 2 | users | /api/v1/users | app/routes/users.py |
-| 3 | solicitudes | /api/v1/solicitudes | app/routes/solicitudes.py |
-| 4 | contracts | /api/v1/contracts | app/routes/contracts.py |
-| 5 | notifications | /api/v1/notifications | app/routes/notifications.py |
-| 6 | payments | /api/v1/payments | app/routes/payments.py |
-| 7 | ai | /api/v1/ai | app/routes/ai.py |
-| 8 | chat | /api/v1/chat | app/routes/chat.py |
-| 9 | admin | /api/v1/admin | app/routes/admin.py |
-| 10 | tickets | /api/v1/tickets | app/routes/tickets.py |
-| 11 | superadmin | /api/v1/superadmin | app/routes/superadmin.py |
-| 12 | ofertas | /api/v1 | app/routes/ofertas.py |
-| 13 | legal | /api/v1/legal | app/routes/legal.py |
-| 14 | kyc | /api/v1/kyc | app/routes/kyc.py |
-| 15 | subscriptions | /api/v1/subscriptions | app/routes/subscriptions.py |
-| 16 | wallet | /api/v1/wallet | app/routes/wallet.py |
-| 17 | prices | /api/v1/prices | app/routes/prices.py |
-| 18 | auth_password | /api/v1/auth | app/routes/auth_password.py |
-| 19 | disputes | /api/v1 | app/routes/disputes.py |
-| 20 | email_verification | /api/v1/auth | app/routes/email_verification.py |
-| 21 | providers | /api/v1/providers | app/routes/providers.py |
-| 22 | onboarding | /api/v1/onboarding | app/routes/onboarding.py |
-| 23 | portfolio | /api/v1/portfolio | app/routes/portfolio.py |
-| 24 | ai_metrics | /api/v1/ai | app/routes/ai_metrics.py |
+| 1 | auth | /api/v1/auth | app/controllers/auth.py |
+| 2 | users | /api/v1/users | app/controllers/users.py |
+| 3 | solicitudes | /api/v1/solicitudes | app/controllers/solicitudes.py |
+| 4 | contracts | /api/v1/contracts | app/controllers/contracts.py |
+| 5 | notifications | /api/v1/notifications | app/controllers/notifications.py |
+| 6 | payments | /api/v1/payments | app/controllers/payments.py |
+| 7 | ai | /api/v1/ai | app/controllers/ai.py |
+| 8 | chat | /api/v1/chat | app/controllers/chat.py |
+| 9 | admin | /api/v1/admin | app/controllers/admin.py |
+| 10 | tickets | /api/v1/tickets | app/controllers/tickets.py |
+| 11 | superadmin | /api/v1/superadmin | app/controllers/superadmin.py |
+| 12 | ofertas | /api/v1 | app/controllers/ofertas.py |
+| 13 | legal | /api/v1/legal | app/controllers/legal.py |
+| 14 | kyc | /api/v1/kyc | app/controllers/kyc.py |
+| 15 | subscriptions | /api/v1/subscriptions | app/controllers/subscriptions.py |
+| 16 | wallet | /api/v1/wallet | app/controllers/wallet.py |
+| 17 | prices | /api/v1/prices | app/controllers/prices.py |
+| 18 | auth_password | /api/v1/auth | app/controllers/auth_password.py |
+| 19 | disputes | /api/v1 | app/controllers/disputes.py |
+| 20 | email_verification | /api/v1/auth | app/controllers/email_verification.py |
+| 21 | providers | /api/v1/providers | app/controllers/providers.py |
+| 22 | onboarding | /api/v1/onboarding | app/controllers/onboarding.py |
+| 23 | portfolio | /api/v1/portfolio | app/controllers/portfolio.py |
+| 24 | ai_metrics | /api/v1/ai | app/controllers/ai_metrics.py |
 
 ### 2.2 Socket.IO Handlers (3)
 
@@ -178,7 +178,7 @@ Cascada Celery → CascadeManager.send_phase()
 **Descripción:** Registro, login, recuperación de contraseña, verificación de email y onboarding de usuarios.
 
 **Módulos involucrados:**
-- Backend: `app/routes/auth.py`, `auth_password.py`, `email_verification.py`, `onboarding.py`
+- Backend: `app/controllers/auth.py`, `auth_password.py`, `email_verification.py`, `onboarding.py`
 - Frontend: `src/features/auth/` (LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage), `src/features/onboarding/`
 
 **Endpoints clave:**
@@ -198,7 +198,7 @@ Cascada Celery → CascadeManager.send_phase()
 **Descripción:** Perfil completo del proveedor con score de confianza, insignias de logro y portafolio multimedia.
 
 **Módulos involucrados:**
-- Backend: `app/routes/users.py`, `app/routes/portfolio.py`, `app/models/trust.py`, `app/services/trust.py`, `app/models/badges.py`
+- Backend: `app/controllers/users.py`, `app/controllers/portfolio.py`, `app/models/trust.py`, `app/services/trust.py`, `app/models/badges.py`
 - Frontend: `src/features/profile/ProfilePage.tsx`, `src/features/trust/` (TrustScore, TrustBreakdown), `src/features/badges/` (BadgePanel, BadgeLegend), `src/features/portfolio/` (PortfolioUploader, PortfolioGallery)
 
 **Endpoints clave:**
@@ -226,7 +226,7 @@ Cascada Celery → CascadeManager.send_phase()
 **Descripción:** Publicación de solicitudes de servicio con geocercas configurables (radio_km) y visualización en mapa.
 
 **Módulos involucrados:**
-- Backend: `app/routes/solicitudes.py`, `app/models/solicitud.py` (columna `radio_km`), `migrations/versions/002_add_solicitud_radio.py`
+- Backend: `app/controllers/solicitudes.py`, `app/models/solicitud.py` (columna `radio_km`), `migrations/versions/002_add_solicitud_radio.py`
 - Frontend: `src/features/services/PublishSolicitudPage.tsx`, `src/features/geofence/` (GeofenceMap, GeofencePicker, circleGeoJson)
 
 **Endpoints clave:**
@@ -273,7 +273,7 @@ Solicitud → get_recommender() → HybridRecommender
 - `ABTest.get_group(user_id)` → Asigna grupo 'A' o 'B' deterministicamente
 - `ABTest.log_recommendation()` → Registra cada recomendación para análisis
 - `ABTest.get_metrics()` → Métricas por grupo (total, avg_score, tasa_aceptacion)
-- Cableado en ambos endpoints de `app/routes/ai.py`
+- Cableado en ambos endpoints de `app/controllers/ai.py`
 
 **Feature Flags (FeatureFlag model):**
 - `ml_ranking_enabled` — Activa ML ranking
@@ -288,7 +288,7 @@ Solicitud → get_recommender() → HybridRecommender
 **Descripción:** Sistema de notificaciones en cascada geoespacial (2km → 5km → 15km) con tiempos configurables y notificación en tiempo real vía Socket.IO.
 
 **Módulos involucrados:**
-- Backend: `app/services/cascade.py` (CascadeManager), `app/models/cascade.py` (NotificationCascade), `app/routes/notification_socket.py` (handler join/disconnect), `app/tasks.py` (Celery tasks)
+- Backend: `app/services/cascade.py` (CascadeManager), `app/models/cascade.py` (NotificationCascade), `app/controllers/notification_socket.py` (handler join/disconnect), `app/tasks.py` (Celery tasks)
 - Frontend: `src/features/notifications/` (useNotificationSocket, useNotificationsStore), `src/components/NotificationBell.tsx`, `src/components/BottomNav.tsx`
 
 **Flujo:**
@@ -324,7 +324,7 @@ DEFAULT_CONFIG = [
 **Descripción:** Flujo de contratación con aceptación de ofertas, chat en tiempo real, hitos y resolución de disputas.
 
 **Módulos involucrados:**
-- Backend: `app/routes/contracts.py`, `app/routes/chat.py`, `app/routes/ofertas.py`, `app/routes/chat_socket.py`, `app/routes/oferta_socket.py`, `app/routes/disputes.py`
+- Backend: `app/controllers/contracts.py`, `app/controllers/chat.py`, `app/controllers/ofertas.py`, `app/controllers/chat_socket.py`, `app/controllers/oferta_socket.py`, `app/controllers/disputes.py`
 - Frontend: `src/features/contracts/`, `src/features/chat/`, `src/features/disputes/`
 
 **Endpoints clave:**
@@ -348,7 +348,7 @@ DEFAULT_CONFIG = [
 **Descripción:** Integración con Nequi para pagos, billetera virtual (wallet), monedas y suscripciones.
 
 **Módulos involucrados:**
-- Backend: `app/routes/payments.py`, `app/routes/wallet.py`, `app/routes/subscriptions.py`, `app/routes/prices.py`
+- Backend: `app/controllers/payments.py`, `app/controllers/wallet.py`, `app/controllers/subscriptions.py`, `app/controllers/prices.py`
 - Frontend: `src/features/payments/` (CheckoutPage, PaymentDetailPage, EarningsHistoryPage), `src/features/wallet/`, `src/features/subscriptions/`
 
 **Endpoints clave:**
@@ -385,7 +385,7 @@ DEFAULT_CONFIG = [
 **Componentes:**
 - `app/ai/ab_testing.py` → `ABTest`
 - `app/models/recommendation_log.py` → `RecommendationLog`
-- Cableado en `app/routes/ai.py` (ambos endpoints)
+- Cableado en `app/controllers/ai.py` (ambos endpoints)
 
 ---
 
@@ -459,7 +459,7 @@ DEFAULT_CONFIG = [
 **Descripción:** Notificaciones en tiempo real via Socket.IO (reemplaza polling 30s).
 
 **Componentes:**
-- Backend: `app/routes/notification_socket.py`, `app/services/cascade.py` (emisión)
+- Backend: `app/controllers/notification_socket.py`, `app/services/cascade.py` (emisión)
 - Frontend: `src/features/notifications/useNotificationSocket.ts`, `useNotificationsStore.ts`
 - Componentes: `NotificationBell.tsx`, `BottomNav.tsx`
 
@@ -470,7 +470,7 @@ DEFAULT_CONFIG = [
 **Descripción:** Upload de archivos (no solo URLs) con drag-and-drop a MinIO.
 
 **Componentes:**
-- Backend: `app/routes/portfolio.py`, `app/services/storage.py`
+- Backend: `app/controllers/portfolio.py`, `app/services/storage.py`
 - Frontend: `src/features/portfolio/PortfolioUploader.tsx`, `PortfolioGallery.tsx`
 
 ---
@@ -480,7 +480,7 @@ DEFAULT_CONFIG = [
 **Descripción:** Dashboard de métricas del modelo y resultados de A/B testing.
 
 **Componentes:**
-- Backend: `app/routes/ai_metrics.py` (blueprint `ai_metrics`)
+- Backend: `app/controllers/ai_metrics.py` (blueprint `ai_metrics`)
 - Endpoints: `GET /api/v1/ai/metrics`, `GET /api/v1/ai/metrics/feature-importance`
 
 ---
@@ -610,7 +610,7 @@ Ver `HOJA_DE_TESTS.md` para el reporte completo de testing.
 | Backend Flask | ✅ | 272 tests, 24 blueprints |
 | Socket.IO Handlers | ✅ | 3 handlers (chat, ofertas, notifications) |
 | ML Pipeline | ✅ | HybridRecommender + ShadowRecommender + ThompsonBandit |
-| A/B Testing | ✅ | Cableado en app/routes/ai.py (ambos endpoints) |
+| A/B Testing | ✅ | Cableado en app/controllers/ai.py (ambos endpoints) |
 | ai_metrics blueprint | ✅ | Registrado en app/__init__.py |
 | notification_socket | ✅ | Emite notificacion:nueva a sala user:<id> via Redis |
 | Portfolio + MinIO | ✅ | Upload, items, delete, público |

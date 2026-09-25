@@ -706,7 +706,7 @@ Cada fase: busca proveedores con `find_nearby_providers()` → crea `Notificatio
 - `ABTest.get_group(user_id)` — Asigna grupo 'A' o 'B' de forma determinista (50/50).
 - `ABTest.log_recommendation()` — Registra cada recomendación con solicitud, proveedor, score, modelo y grupo.
 - `ABTest.get_metrics()` — Métricas por grupo: total, avg_score, tasa_aceptacion.
-- Cableado en `app/routes/ai.py` (ambos endpoints: recommendations y solicitudes-for-provider).
+- Cableado en `app/controllers/ai.py` (ambos endpoints: recommendations y solicitudes-for-provider).
 
 ### **9.5 Visor 360°**
 

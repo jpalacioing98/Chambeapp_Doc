@@ -1,6 +1,6 @@
 # RF Módulo Anuncios Laborales (no vinculantes) — RF-67 a RF-69
 
-> Fuente: `Chambeapp_backend/CHANGELOG.md` (Unreleased: Anuncios Laborales — migración `013_anuncios`), verificado contra `app/models/anuncio.py`, `app/routes/anuncios.py`, `app/schemas/anuncio.py`.
+> Fuente: `Chambeapp_backend/CHANGELOG.md` (Unreleased: Anuncios Laborales — migración `013_anuncios`), verificado contra `app/models/anuncio.py`, `app/controllers/anuncios.py`, `app/schemas/anuncio.py`.
 > Numeración continúa RF-66. Formato EARS. Implementado (10 tests `test_anuncios.py`).
 
 ## Modelo

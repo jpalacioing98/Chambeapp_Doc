@@ -1,6 +1,6 @@
 # RF Módulo Chambas + Marañas (Rebusque) — RF-49 a RF-60
 
-> Fuente: `modulo chambas.md`, `PLAN_IMPLEMENTACION_MODULO_CHAMBAS.md`, `Chambeapp_backend/CHANGELOG.md` (Unreleased: chambas + marañas), verificado contra `app/models/chamba.py`, `app/models/marana.py`, `app/routes/chambas.py`, `app/routes/maranas.py`, `app/services/chamba.py`.
+> Fuente: `modulo chambas.md`, `PLAN_IMPLEMENTACION_MODULO_CHAMBAS.md`, `Chambeapp_backend/CHANGELOG.md` (Unreleased: chambas + marañas), verificado contra `app/models/chamba.py`, `app/models/marana.py`, `app/controllers/chambas.py`, `app/controllers/maranas.py`, `app/services/chamba.py`.
 > Numeración continúa RF-48 (RF_Modulo_Comerciante). Formato EARS. Implementado backend (100%).
 
 ## Modelo base

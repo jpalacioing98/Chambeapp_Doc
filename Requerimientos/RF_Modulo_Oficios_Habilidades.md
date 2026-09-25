@@ -1,6 +1,6 @@
 # RF Módulo Oficios y Habilidades — RF-61 a RF-66
 
-> Fuente: `modeulo de oficio y habilidades.md`, `lista de oficion y habilidades.md`, verificado contra `app/models/habilidad.py`, `app/routes/habilidades.py`, `app/data/seed_habilidades.py` (si existe), `CHANGELOG` no dedicado pero backend ya implementado.
+> Fuente: `modeulo de oficio y habilidades.md`, `lista de oficion y habilidades.md`, verificado contra `app/models/habilidad.py`, `app/controllers/habilidades.py`, `app/data/seed_habilidades.py` (si existe), `CHANGELOG` no dedicado pero backend ya implementado.
 > Catálogo nacional CUOC/SENA. Formato EARS. Implementado.
 
 ## RF-61: Catálogo nacional de oficios (5 categorías)
@@ -17,7 +17,7 @@ Detallado: Construcción/Obra Blanca: plomería (termofusión, fugas, sanitarios
 **CA:** Ruta típica 3-5 niveles; ej. Básico quiz → Intermedio quiz → Avanzado certificación.
 
 ## RF-63: Validación por quiz (micro-evaluación)
-**EARS:** WHEN usuario `GET /habilidades/<id>/nivel/<n>/quiz` THEN SHALL retornar `{nivel, preguntas:[{pregunta, opciones}]}` (tipo quiz). WHEN `POST .../quiz {respuestas:int[]}` THEN SHALL calificar: `aciertos/total >= 0.8` (80% — `UMBRAL_QUIZ` en `app/routes/habilidades.py`; doc origen decía 70% pero código exige 80%) → `HabilidadNivel {metodo:quiz}`; else mensaje "No alcanzaste... Reintenta" (reintento ilimitado, no bloqueo). Validación longitudes exacta.
+**EARS:** WHEN usuario `GET /habilidades/<id>/nivel/<n>/quiz` THEN SHALL retornar `{nivel, preguntas:[{pregunta, opciones}]}` (tipo quiz). WHEN `POST .../quiz {respuestas:int[]}` THEN SHALL calificar: `aciertos/total >= 0.8` (80% — `UMBRAL_QUIZ` en `app/controllers/habilidades.py`; doc origen decía 70% pero código exige 80%) → `HabilidadNivel {metodo:quiz}`; else mensaje "No alcanzaste... Reintenta" (reintento ilimitado, no bloqueo). Validación longitudes exacta.
 **CA:** 3-5 preguntas, 30-45s recomendado; aprobación ≥80% otorga "Habilidad Validada por Quiz" (RF origen 80%, código 80%).
 
 ## RF-64: Validación social — endoso por clientes + evidencias 360°
@@ -34,7 +34,7 @@ Detallado: Construcción/Obra Blanca: plomería (termofusión, fugas, sanitarios
 **CA:** Tarjeta UI `Perfil → Formación Técnica` muestra institución, título, año, badge; prioridad IA para verificados en solicitudes complejas. Blindaje legal: verificación documental informativa, no garantía de resultado (doc origen §6).
 
 ## RF-66: Sistema de progresión Novato → Experto (5 niveles)
-**EARS:** WHEN usuario consulta `GET /habilidades/progreso` THEN sistema SHALL calcular por oficio (profile.habilidades) el nivel 1-5 con reglas reales `app/routes/habilidades.py`:
+**EARS:** WHEN usuario consulta `GET /habilidades/progreso` THEN sistema SHALL calcular por oficio (profile.habilidades) el nivel 1-5 con reglas reales `app/controllers/habilidades.py`:
 - N1 Novato: oficio registrado (default).
 - N2 Conocedor: ≥1 quiz + ≥3 trabajos completados + rating ≥4.0
 - N3 Práctico: ≥1 quiz + ≥15 trabajos + rating ≥4.5

@@ -4,6 +4,14 @@ All notable changes to documentation will be documented in this file.
 
 ## [1.8.1] - 2026-09-25
 
+### Changed
+- **Arquitectura MVC backend**: `app/routes/` → `app/controllers/` (documentado en
+  `Arquitectura/Contratos_API.md`, `Arquitectura_Software.md` y RFs; las referencias
+  `app/routes/*` se actualizaron a `app/controllers/*`).
+- **Seguridad JWT**: access 30 min / refresh 7 días con renovación, `role_v` en
+  refresh, y autenticación JWT en sockets (`app/auth/socket_auth.py`). Nuevo
+  `tests/test_security.py` (20 casos) + auditoría de rutas (182 protegidas / 35 públicas).
+
 ### Added (registro previo a limpieza)
 - Documentación externa registrada en `Chambeapp_Doc` antes de su eliminación:
   - `Branding/DesignSystem/` — `01-tokens` a `06-decisiones-abiertas` (design system completo).
@@ -100,7 +108,7 @@ All notable changes to documentation will be documented in this file.
 ### Changed
 - `seed.py`: catálogo KYC PDS ampliado de 7 a 11 documentos; añadido flag `multi_instancia` por documento.
 - `app/models/kyc.py`: campo `multi_instancia` en `DocumentoRequerido`; campo `instancia` en `DocumentoUsuario`; constraint único cambiado a `(user_id, documento_clave, instancia)`.
-- `app/routes/kyc.py`: endpoints `/documentos-requeridos` y `/mis-documentos` exponen `multi_instancia`; upload soporta `instancia` para docs multi-instancia; `_recalcular_verificado` verfica al menos una instancia aprobada por clave obligatoria.
+- `app/controllers/kyc.py`: endpoints `/documentos-requeridos` y `/mis-documentos` exponen `multi_instancia`; upload soporta `instancia` para docs multi-instancia; `_recalcular_verificado` verfica al menos una instancia aprobada por clave obligatoria.
 - `app/schemas/kyc.py`: schemas exponen `multi_instancia` e `instancia`.
 - Política KYC (`ChambeApp_Politica_KYC.md`): reescrita completamente con tablas, grupos, docs multi-instancia, flujo de verificación y endpoints.
 

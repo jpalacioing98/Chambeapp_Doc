@@ -1,6 +1,6 @@
 # Contratos de API — ChambeApp Backend (Inventario Real vs Documentación)
 
-> **Fuente:** `Chambeapp_backend/app/__init__.py` (registro de blueprints) + `app/routes/*.py` (rutas reales).
+> **Fuente:** `Chambeapp_backend/app/__init__.py` (registro de blueprints) + `app/controllers/*.py` (rutas reales).
 > **Fecha:** 2026-09-25.
 > **Estado:** Inventario exhaustivo de TODOS los endpoints registrados en el backend Flask-Smorest.
 >
@@ -509,4 +509,4 @@ Eventos server→client emitidos desde rutas: `notificacion:nueva`, `message`, `
 
 ---
 
-*Generado automáticamente desde el código backend (app/__init__.py + app/routes/*.py). No editar a mano; regenerar al cambiar rutas.*
+*Generado automáticamente desde el código backend (app/__init__.py + app/controllers/*.py). No editar a mano; regenerar al cambiar rutas.*
