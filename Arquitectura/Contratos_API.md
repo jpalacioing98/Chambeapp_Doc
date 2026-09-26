@@ -91,7 +91,7 @@
 | GET | `/auth/2fa` | `TwoFactor.get` | jwt | ❌ |
 | PUT | `/auth/2fa` | `TwoFactor.put` | jwt | ❌ |
 
-> Notas: `register` exige `acepto_tyc=true` (RF-17). `login` valida `status=active`. OTP usa Onurix en prod (dev_code en DEBUG/TESTING). 2FA es toggle MVP.
+> Notas: `register` exige `acepto_tyc=true` (RF-17) y solo acepta roles públicos `pds|solicitante|merchant` (otros roles → 422). El personal de administración (`verificador|soporte|admin|superadmin`) NO se autoregistra: lo crea el superadmin vía `POST /superadmin/admins` (o el admin regional crea `verificador|soporte` de su región vía `POST /admin/staff`); el panel admin solo expone login. `login` valida `status=active`. OTP usa Onurix en prod (dev_code en DEBUG/TESTING). 2FA es toggle MVP.
 
 ### 3.2 Usuarios — `/api/v1/users` (blueprints: `users`, `user_preferences`)
 

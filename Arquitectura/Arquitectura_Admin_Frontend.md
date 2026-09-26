@@ -307,3 +307,27 @@ Fuente `.puml` y equivalente ASCII manual `.utxt` en `diagramas/` (los `.utxt` l
 ---
 
 *Versión: 1.0 — Documento inicial del Admin Frontend (app staff separada del PWA).*
+
+
+## UI — design system del frontend principal (portado)
+
+El panel admin usa el **kit de componentes del frontend cliente** (Chambeapp_frontend/src/components/ui/*, TSX + CSS ch-), portado a Chambeapp_admin_frontend/src/components/ui/ con Vite (transpila TSX vía esbuild). Incluye 	okens.css canónico y wrappers de compatibilidad para la API legacy del panel:
+
+- AdminModal (API 	itle/ooter sobre ModalHeader/Body/Footer)
+- AdminBadge (API 	one → variantes status del kit)
+- AdminLoadingState (acepta ows/label)
+- AdminEmptyState (acepta icon como ReactNode o string)
+- Chip (label estático del panel)
+
+Overrides del panel: src/styles/ui-fixes.css (.ch-btn--ok/danger, badge neutral) y globals.css recortado (solo layout: shell, sidebar, tabla, stats, kyc, auth…).
+
+## Mi perfil y cierre de sesión
+
+- Nueva página `/perfil` (`src/features/perfil/PerfilPage.jsx`) para todos los roles:
+  credencial de acceso regional (banda de registro + región + rol, identidad en Archivo,
+  datos de credencial en mono) + secciones funcionales: **Información personal**
+  (`PUT /users/me/profile`), **Notificaciones** y **Preferencias** (`PUT /users/me/preferences`),
+  y **Seguridad** (cambio de contraseña `POST /auth/change-password` + 2FA `GET/PUT /auth/2fa`),
+  más el botón **Cerrar sesión**.
+- El **logout se quitó de la barra superior** (Topbar). La topbar muestra el avatar (componente Avatar) y el nombre, clicable hacia /perfil.
+- Navegación: grupo **Cuenta → Mi perfil** en el sidebar y tab **Perfil** en el tabbar para verificador, soporte, admin y superadmin.

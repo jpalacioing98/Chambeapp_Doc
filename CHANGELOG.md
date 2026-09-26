@@ -2,9 +2,54 @@
 
 All notable changes to documentation will be documented in this file.
 
+## [1.8.2] - 2026-09-26
+
+### Security
+- **Registro público restringido**: `POST /auth/register` solo acepta los roles
+  públicos `pds|solicitante|merchant` (cualquier rol de administración → 422).
+  El personal de administración (`verificador|soporte|admin|superadmin`) NO se
+  autoregistra: lo crea el superadmin vía `POST /superadmin/admins` (o el admin
+  regional crea `verificador|soporte` de su región vía `POST /admin/staff`); el
+  panel admin solo expone login (sin ruta de registro). Documentado en
+  `Arquitectura/Contratos_API.md` (§3.1 Auth) + tests de regresión en
+  `tests/test_auth.py` (4 casos).
+
+### Changed
+- **Admin frontend — login**: formulario con espaciado corregido (`flex+gap` en
+  el `form`); los campos quedaban pegados.
+- **"Estadísticas" → "Dashboard"**: renombrado en sidebar/tabbar y títulos de
+  página para **verificador** y **soporte** (el admin conserva su sección
+  *Análisis · Estadísticas*). Fix de `padding-top` de `ch-app-shell__content`
+  (`calc(topbar + 26px)`): los títulos del `PageHeader` quedaban ocultos bajo
+  el topbar fijo en todas las páginas.
+- **Dashboard de soporte con métricas**: hero de la cola (tickets activos +
+  sin asignar + alta prioridad + cerrados), barras **Por prioridad** y **Por
+  estado** (coral/ámbar/verde) y **Tickets recientes** con chips de
+  prioridad/estado — antes solo mostraba una tarjeta.
+- **Moderación de solicitudes**: se eliminó el flujo de aprobación (Aprobar/
+  Rechazar). La acción disponible es **Ocultar** (baja por denuncia o
+  irregularidad → `estado: oculto`) y **Restaurar** si ya está oculta
+  (reaparece como *Publicado*).
+
 ## [1.8.1] - 2026-09-25
 
 ### Changed
+- **Admin frontend — shell**: corregido el **bug de selección del sidebar** (el item
+  activo se calcula globalmente por ruta, no por item — ya no se marcan "Inicio" y
+  "Revisión KYC" a la vez). **Icono de notificaciones** en la barra superior con
+  dropdown (en web solo la campana; en móvil también rol y usuario). El **inicio del
+  verificador** pasó a un **panel de estadísticas** (pendientes, usuarios, tipos + cola).
+- **2FA real en el panel admin**: el toggle de dos pasos ya es funcional. El login
+  (`/auth/login`) devuelve `requires_2fa` cuando está activo y el panel muestra un
+  paso de **código de verificación** (`/auth/2fa/verify`). Se eliminó el subtítulo
+  del perfil ("Tu credencial de acceso al panel").
+- **Admin frontend UI**: se portó el **design system del frontend principal**
+  (`components/ui/*` TSX + CSS + `tokens.css`) al panel admin; wrappers de
+  compatibilidad (Modal/Badge/LoadingState/EmptyState/Chip) y `ui-fixes.css`.
+  Nueva página **Mi perfil** (`/perfil`) con **Información personal**, **Notificaciones**,
+  **Preferencias** y **Seguridad** (contraseña + 2FA) sobre los endpoints del cliente
+  (`/users/me/profile`, `/users/me/preferences`, `/auth/change-password`, `/auth/2fa`),
+  y botón **Cerrar sesión**; el logout se quitó de la barra superior. Capturas regeneradas (27 vistas).
 - **Arquitectura MVC backend**: `app/routes/` → `app/controllers/` (documentado en
   `Arquitectura/Contratos_API.md`, `Arquitectura_Software.md` y RFs; las referencias
   `app/routes/*` se actualizaron a `app/controllers/*`).
