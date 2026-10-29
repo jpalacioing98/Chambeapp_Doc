@@ -1,0 +1,102 @@
+@startuml
+title Figura 6 - Modelo de Datos Relacional Unificado: 47 Entidades SQLAlchemy + PostGIS
+
+actor "DBA / Arquitecto" as DBA
+participant "CORE USUARIOS (8)" as CORE
+participant "CHAMBAS/MARAÑAS (8)" as CHAM
+participant "FINANZAS/WALLET (7)" as FIN
+participant "NEGOCIOS/MERCHANT (6)" as NEG
+participant "IA/RECOMENDACIÓN (4)" as ML
+participant "GOBERNANZA/AUDITORÍA (5)" as GOB
+participant "COMUNICACIÓN (5)" as COM
+participant "SISTEMA/UTILIDADES (4)" as SYS
+
+DBA -> CORE: Diseño normalizado 3FN
+DBA -> CHAM: PostGIS geometry(Point,4326)
+DBA -> FIN: Partida doble invariante
+DBA -> NEG: Scoping regional
+DBA -> ML: Vector embeddings (pgvector)
+DBA -> GOB: Audit logs inmutables
+DBA -> COM: Socket.IO message log
+DBA -> SYS: Feature flags + config
+
+note right of CORE
+  CORE USUARIOS (8):
+  1. users                    → PK id, email, password_hash, rol, role_version, region_scope_id, kyc_verificado, telefono_verificado, created_at
+  2. user_profiles            → PK user_id, nombre, apellido, avatar_url, bio, habilidades[], certificaciones[], rating_promedio, total_servicios
+  3. user_kyc_documents       → PK id, user_id, documento_clave, instancia, estado, minio_url, hash_sha256, revisado_por, revisado_en, observacion
+  4. kyc_required_documents   → PK clave, grupo, obligatorio, multi_instancia, orden, rol_aplicable
+  5. user_verifications       → PK id, user_id, tipo (EMAIL/PHONE/IDENTITY), verificado, codigo_hash, expira_en
+  6. user_sessions            → PK id, user_id, refresh_token_hash, device_info, ip, expira_en, revocado
+  7. roles                    → PK id, nombre (pds/solicitante/merchant/verificador/soporte/admin/superadmin), permisos_json
+  8. regions                  → PK id, codigo_dane, nombre, departamento, latitud, longitud, radio_km, activa
+end note
+
+note right of CHAM
+  CHAMBAS/MARAÑAS (8):
+  9. solicitudes              → PK id, solicitante_id, categoria, titulo, descripcion, presupuesto_min, presupuesto_max, ubicacion (POINT), radio_km, panorama_360_url, fecha_inicio, fecha_fin, estado, created_at
+  10. ofertas                 → PK id, solicitud_id, pds_id, precio, mensaje, estado, created_at
+  11. contratos               → PK id, solicitud_id, oferta_id, pds_id, solicitante_id, monto_total, estado_fsm, checkin_entrada_at, checkin_salida_at, lat_entrada, lon_entrada, lat_salida, lon_salida, firma_solicitante, firma_pds, perfeccionado_en
+  12. adendas                 → PK id, contrato_id, tipo (ALCANCE/PRECIO/NOVEDAD/DERIVACION), descripcion, monto_ajuste, estado, creado_por
+  13. evidencias              → PK id, contrato_id, tipo (ENTRADA/SALIDA/ADENDA/NOVEDAD), minio_urls[], hash_sha256[], metadatos_exif_json, subido_por
+  14. hitos                   → PK id, contrato_id, numero (1-6), nombre, estado, aprobado_por, aprobado_en, observacion
+  15. marañas                 → PK id, contrato_padre_id, adenda_id, pds_id, descripcion, presupuesto, estado, created_at
+  16. ofertas_marana          → PK id, marana_id, pds_id, precio, mensaje, estado
+end note
+
+note right of FIN
+  FINANZAS/WALLET (7):
+  17. wallets                 → PK user_id, saldo_disponible, saldo_bloqueado, total_ingresos, total_egresos, updated_at
+  18. wallet_transactions     → PK id, wallet_id, tipo (DEBE/HABER), concepto, monto, saldo_resultante, referencia_id, referencia_tipo, created_at
+  19. pagos                   → PK id, contrato_id, monto, metodo (DIGITAL/EFECTIVO), estado, checkout_url, webhook_payload, conformidad_solicitante, conformidad_pds, liberado_en
+  20. pagos_checkin           → PK id, pago_id, tipo (ENTRADA/SALIDA), latitud, longitud, distancia_m, evidencias_urls[], created_at
+  21. coins                   → PK id, user_id, tipo (COMPRADA/PROMOCIONAL/GANADA), cantidad, saldo_actual, origen, expira_en
+  22. coin_packages           → PK id, nombre, monedas, precio_cop, modalidad (A/B), activo
+  23. precios_sugeridos       → PK id, categoria, precio_min, precio_max, precio_promedio, muestra_n, actualizado_en
+end note
+
+note right of NEG
+  NEGOCIOS/MERCHANT (6):
+  24. negocios                → PK id, merchant_id, nombre, categoria, descripcion, ubicacion (POINT), horario_json, telefono, email, estado, kyc_verificado
+  25. negocio_kyc_docs        → PK id, negocio_id, documento_clave, estado, minio_url, revisado_por, revisado_en
+  26. negocio_estadisticas    → PK negocio_id, vistas_mes, contactos_mes, anuncios_activos, rating_promedio
+  27. anuncios_laborales      → PK id, negocio_id, titulo, descripcion, requisitos, salario_ofrecido, tipo_contrato, ubicacion (POINT), estado, created_at
+  28. postulaciones_anuncio   → PK id, anuncio_id, user_id, cv_url, mensaje, estado
+  29. negocio_preferencias_pago → PK negocio_id, modalidad (A/B), comision_pct, cuenta_bancaria_encriptada
+end note
+
+note right of ML
+  IA/RECOMENDACIÓN (4):
+  30. pds_embeddings          → PK pds_id, embedding (vector(384)), modelo_version, actualizado_en
+  31. solicitud_embeddings    → PK solicitud_id, embedding (vector(384)), modelo_version
+  32. recommendation_logs     → PK id, solicitud_id, pds_id, score_retrieval, score_ranking, shap_explanation_json, clicked, contratado, created_at
+  33. feature_flags           → PK nombre, habilitado, descripcion, modelo_version, actualizado_por
+end note
+
+note right of GOB
+  GOBERNANZA/AUDITORÍA (5):
+  34. audit_logs              → PK id, actor_id, accion, entidad_tipo, entidad_id, snapshot_diff_json, ip_address, user_agent, timestamp_utc
+  35. disputes                → PK id, contrato_id, iniciado_por, tipo (PAGO/CALIFICACION/ALCANCE/INCUMPLIMIENTO), estado, resolucion, resuelto_por, resuelto_en
+  36. tickets                 → PK id, user_id, tipo (SOPORTE/RECLAMO/SUGERENCIA), prioridad, estado, asignado_a, respuesta, creado_en, cerrado_en
+  37. moderacion_contenido    → PK id, entidad_tipo, entidad_id, reportado_por, motivo, estado, accion_tomada, moderador_id, created_at
+  38. region_scoping          → PK admin_id, region_id, permiso (LECTURA/ESCRITURA/ADMIN)
+end note
+
+note right of COM
+  COMUNICACIÓN (5):
+  39. conversations           → PK id, participante_1_id, participante_2_id, contrato_id, created_at, updated_at
+  40. messages                → PK id, conversation_id, sender_id, contenido, tipo (TEXTO/ACCION_CONTRACTUAL/SISTEMA), leido, created_at
+  41. notifications           → PK id, user_id, tipo, titulo, cuerpo, payload_json, leido, canal (PUSH/IN_APP/EMAIL), created_at
+  42. notification_preferences → PK user_id, push_habilitado, in_app_habilitado, email_habilitado, categorias_json
+  43. presence                → PK user_id, online, last_seen, socket_id, heartbeat_at
+end note
+
+note right of SYS
+  SISTEMA/UTILIDADES (4):
+  44. system_config           → PK clave, valor_json, descripcion, editable
+  45. migrations_log          → PK version, descripcion, aplicado_en, exito, checksum
+  46. seed_data               → PK tabla, registro_json, version, aplicado
+  47. api_rate_limits         → PK endpoint, metodo, limite_ventana, ventana_segundos, rol_excluido
+end note
+
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+title Figura 3 - Arquitectura de Tres Capas (Secuencia Simplificada)
+
+actor "Usuario" as User
+participant "PWA React\n(Mapbox 3D, A-Frame 360°)" as FE
+participant "Flask-Smorest\n36 Blueprints + 3 Socket.IO" as BE
+participant "PostgreSQL\n+ PostGIS" as PG
+participant "Redis 7\nCache + MQ" as Redis
+participant "MinIO S3" as S3
+participant "Celery\nWorkers" as Celery
+
+== Flujo Típico: Publicación Chamba ==
+User -> FE: Abre app → "Publicar Chamba"
+FE -> FE: Mapbox 3D: Dibuja geocerca\nA-Frame: Captura 360°
+FE -> BE: POST /solicitudes/ {geo, panorama_base64}
+BE -> PG: INSERT solicitud + ST_Point(lon,lat)
+BE -> S3: Subir panorámica 360°
+BE -> PG: Guardar URL + metadatos geocerca
+BE --> FE: 201 {solicitud_id}
+FE --> User: "Publicada en feed geo"
+
+== Flujo: Exploración PDS con ML ==
+User -> FE: Abre mapa / feed
+FE -> BE: GET /ai/recommendations?lat&lon&radio
+BE -> PG: ST_DWithin(ubicacion, punto, radio)\nWHERE verificado AND disponible
+PG --> BE: ~50 candidatos + embeddings
+BE -> BE: Similitud coseno → Top-K
+BE --> FE: Lista {score, distancia, rating}
+FE -> FE: Render Mapbox 3D clusters
+
+== Flujo: Ciclo Operativo (FSM 6 Hitos) ==
+User -> FE: PDS Check-in GPS obra
+FE -> BE: POST /pagos/{id}/checkin {lat,lon}
+BE -> PG: Validar Haversine < 100m
+BE -> PG: estado = EN_PROGRESO
+... 6 hitos: entrada → adendas → salida → conformidad → calificación ...
+BE -> PG: wallet_transaction PARTIDA DOBLE
+BE -> PG: TrustScore actualizado
+
+== Tiempo Real Socket.IO ==
+FE <--> BE : WebSocket WSS\n(mensajería, notificaciones, presencia)
+BE --> Redis : PUB/SUB rooms + adapter
+BE --> Celery : Tasks async (auto-release, ML retrain)
+
+@enduml

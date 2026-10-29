@@ -1,0 +1,83 @@
+@startuml
+title Figura 15 - Secuencia: Arquitectura Tiempo Real Socket.IO (Mensajería, Notificaciones, Presencia)
+
+actor "Usuario A\n(Solicitante/PDS)" as UserA
+actor "Usuario B\n(PDS/Solicitante)" as UserB
+participant "Frontend A\n(Socket.IO Client)" as FE_A
+participant "Frontend B\n(Socket.IO Client)" as FE_B
+participant "Backend\n(Socket.IO Handlers)" as BE
+participant "Redis\nPub/Sub + Adapter" as Redis
+participant "PostgreSQL" as DB
+
+== Conexión y Autenticación Socket ==
+UserA -> FE_A: Abre app → Auto-conecta
+FE_A -> BE: WebSocket CONNECT\n{token: JWT_access}
+BE -> Redis: Validar JWT + role_version
+Redis --> BE: OK + user_id + roles
+BE -> Redis: SUBSCRIBE user:{user_id}\nSUBSCRIBE room:contrato_{id}
+BE --> FE_A: CONNECTED {socket_id, user_id}
+FE_A -> FE_A: Registrar handlers:\non('message'), on('notification'),\non('presence'), on('typing')
+
+UserB -> FE_B: Abre app → Auto-conecta
+FE_B -> BE: WebSocket CONNECT {token}
+BE -> Redis: Validar + SUBSCRIBE user:{user_id_B}
+BE --> FE_B: CONNECTED
+
+== Mensajería 1:1 (Protocolo Estructurado ⟦c:...⟧) ==
+UserA -> FE_A: Escribe mensaje en chat contrato #123
+FE_A -> BE: EMIT 'message:send' {\n  contrato_id: 123,\n  contenido: "Hola, ¿cuándo llegas?",\n  tipo: TEXTO\n}
+BE -> Redis: PUBLISH room:contrato_123\n{from: userA, contenido, tipo, timestamp}
+Redis --> FE_A: MESSAGE (echo confirmación)
+Redis --> FE_B: MESSAGE (entrega tiempo real)
+FE_B -> UserB: Notificación push/in-app\n"Nuevo mensaje de UserA"
+
+== Mensajería Estructurada (Acciones Contractuales) ==
+UserA -> FE_A: Botón "Enviar contraoferta $50.000"
+FE_A -> BE: EMIT 'message:send' {\n  contrato_id: 123,\n  contenido: "[[c:counteroffer:50000]]",\n  tipo: ACCION_CONTRACTUAL\n}
+BE -> Redis: PUBLISH room:contrato_123\n{from: userA, contenido: "⟦c:...⟧", tipo}
+Redis --> FE_B: MESSAGE
+FE_B -> FE_B: Parsear ⟦c:...⟧\nRender tarjeta interactiva:\n"Contraoferta: $50.000" [Aceptar] [Rechazar] [Contraofertar]
+UserB -> FE_B: Clic "Aceptar"
+FE_B -> BE: EMIT 'message:send' {\n  contenido: "[[c:accept_counteroffer]]",\n  tipo: ACCION_CONTRACTUAL\n}
+BE -> DB: ACTUALIZAR contrato.precio = 50000\nCREAR evento contractual
+BE -> Redis: PUBLISH room:contrato_123\n{evento: CONTRACT_UPDATED, precio: 50000}
+FE_A -> UserA: UI actualizada: "Contraoferta aceptada"
+FE_B -> UserB: UI actualizada: "Contraoferta aceptada"
+
+== Notificaciones Push/In-App Multicanal ==
+BE -> BE: Evento interno (pago, hitos, KYC, etc.)
+BE -> Redis: PUBLISH user:{user_id}\n{tipo: NOTIFICACION, payload: {...}}
+Redis --> FE_A: NOTIFICACION
+FE_A -> FE_A: Centro de alertas:\nBadge contador + toast\nPersistir en localStorage
+
+== Presencia y Typing Indicators ==
+UserA -> FE_A: Escribiendo en chat...
+FE_A -> BE: EMIT 'typing:start' {contrato_id}
+BE -> Redis: PUBLISH room:contrato_123\ntyping {user: userA}
+Redis --> FE_B: TYPING_START
+FE_B -> UserB: "UserA está escribiendo..."
+
+UserA -> FE_A: Deja de escribir (timeout 3s)
+FE_A -> BE: EMIT 'typing:stop' {contrato_id}
+BE -> Redis: PUBLISH room:contrato_123
+Redis --> FE_B: TYPING_STOP
+
+== Presencia Online/Offline ==
+BE -> Redis: SET user:{userA}:online EX 30\n(Heartbeat cada 15s desde FE)
+FE_A -> BE: EMIT 'heartbeat' (cada 15s)
+BE -> Redis: REFRESH user:{userA}:online EX 30
+alt Usuario cierra app / network fail
+    Redis -> BE: KEY EXPIRED user:{userA}:online
+    BE -> Redis: PUBLISH presence:global\n{user: userA, status: OFFLINE}
+    Redis --> FE_B: PRESENCE_CHANGE
+    FE_B -> UserB: "UserA desconectado"
+end
+
+== Reconexión y Recuperación ==
+FE_A -> BE: WebSocket RECONNECT {token, last_msg_id}
+BE -> Redis: Validar + obtener mensajes perdidos\n(last_msg_id → now)
+Redis --> BE: Mensajes pendientes
+BE --> FE_A: SYNC {missed_messages[]}
+FE_A -> UserA: Chat actualizado sin gaps
+
+@enduml

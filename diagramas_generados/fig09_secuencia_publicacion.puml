@@ -1,0 +1,46 @@
+@startuml
+title Figura 9 - Secuencia: Publicación de Chamba con Geocerca Dinámica y Panorámica 360°
+
+actor "Solicitante" as User
+participant "Frontend\n(PWA + Mapbox + A-Frame)" as FE
+participant "Backend\n(Solicitudes Blueprint)" as BE
+participant "PostgreSQL\n+ PostGIS" as DB
+participant "MinIO S3" as S3
+
+== Creación de Solicitud (Chamba) ==
+User -> FE: Abre "Publicar Chamba"\nSelecciona categoría (14 opciones)
+FE -> FE: Mapbox GL JS 3D\nDibuja geocerca dinámica (radio km)
+FE -> FE: A-Frame 360°\nCaptura panorámica equirrectangular
+User -> FE: Completa formulario:\ntítulo, descripción, presupuesto, fechas
+FE -> BE: POST /solicitudes/ {\n  titulo, descripcion, categoria,\n  latitud, longitud, radio_km,\n  panorama_360_base64,\n  fecha_inicio, fecha_fin,\n  presupuesto_min, presupuesto_max\n}
+BE -> DB: INSERT solicitud\nST_SetSRID(ST_MakePoint(lon,lat),4326)
+BE -> S3: Subir panorámica 360°\n(base64 → objeto MinIO)
+BE -> DB: Guardar URL panorámica\n+ metadatos geocerca
+BE --> FE: 201 Created {solicitud_id, estado: PUBLICADO}
+FE --> User: "Chamba publicada"\nVisible en feed geográfico
+
+== Feed Público (Privacidad Diferencial) ==
+actor "PDS Explorador" as PDS
+PDS -> FE: Abre mapa / lista chambas
+FE -> BE: GET /solicitudes/?lat=X&lng=Y&radio=Z
+BE -> DB: SELECT * FROM solicitudes\nWHERE ST_DWithin(ubicacion, ST_MakePoint(lng,lat), radio_m)\nAND estado = 'PUBLICADO'
+DB --> BE: Registros (SIN lat/lon exactos\nNI dirección - purgados en serialización)
+BE --> FE: Lista chambas:\n{categoria, radio_km, presupuesto,\n distancia_aprox, panorama_thumb}
+FE -> FE: Render Mapbox 3D:\nclusters + heatmap + panorámicas thumb
+PDS -> FE: Selecciona chamba → ve detalles\n(SIN coordenadas exactas)
+
+== Postulación PDS ==
+PDS -> FE: Botón "Postularse"\nIngresa precio + mensaje
+FE -> BE: POST /ofertas/ {solicitud_id, precio, mensaje}
+BE -> DB: INSERT oferta + notificar solicitante
+BE --> FE: 201 Created {oferta_id}
+FE --> PDS: "Oferta enviada"
+
+== Desbloqueo Coordenadas (Perfeccionamiento Contrato) ==
+User -> FE: Recibe ofertas → negocia → firma
+FE -> BE: PUT /contratos/{id}/firmar {firma_digital}
+BE -> DB: Estado contrato → PERFECCIONADO\nDesbloquear coordenadas exactas
+BE --> FE: 200 OK {latitud_exacta, longitud_exacta, direccion}
+FE --> User: "Ubicación exacta revelada"\nNavegación GPS activada
+
+@enduml

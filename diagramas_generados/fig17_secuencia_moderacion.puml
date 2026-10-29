@@ -1,0 +1,107 @@
+@startuml
+title Figura 17 - Secuencia: Moderación, Soporte y Auditoría Superadmin
+
+actor "Usuario\nReporta" as User
+actor "Moderador\nVerificador/Soporte" as MOD
+actor "Superadmin\nGobernanza" as SAD
+participant "Frontend\n(Panel Admin)" as FE
+participant "Backend\n(Admin + Superadmin)" as BE
+participant "PostgreSQL\n+ Redis" as DB
+
+== Moderación de Contenido (Solicitudes) ==
+User -> FE: "Reportar chamba inapropiada"
+FE -> BE: POST /moderacion/reportes {\n  entidad_tipo: SOLICITUD,\n  entidad_id, motivo, descripcion\n}
+BE -> DB: INSERT moderacion_contenido\n{estado: PENDIENTE}
+BE -> DB: NOTIFICAR moderadores región\n(region_scope_id match)
+BE --> FE: 201 {reporte_id}
+FE --> User: "Reporte enviado"
+
+MOD -> FE: Abre panel moderación\nFiltro: región + estado PENDIENTE
+FE -> BE: GET /admin/moderacion?region=X&estado=PENDIENTE
+BE -> DB: SELECT * FROM moderacion_contenido\nJOIN solicitudes\nWHERE region_scope_id = moderador.region\n  AND estado = 'PENDIENTE'
+DB --> BE: Lista paginada
+BE --> FE: 200 {reportes[]}
+FE -> FE: Tabla: Usuario | Contenido | Motivo | Fecha | Acciones
+
+MOD -> FE: Clic "Revisar" → Modal\nVer contenido + historial usuario
+MOD -> FE: Acción: OCULTAR / RESTAURAR / DESCARTAR
+FE -> BE: POST /admin/moderacion/{id}/accion {\n  accion: OCULTAR,\n  justificacion: "Spam detectado"\n}
+BE -> DB: UPDATE solicitudes SET estado='OCULTO'\nWHERE id = entidad_id
+BE -> DB: INSERT audit_log {actor: moderador_id,\n  accion: MODERACION_OCULTAR,\n  snapshot_diff: {estado_antes: PUBLICADO, estado_despues: OCULTO}}
+BE -> DB: NOTIFICAR usuario reportado
+BE --> FE: 200 OK
+FE --> User: Notificación "Tu chamba fue ocultada: Spam"
+
+== Gestión de Tickets Soporte ==
+User -> FE: "Crear ticket soporte"
+FE -> BE: POST /tickets/ {\n  tipo: RECLAMO,\n  prioridad: ALTA,\n  asunto, descripcion\n}
+BE -> DB: INSERT tickets {estado: ABIERTO,\n  prioridad, asignado_a: null}
+BE --> FE: 201 {ticket_id}
+FE --> User: "Ticket #1234 creado"
+
+SOP -> FE: Panel tickets → Filtro: SIN_ASIGNAR + ALTA
+FE -> BE: GET /admin/tickets?estado=ABIERTO&prioridad=ALTA
+BE -> DB: SELECT * FROM tickets\nWHERE estado='ABIERTO'\nORDER BY prioridad DESC, creado_en
+DB --> BE: Lista
+BE --> FE: 200 {tickets[]}
+
+SOP -> FE: Asigna ticket #1234 a sí mismo
+FE -> BE: PUT /admin/tickets/1234 {asignado_a: me}
+BE -> DB: UPDATE tickets SET asignado_a=soporte_id
+BE -> DB: INSERT audit_log {TICKET_ASIGNADO}
+BE --> FE: 200 OK
+
+SOP -> FE: Responde ticket + Cambia estado: CERRADO
+FE -> BE: PUT /admin/tickets/1234 {\n  estado: CERRADO,\n  respuesta: "Resuelto: reembolso procesado"\n}
+BE -> DB: UPDATE tickets SET estado='CERRADO',\n  cerrado_en=NOW(), respuesta=...
+BE -> DB: INSERT audit_log {TICKET_CERRADO}
+BE --> FE: 200 OK
+FE --> User: Notificación "Ticket #1234 cerrado"
+
+== Resolución de Disputas ==
+User -> FE: "Iniciar disputa pago chamba #456"
+FE -> BE: POST /disputas/ {\n  contrato_id, tipo: PAGO,\n  descripcion: "PDS no completó trabajo"\n}
+BE -> DB: INSERT disputes {estado: ABIERTA}
+BE -> DB: NOTIFICAR PDS + Superadmin
+BE --> FE: 201 {disputa_id}
+
+SAD -> FE: Panel disputas → "Revisar #789"
+FE -> BE: GET /superadmin/disputas/789
+BE -> DB: SELECT d.*, c.*, u1 as solicitante, u2 as pds\nFROM disputes d\nJOIN contratos c ON d.contrato_id=c.id\nJOIN users u1 ON c.solicitante_id=u1.id\nJOIN users u2 ON c.pds_id=u2.id
+DB --> BE: Detalle completo + evidencias
+BE --> FE: 200 {disputa, contrato, partes, evidencias[]}
+
+SAD -> FE: Resolución: FAVOR_SOLICITANTE + REEMBOLSO
+FE -> BE: POST /superadmin/disputas/789/resolver {\n  resolucion: FAVOR_SOLICITANTE,\n  accion_pago: REEMBOLSO_TOTAL,\n  justificacion: "Evidencias insuficientes PDS"\n}
+BE -> DB: UPDATE disputes SET estado='RESUELTA',\n  resolucion=..., resuelto_por=superadmin_id
+BE -> DB: wallet_transaction PARTIDA DOBLE (reembolso)
+BE -> DB: INSERT audit_log {DISPUTA_RESUELTA, snapshot_diff}
+BE --> FE: 200 OK
+FE --> User: "Disputa resuelta a tu favor - Reembolso procesado"
+FE --> MOD: Notificación "Disputa #789 resuelta"
+
+== Auditoría Forense Superadmin ==
+SAD -> FE: "Auditoría: usuario sospechoso #999"
+FE -> BE: GET /superadmin/auditoria/usuario/999
+BE -> DB: SELECT * FROM audit_logs\nWHERE actor_id=999 OR entidad_id=999\nORDER BY timestamp_utc DESC\nLIMIT 100
+DB --> BE: Log inmutable completo
+BE --> FE: 200 {auditoria[]}
+FE -> FE: Timeline: Login → KYC → Publicación → Contrato → Pago → Calificación
+FE -> SAD: Export PDF/CSV para evidencia legal
+
+SAD -> FE: "Activar feature flag: ml_ranking_enabled=false"
+FE -> BE: PUT /superadmin/flags/ml_ranking_enabled {habilitado: false}
+BE -> DB: UPDATE feature_flags SET habilitado=false\nWHERE nombre='ml_ranking_enabled'
+BE -> DB: INSERT audit_log {FEATURE_FLAG_CHANGE}
+BE --> FE: 200 OK
+FE --> SAD: "Flag desactivado - Efecto inmediato sin redeploy"
+
+note right of BE
+  SCOPING REGIONAL ESTRICTO:
+  • Moderador ve SOLO su región (region_scope_id)
+  • Superadmin ve TODO (scope=null)
+  • Intento acceso a otra región → 404
+  • Auditoría: inmutable, snapshot_diff JSON
+end note
+
+@enduml

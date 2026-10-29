@@ -1,0 +1,86 @@
+@startuml
+title Figura 11 - Secuencia: Pago Dual (Digital/Efectivo) y Calificación Bilateral 360°
+
+actor "Solicitante" as User
+actor "PDS (Prestador)" as PDS
+participant "Frontend\n(Billetera + Chat)" as FE
+participant "Backend\n(Wallet + Payments)" as BE
+participant "PostgreSQL\n+ Redis" as DB
+participant "Nequi/PSE\nGateway" as Gateway
+participant "Celery Worker" as Celery
+
+== Pago Digital (Nequi/PSE) ==
+User -> FE: Selecciona "Pagar con Nequi/PSE"
+FE -> BE: POST /pagos/ {contrato_id, monto, metodo: DIGITAL}
+BE -> DB: CREAR pago {estado: PENDIENTE, saldo_bloqueado}
+BE -> Gateway: Iniciar transacción Nequi/PSE
+Gateway --> BE: URL pago / token
+BE --> FE: 201 {pago_id, checkout_url}
+FE -> User: Redirige a pasarela Nequi/PSE
+User -> Gateway: Completa pago en app Nequi/PSE
+Gateway -> BE: Webhook confirmación pago
+BE -> DB: pago.estado = COMPLETADO\nwallet.saldo_disponible += monto\nwallet.saldo_bloqueado -= monto
+BE -> DB: CREAR wallet_transaction (PARTIDA DOBLE)\nDEBE: caja | HABER: usuario
+BE --> FE: Notificación push "Pago recibido"
+FE --> PDS: "Pago confirmado - Inicia trabajo"
+
+== Pago Efectivo (Doble Check-in) ==
+PDS -> FE: Llega a obra → Check-in GPS\nHaversine < 100m
+FE -> BE: POST /pagos/{id}/checkin_entrada {lat, lon}
+BE -> DB: Validar distancia < 100m\npago.estado = EN_CURSO
+BE --> FE: 200 OK
+FE --> PDS: "Check-in entrada confirmado"
+
+... Trabajo en curso (FSM 6 hitos) ...
+
+PDS -> FE: Finaliza trabajo → Check-out GPS
+FE -> BE: POST /pagos/{id}/checkin_salida {lat, lon, evidencias}
+BE -> DB: Validar distancia < 100m
+BE -> DB: pago.estado = PENDIENTE_CONFORMIDAD
+BE --> FE: 200 OK
+FE --> User: "PDS finalizó - Confirma conformidad"
+
+User -> FE: Botón "Confirmar conformidad"
+FE -> BE: POST /pagos/{id}/conformidad_solicitante
+BE -> DB: conformidad_solicitante = true
+alt Ambas conformidades (PDS ya confirmó)
+    BE -> DB: pago.estado = COMPLETADO
+    BE -> DB: wallet_transaction PARTIDA DOBLE
+    BE -> DB: wallet.saldo_disponible += monto
+    BE --> FE: "Pago liberado a PDS"
+else Esperar conformidad PDS
+    BE --> FE: "Esperando conformidad PDS"
+end
+
+PDS -> FE: Botón "Confirmar conformidad"
+FE -> BE: POST /pagos/{id}/conformidad_pds
+BE -> DB: conformidad_pds = true
+alt Ambas conformidades
+    BE -> DB: pago.estado = COMPLETADO
+    BE -> DB: wallet_transaction PARTIDA DOBLE
+    BE -> DB: wallet.saldo_disponible += monto
+    BE --> FE: "Pago liberado"
+end
+
+== Auto-release 48h (Celery) ==
+Celery -> BE: Cada 30 min: buscar pagos PENDIENTE_CONFORMIDAD > 48h
+BE -> DB: Auto-liberar pago\nwallet_transaction + saldo_disponible
+BE -> FE: Notificación "Pago auto-liberado"
+
+== Calificación Bilateral 360° ==
+User -> FE: Califica PDS (1-5★ + comentario)
+FE -> BE: POST /calificaciones/ {contrato_id, pds_id, estrellas, comentario}
+BE -> DB: INSERT calificacion (única por autor)
+BE -> DB: ACTUALIZAR TrustScore PDS\nf(calif, cumplimiento, verificación, antigüedad)
+BE --> FE: 201 Created
+
+PDS -> FE: Califica Solicitante (1-5★ + comentario)
+FE -> BE: POST /calificaciones/ {contrato_id, solicitante_id, estrellas, comentario}
+BE -> DB: INSERT calificacion
+BE -> DB: ACTUALIZAR TrustScore Solicitante
+BE --> FE: 201 Created
+
+FE --> User: "Calificación registrada"
+FE --> PDS: "Calificación registrada"
+
+@enduml

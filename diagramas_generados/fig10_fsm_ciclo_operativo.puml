@@ -1,0 +1,98 @@
+@startuml
+title Figura 10 - FSM Ciclo Operativo: 6 Hitos con Verificación GPS y Evidencias
+
+actor "PDS\n(Prestador)" as PDS
+actor "Solicitante" as User
+participant "Frontend\n(Chat + Mapa + Cámara)" as FE
+participant "Backend\n(Contracts + Payments)" as BE
+participant "PostgreSQL\n+ PostGIS" as DB
+participant "MinIO S3" as S3
+participant "Celery\nWorker" as Celery
+
+== HITO 1: Check-in Entrada (GPS Haversine < 100m) ==
+PDS -> FE: Llega a obra → "Iniciar trabajo"
+FE -> FE: Obtener GPS actual (lat, lon)
+FE -> BE: POST /contratos/{id}/checkin_entrada {lat, lon}
+BE -> DB: SELECT ST_DWithin(obra_ubicacion, ST_MakePoint(lon,lat), 100)
+alt Dentro de 100m
+    BE -> DB: UPDATE contrato SET estado = 'EN_PROGRESO',\n  checkin_entrada_at = NOW(),\n  checkin_entrada_gps = POINT(lon,lat)
+    BE --> FE: 200 {estado: EN_PROGRESO}
+    FE --> PDS: "Check-in confirmado - Inicia hito 2"
+else Fuera de 100m
+    BE --> FE: 400 {error: "Fuera de geocerca (>100m)"}
+    FE --> PDS: "Acérquese a la ubicación de la obra"
+end
+
+== HITO 2: Evidencia de Entrada (Fotos a MinIO) ==
+PDS -> FE: Toma fotos evidencia entrada\n(cámara app)
+FE -> FE: Comprimir + base64
+FE -> BE: POST /contratos/{id}/evidencias_entrada {fotos_base64[]}
+BE -> S3: Subir cada foto → objeto MinIO
+BE -> DB: INSERT evidencia {contrato_id, tipo: ENTRADA,\n  minio_url[], hash_sha256, metadatos_exif}
+BE --> FE: 201 {evidencia_ids[]}
+FE --> PDS: "Evidencias subidas - Inicia hito 3"
+
+== HITO 3: Adendas y Novedades (Opcional) ==
+User -> FE: "Registrar adenda" (cambio alcance/precio)
+FE -> BE: POST /contratos/{id}/adendas {\n  tipo: CAMBIO_ALCANCE|CAMBIO_PRECIO|NOVEDAD,\n  descripcion, monto_ajuste\n}
+BE -> DB: INSERT adenda + ACTUALIZAR contrato.monto_total
+BE -> DB: NOTIFICAR PDS (Socket.IO)
+BE --> FE: 201 {adenda_id}
+FE --> PDS: Notificación "Nueva adenda registrada"
+PDS -> FE: Acepta/Rechaza adenda
+FE -> BE: PUT /adendas/{id}/respuesta {aceptada: true}
+BE -> DB: adenda.estado = ACEPTADA
+
+== HITO 4: Evidencia de Salida + Check-out GPS ==
+PDS -> FE: Finaliza trabajo → "Terminar"\nToma fotos salida + GPS
+FE -> BE: POST /contratos/{id}/checkin_salida {\n  lat, lon, fotos_salida_base64[]\n}
+BE -> DB: Validar Haversine < 100m (misma obra)
+BE -> S3: Subir fotos salida
+BE -> DB: INSERT evidencia {tipo: SALIDA, ...}
+BE -> DB: contrato.estado = 'PENDIENTE_CONFORMIDAD'
+BE --> FE: 200 {estado: PENDIENTE_CONFORMIDAD}
+FE --> User: "PDS finalizó - Confirme conformidad"
+
+== HITO 5: Doble Conformidad de Pago ==
+User -> FE: Revisa evidencias → "Conforme"
+FE -> BE: POST /pagos/{id}/conformidad_solicitante
+BE -> DB: pago.conformidad_solicitante = true
+alt PDS ya confirmó
+    BE -> DB: pago.estado = COMPLETADO
+    BE -> DB: wallet_transaction PARTIDA DOBLE
+    BE -> DB: wallet.saldo_disponible += monto
+    BE --> FE: "Pago liberado a PDS"
+else Esperando PDS
+    BE --> FE: "Esperando conformidad PDS"
+end
+
+PDS -> FE: "Confirmar conformidad"
+FE -> BE: POST /pagos/{id}/conformidad_pds
+BE -> DB: pago.conformidad_pds = true
+alt Solicitante ya confirmó
+    BE -> DB: pago.estado = COMPLETADO + PARTIDA DOBLE
+    BE --> FE: "Pago liberado"
+end
+
+== Auto-release 48h (Celery) ==
+Celery -> BE: Cada 30 min: buscar PENDIENTE_CONFORMIDAD > 48h
+BE -> DB: Auto-liberar + PARTIDA DOBLE
+BE -> FE: Notificación "Pago auto-liberado por tiempo"
+
+== HITO 6: Calificación Bilateral 360° ==
+User -> FE: Califica PDS (1-5★ + comentario)
+FE -> BE: POST /calificaciones/ {contrato_id, pds_id, estrellas, comentario}
+BE -> DB: INSERT calificacion (única por autor)
+BE -> DB: ACTUALIZAR TrustScore PDS
+BE --> FE: 201 Created
+
+PDS -> FE: Califica Solicitante (1-5★ + comentario)
+FE -> BE: POST /calificaciones/ {contrato_id, solicitante_id, estrellas, comentario}
+BE -> DB: INSERT calificacion
+BE -> DB: ACTUALIZAR TrustScore Solicitante
+BE --> FE: 201 Created
+
+FE --> User: "Calificaciones registradas - Contrato COMPLETADO"
+FE --> PDS: "Calificaciones registradas - Contrato COMPLETADO"
+
+@enduml

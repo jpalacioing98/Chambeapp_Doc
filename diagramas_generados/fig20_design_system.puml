@@ -1,0 +1,66 @@
+@startuml
+title Figura 20 - Design System: Tokens, Componentes, Reglas, Arquitectura CSS, Iconografía
+
+actor "Diseñador\nUI/UX" as Designer
+participant "Design System\nRepo Compartido" as DS
+participant "Frontend Cliente\nPWA React" as FE_CLIENT
+participant "Frontend Admin\nPanel Admin" as FE_ADMIN
+
+== 1. Tokens de Diseño (Fuente Única) ==
+Designer -> DS: Define tokens base\ncolors.json, spacing.json,\ntypography.json, shadows.json,\nradii.json, motion.json
+DS -> DS: Valida WCAG AA\nContraste: 4.5:1 (texto)\n3:1 (UI elements)
+DS -> DS: Genera CSS Custom Properties\n:root { --color-primary: #...;\n  --spacing-4: 1rem;\n  --font-size-base: 1rem; }
+DS -> DS: Exporta: tokens.css\n+ tokens.js (TypeScript)
+DS --> FE_CLIENT: @import 'tokens.css'
+DS --> FE_ADMIN: @import 'tokens.css'
+
+== 2. Componentes Atómicos ==
+DS -> DS: Button (primary, secondary, ghost, danger)\nInput (text, select, textarea, file)\nBadge, Chip, Avatar, Icon\nLoadingState (spinner, skeleton)\nEmptyState, Tooltip, Modal
+DS -> DS: Props tipadas TypeScript\nVariants: size, variant, state\nAccesibilidad: ARIA, focus-visible
+DS --> FE_CLIENT: Button, Input, Badge...
+DS --> FE_ADMIN: Button, Input, Badge... (wrappers)
+
+== 3. Componentes Compuestos ==
+DS -> DS: Card (header, body, footer, actions)\nTable (sort, filter, pagination, row-click)\nFormField (label, input, error, hint)\nListItem (avatar, title, subtitle, actions)\nNavigationDrawer, TopBar, BottomBar\nPageHeader, SectionHeader, Divider
+DS -> DS: Composition patterns:\n  Slot-based (React children)\n  Compound components\n  Render props
+DS --> FE_CLIENT: Card, Table, FormField...
+DS --> FE_ADMIN: Card, Table, FormField... (wrappers)
+
+== 4. Reglas de Composición ==
+DS -> DS: Layout: 8px grid system\nBreakpoints: sm(640), md(768), lg(1024), xl(1280)\nContainer: max-width 1200px\nSpacing scale: 4, 8, 12, 16, 24, 32, 48, 64
+DS -> DS: Accesibilidad WCAG AA:\n  Focus visible: outline 2px offset 2px\n  Skip links\n  Landmarks: main, nav, aside\n  Color no solo para info
+DS -> DS: Responsive patterns:\n  Mobile-first\n  Stack → Grid en breakpoints\n  Touch targets: 44x44px mínimo
+
+== 5. Arquitectura CSS (Capas) ==
+DS -> DS: Capa 1: Tokens (CSS custom props)\nCapa 2: Reset + Base (normalize)\nCapa 3: Componentes (block__element--modifier)\nCapa 4: Utilidades (spacing, display, flex)\nCapa 5: Overrides (tema, marca blanca)
+DS -> DS: Metodología: BEM + CUBE CSS\nNaming: .block__element--modifier\nNo !important (excepto utilidades)
+DS -> DS: Build: PostCSS + cssnano\nSource maps + minificación
+DS --> FE_CLIENT: design-system.css (bundled)
+DS --> FE_ADMIN: design-system.css + admin-overrides.css
+
+== 6. Iconografía Unificada ==
+DS -> DS: Librería: Lucide React (base)\nCustom SVG: 48 iconos marca\nNaming: icon-[categoria]-[accion]\nSizes: 16, 20, 24, 32, 48px\nStroke: 2px, currentColor
+DS -> DS: Icon component:\n  <Icon name="user" size={24} />\n  Tree-shaking automático
+DS --> FE_CLIENT: Icon component
+DS --> FE_ADMIN: Icon component (wrappers)
+
+== 7. Decisiones Abiertas Documentadas ==
+DS -> DS: ADR-001: Tokens vs ThemeProvider\nADR-002: CSS-in-JS vs CSS Modules\nADR-003: Component library vs Copy-paste\nADR-004: Dark mode strategy\nADR-005: Animation reduced-motion\nADR-006: Versionado semántico DS
+
+note right of DS
+  DESIGN SYSTEM MÉTRICAS:
+  • 12 tokens color (semánticos)
+  • 8 spacing scale steps
+  • 6 tipografía scales
+  • 4 shadow elevations
+  • 3 border radii
+  • 12 componentes atómicos
+  • 8 componentes compuestos
+  • 6 reglas composición
+  • 5 capas CSS arquitectura
+  • 48 iconos (Lucide + custom)
+  • 6 ADRs documentados
+  • 2 frontends sincronizados
+end note
+
+@enduml

@@ -1,0 +1,56 @@
+@startuml
+title Figura 21 - Dashboard Resultados Auditoría E2E: 14/14 Flujos PASA
+
+actor "Evaluador Jurado" as Evaluator
+participant "Dashboard Playwright" as Dashboard
+participant "Backend API" as BE
+participant "PostgreSQL" as DB
+participant "Artifacts" as Artifacts
+
+Evaluator -> Dashboard: Abre reporte auditoria
+Dashboard -> Dashboard: Carga index.html
+Dashboard --> Evaluator: Dashboard principal: 14/14 PASSED | 42 min | 142 capturas | 14 videos | 14 scripts | 1247 HTTP | 892 DB
+
+Evaluator -> Dashboard: Clic flujo 06-ejecucion-ciclo-operativo
+Dashboard -> Dashboard: Filtro + drill-down
+Dashboard --> Evaluator: Detalle Flujo 06: PASSED | 4m23s | 11 capturas | 1 video | 1 script | 87 HTTP/0 fail | 62 DB/0 rollback | 8/8 invariantes
+
+Evaluator -> Dashboard: Tab Network -> Flujo 06
+Dashboard -> BE: GET /api/audit/http?flow=06
+BE -> DB: SELECT http_audit_log WHERE flow_id=06
+DB --> BE: 87 registros
+BE --> Dashboard: JSON
+Dashboard -> Dashboard: Render tabla: Metodo | Endpoint | Status | Latencia
+Dashboard --> Evaluator: Tabla interactiva
+
+Evaluator -> Dashboard: Tab Database -> Flujo 06
+Dashboard -> BE: GET /api/audit/db?flow=06
+BE -> DB: SELECT db_audit_log WHERE flow_id=06
+DB --> BE: 62 transacciones (INSERT, UPDATE, CONSTRAINTS 0, TRIGGERS 8)
+BE --> Dashboard: JSON
+Dashboard --> Evaluator: 0 constraint violations, All triggers OK
+
+Evaluator -> Dashboard: Tab Invariants -> Flujo 06
+Dashboard -> BE: GET /api/audit/invariants?flow=06
+BE -> DB: 8 validaciones automaticas
+DB --> BE: 8/8 PASS
+BE --> Dashboard: Resultado
+Dashboard --> Evaluator: 8/8 Invariantes VERIFICADOS
+
+Evaluator -> Dashboard: Boton Re-ejecutar Flujo 06
+Dashboard -> Artifacts: Descarga flow-06.cjs + flow-06.webm + 11 PNG
+Evaluator -> Evaluator: npx playwright flow-06.cjs -> PASSED
+
+note right of Dashboard
+  PLAYWRIGHT REPORT:
+  * index.html: Dashboard interactivo
+  * data/: JSON por flujo (http, db, invariants)
+  * screenshots/: 142 PNG por flujo
+  * videos/: 14 WebM
+  * scripts/: 14 .cjs autonomos
+  * traces/: 14 .zip trace viewer
+  * summary.json: Metricas consolidadas
+  * README.md: Instrucciones re-ejecucion
+end note
+
+@enduml

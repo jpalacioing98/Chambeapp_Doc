@@ -1,0 +1,68 @@
+@startuml
+title Figura 12 - Secuencia: Derivación Ágil de Marañas desde Adenda Contractual
+
+actor "Solicitante" as User
+actor "PDS Principal" as PDS
+actor "PDS Maraña\n(Derivado)" as PDS2
+participant "Frontend\n(Contratos + Marañas)" as FE
+participant "Backend\n(Contracts + Marañas)" as BE
+participant "PostgreSQL\n+ Redis" as DB
+
+== Creación Adenda con Derivación ==
+User -> FE: En contrato activo → "Derivar tarea"
+FE -> FE: Formulario maraña:\ntipo, descripción, presupuesto_derivado
+User -> FE: Selecciona PDS derivado (opcional)
+FE -> BE: POST /contratos/{id}/adendas {\n  tipo: DERIVACION_MARANA,\n  descripcion, presupuesto_derivado,\n  pds_derivado_id (opcional)\n}
+BE -> DB: INSERT adenda\nDESCONTAR presupuesto_derivado\nde orden madre (contrato.monto_total)
+BE -> DB: CREAR maraña {estado: PUBLICADA,\n  presupuesto: presupuesto_derivado,\n  contrato_padre_id, adenda_id}
+BE -> DB: NOTIFICAR PDS derivado\n(si preseleccionado) o PUBLICAR en feed
+BE --> FE: 201 {adenda_id, maraña_id}
+FE --> User: "Tarea derivada → Maraña creada"
+FE --> PDS: Notificación "Nueva adenda: derivación"
+
+== Asignación PDS a Maraña ==
+alt PDS preseleccionado
+    PDS2 -> FE: Recibe notificación → Acepta maraña
+    FE -> BE: POST /maranas/{id}/aceptar
+    BE -> DB: maraña.estado = ASIGNADA\nmaraña.pds_id = PDS2
+    BE --> FE: 200 OK
+else Feed público marañas
+    PDS2 -> FE: Explora feed marañas\n(Mapbox 3D + geoespacial)
+    PDS2 -> FE: Postúlase a maraña
+    FE -> BE: POST /ofertas/ {marana_id, precio, mensaje}
+    BE -> DB: INSERT oferta_maraña
+    User -> FE: Recibe ofertas → Selecciona PDS
+    FE -> BE: POST /maranas/{id}/asignar {pds_id}
+    BE -> DB: maraña.estado = ASIGNADA
+    BE --> FE: 200 OK
+end
+FE --> PDS2: "Maraña asignada - Inicia trabajo"
+
+== Ejecución Maraña (Ciclo Simplificado) ==
+PDS2 -> FE: Check-in GPS obra (<100m)
+FE -> BE: POST /maranas/{id}/checkin
+BE -> DB: Validar GPS + estado = EN_PROGRESO
+PDS2 -> FE: Realiza trabajo → Evidencias fotos
+FE -> BE: POST /maranas/{id}/evidencias {fotos}
+BE -> S3: Subir evidencias MinIO
+BE -> DB: maraña.estado = PENDIENTE_REVISION
+PDS2 -> FE: Check-out GPS + "Finalizado"
+FE -> BE: POST /maranas/{id}/finalizar
+BE -> DB: maraña.estado = PENDIENTE_CONFORMIDAD
+
+== Cierre y Conciliación ==
+User -> FE: Revisa evidencias → "Conforme"
+FE -> BE: POST /maranas/{id}/conformidad
+BE -> DB: maraña.estado = COMPLETADA
+BE -> DB: PAGO PDS2 desde presupuesto_derivado\nwallet_transaction PARTIDA DOBLE
+BE -> DB: ACTUALIZAR contrato_padre\nmonto_ejecutado += presupuesto_derivado
+BE -> DB: CALIFICACIÓN bilateral 360° (maraña)
+BE --> FE: "Maraña cerrada - Pago liberado"
+FE --> User: "Tarea derivada completada"
+FE --> PDS: "Adenda cerrada - Monto descontado"
+FE --> PDS2: "Maraña pagada - Calificación recibida"
+
+note right of User : Prevención doble imputación:\npresupuesto_derivado descontado\nde orden madre al crear adenda
+note right of PDS2 : Maraña = micro-trabajo barrial\nciclo simplificado vs chamba
+
+@enduml

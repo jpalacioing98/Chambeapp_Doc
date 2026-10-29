@@ -1,0 +1,82 @@
+@startuml
+title Figura 7 - Casos de Uso Extendidos: 4 Roles, 14 Flujos (Secuencia)
+
+actor "PDS\n(Prestador Servicios)" as PDS
+actor "Solicitante\n(Empleador)" as SOL
+actor "Comerciante\n(Negocio Local)" as MER
+actor "Verificador\nKYC" as VER
+actor "Soporte\nTickets" as SOP
+actor "Superadmin\nGobernanza" as SAD
+
+participant "ChambeApp Platform" as APP
+
+== PDS: 10 Casos de Uso ==
+PDS -> APP: UC01 Autenticación\nRegistro + 2FA TOTP + Login/Refresh
+PDS -> APP: UC02 Perfil y KYC\n11 docs, 4 grupos, Multi-instancia, OTP
+PDS -> APP: UC04 Explorar y Postular\nMapbox 3D + ML ranking, Ofertas, Negociación
+PDS -> APP: UC05 Negociar y Firmar\nContraofertas ⟦c:⟧, Firma digital contrato
+PDS -> APP: UC06 Ejecutar Ciclo 6 Hitos\nCheck-in GPS <100m, Evidencias MinIO, Adendas, Salida, Doble conformidad, Calificación 360°
+PDS -> APP: UC07 Pago Dual\nDigital Nequi/PSE, Efectivo doble check-in, Partida doble, Auto-release 48h
+PDS -> APP: UC08 Derivar Marañas\nAdenda DERIVACION, Descuento orden madre, Feed micro-trabajos
+PDS -> APP: UC11 Billetera + Coins\n3 tipos moneda, Modalidades A/B, Certificado Ley 527
+PDS -> APP: UC12 Mensajería Tiempo Real\nSocket.IO 1:1, Protocolo ⟦c:⟧, Historial + typing
+PDS -> APP: UC13 Notificaciones\nPush + In-App, Centro alertas, Preferencias canal
+
+== SOLICITANTE: 10 Casos de Uso ==
+SOL -> APP: UC01 Autenticación
+SOL -> APP: UC02 Perfil y KYC
+SOL -> APP: UC03 Publicar Chamba\nGeocerca dinámica, Panorámica 360° A-Frame
+SOL -> APP: UC05 Negociar y Firmar
+SOL -> APP: UC06 Ejecutar Ciclo 6 Hitos
+SOL -> APP: UC07 Pago Dual
+SOL -> APP: UC08 Derivar Marañas
+SOL -> APP: UC11 Billetera + Coins
+SOL -> APP: UC12 Mensajería Tiempo Real
+SOL -> APP: UC13 Notificaciones
+
+== COMERCIANTE: 6 Casos de Uso ==
+MER -> APP: UC01 Autenticación
+MER -> APP: UC02 Perfil y KYC (Merchant)
+MER -> APP: UC09 Directorio Negocios\nKYC Merchant, Estadísticas, Anuncios, Preferencias pago
+MER -> APP: UC10 Anuncios Laborales\nEmpleo proximidad, Postulaciones + CV, Geo-index
+MER -> APP: UC11 Billetera + Coins
+MER -> APP: UC13 Notificaciones
+
+== VERIFICADOR: 2 Casos de Uso ==
+VER -> APP: UC01 Autenticación
+VER -> APP: UC02 Perfil y KYC (Review panel)
+VER -> APP: UC14 Moderación/Gobernanza\nKYC review Aprobar/Rechazar, Tickets, Disputas, Auditoría, Feature flags, Multi-región
+
+== SOPORTE: 3 Casos de Uso ==
+SOP -> APP: UC01 Autenticación
+SOP -> APP: UC13 Notificaciones
+SOP -> APP: UC14 Moderación/Gobernanza
+
+== SUPERADMIN: 2 Casos de Uso ==
+SAD -> APP: UC01 Autenticación
+SAD -> APP: UC14 Moderación/Gobernanza (Full access)
+
+note right of APP
+  RESUMEN MATRIZ ROLES × CASOS DE USO:
+  
+  | UC    | PDS | SOL | MER | VER | SOP | SAD |
+  |-------|-----|-----|-----|-----|-----|-----|
+  | UC01  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |  ✓  |
+  | UC02  |  ✓  |  ✓  |  ✓  |  ✓  |     |     |
+  | UC03  |     |  ✓  |     |     |     |     |
+  | UC04  |  ✓  |     |     |     |     |     |
+  | UC05  |  ✓  |  ✓  |     |     |     |     |
+  | UC06  |  ✓  |  ✓  |     |     |     |     |
+  | UC07  |  ✓  |  ✓  |     |     |     |     |
+  | UC08  |  ✓  |  ✓  |     |     |     |     |
+  | UC09  |     |     |  ✓  |     |     |     |
+  | UC10  |     |     |  ✓  |     |     |     |
+  | UC11  |  ✓  |  ✓  |  ✓  |     |     |     |
+  | UC12  |  ✓  |  ✓  |     |     |     |     |
+  | UC13  |  ✓  |  ✓  |  ✓  |     |  ✓  |     |
+  | UC14  |     |     |     |  ✓  |  ✓  |  ✓  |
+  
+  TOTAL: PDS=10, SOL=10, MER=6, VER=3, SOP=3, SAD=2
+end note
+
+@enduml

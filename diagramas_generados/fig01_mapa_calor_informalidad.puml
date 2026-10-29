@@ -1,0 +1,36 @@
+@startuml
+title Figura 1 - Mapa de Calor: Informalidad Laboral en Ciudades Intermedias Colombia 2025-2026
+
+actor "DANE / GEIH\nFuente Oficial" as DANE
+participant "Procesamiento\nDatos Geoespaciales" as Proc
+participant "Mapbox GL JS\nVisualización" as Viz
+
+== Datos Oficiales (DANE GEIH 2025-2026) ==
+DANE -> Proc: Datos brutos:\n- % informalidad por ciudad\n- Población ocupada\n- Sectores económicos\n- Año: 2025-2026
+
+Proc -> Proc: Limpieza y estandarización\nGeocodificación ciudades\nCálculo índices compuestos
+
+== Ciudades con Mayor Informalidad ==
+note right of Proc
+  TOP 5 CIUDADES INTERMEDIAS:
+  1. Valledupar     62.3%  (FOCO PROYECTO)
+  2. Sincelejo      59.8%
+  3. Riohacha       58.1%
+  4. Montería       56.7%
+  5. Cúcuta         55.9%
+  
+  Promedio nacional: 55.1%
+  Promedio 13 principales: 48.2%
+end note
+
+== Visualización Mapbox GL JS ==
+Proc -> Viz: GeoJSON + propiedades:\n{ciudad, %informalidad, poblacion,\n  lat, lon, sectores_dominantes}
+Viz -> Viz: Estilo heatmap:\n- Intensidad = % informalidad\n- Radio = población ocupada\n- Color: verde→amarillo→rojo
+Viz -> Viz: Capas interactivas:\n- Heatmap base\n- Marcadores con popup detalle\n- Tooltip: ciudad, %, población, sectores
+Viz --> DANE: Mapa web interactivo\n(Filtrado por año, sector, género)
+
+== Integración en ChambeApp ==
+Viz -> Viz: Overlay en PWA:\n- Fondo: heatmap informalidad\n- Foreground: chambas activas\n- Correlación: alta oferta ↔ alta informalidad
+Viz --> DANE: Dashboard analítico\npara toma de decisiones
+
+@enduml

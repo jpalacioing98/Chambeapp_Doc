@@ -1,0 +1,78 @@
+@startuml
+title Figura 18 - Módulo Visualización 3D: Mapbox GL JS 3D + A-Frame 360°
+
+actor "Usuario\n(PDS/Solicitante)" as User
+participant "Frontend\nPWA React" as FE
+participant "Mapbox GL JS\n3D Engine" as MAPBOX
+participant "A-Frame\n360 Viewer" as AFRAME
+participant "Backend\nAPI" as BE
+participant "MinIO S3" as S3
+
+== Mapbox GL JS 3D: Exploración Geoespacial ==
+User -> FE: Abre "Explorar Chambas"
+FE -> MAPBOX: Inicializa mapa 3D\nStyle: streets-v11 + custom\nCenter: user location\nPitch: 45, Bearing: 0
+MAPBOX -> MAPBOX: Carga tiles vectoriales\nTerrain: RGB DEM\nExtrusion: buildings 3D
+FE -> BE: GET /solicitudes/?lat&lon&radio
+BE -> DB: ST_DWithin + filtros
+DB --> BE: GeoJSON FeatureCollection
+BE --> FE: Chambas con geometría POINT
+FE -> MAPBOX: Add source: geojson chambas
+MAPBOX -> MAPBOX: Cluster layer:\n  radius: 50px, maxzoom: 14
+MAPBOX -> MAPBOX: Heatmap layer:\n  weight: score_ml * (1/dist_km)\n  radius: 30px, intensity: 0.8
+MAPBOX -> MAPBOX: 3D Extrusion:\n  circle-radius: sqrt(score)*10\n  circle-height: score*100
+FE --> User: Mapa 3D interactivo\nNavegación: pitch, bearing, zoom
+
+== Mapbox: Geocerca Dinámica (Publicación) ==
+User -> FE: "Publicar Chamba" → Paso 2: Ubicación
+FE -> MAPBOX: Draw mode: Polygon\nToolbar: draw, edit, delete
+User -> MAPBOX: Dibuja polígono geocerca\nPuntos: [lat,lon] array
+MAPBOX -> MAPBOX: Cálculo en cliente:\n  centroid = turf.centroid\n  radius_km = max_distance\n  bbox = turf.bbox
+FE -> FE: Preview: area km2 + radio efectivo
+User -> FE: Confirma geocerca → Siguiente
+FE -> BE: POST /solicitudes/ {\n  geocerca: polygon_geojson,\n  centroid, radius_km, bbox\n}
+
+== A-Frame 360: Captura Panorámica ==
+User -> FE: Paso 3: "Capturar 360"
+FE -> AFRAME: Inicializa escena A-Frame\nPhoto Sphere Viewer\nWebRTC getUserMedia
+AFRAME -> AFRAME: Camera stream → texture\nGyroscope + accelerometer
+User -> AFRAME: Mueve telefono 360
+AFRAME -> AFRAME: Stitching frames\nEquirectangular 2:1 (4096x2048)
+User -> FE: "Guardar panoramica"
+FE -> FE: Canvas → base64 JPEG (0.8)
+FE -> BE: POST /solicitudes/ {panorama_360_base64}
+BE -> S3: Upload base64 → objeto MinIO
+BE -> DB: Guardar URL + metadatos EXIF
+BE --> FE: 201 {panorama_url}
+
+== A-Frame 360: Inspección Evidencias (Ejecución) ==
+User -> FE: Abre contrato → "Ver evidencias 360"
+FE -> BE: GET /contratos/{id}/evidencias_360
+BE -> DB: SELECT minio_url FROM evidencias\nWHERE formato=360
+DB --> BE: URLs MinIO
+BE --> FE: {panoramas: [url1, url2...]}
+FE -> AFRAME: Carga panoramicas en secuencia\n<a-scene> + <a-sky> + animation
+AFRAME -> AFRAME: Navegación VR:\n  Look-controls (mouse/touch/gyro)\n  Hotspots: marcadores GPS + timestamp\n  Medición: distancia entre puntos
+User -> AFRAME: Inspecciona obra 360\nZoom + giro + hotspots
+FE --> User: Evidencia entrada/salida verificada\nContexto espacial inmersivo
+
+note right of MAPBOX
+  MAPBOX GL JS 3D:
+  • Vector tiles + RGB DEM terrain
+  • Building extrusion 3D
+  • Clustering + Heatmap dinámico
+  • Geocerca: turf.js (centroid, bbox, area)
+  • Fallback: SwiftShader WebGL
+  • Offline: MBTiles cache
+end note
+
+note right of AFRAME
+  A-FRAME 360:
+  • Photo Sphere Viewer stitching
+  • Equirectangular 4096x2048
+  • WebRTC camera + gyroscope
+  • Hotspots GPS + timestamp
+  • Medición distancia en esfera
+  • WebXR ready (VR headset)
+end note
+
+@enduml

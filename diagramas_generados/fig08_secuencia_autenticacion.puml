@@ -1,0 +1,49 @@
+@startuml
+title Figura 8 - Secuencia: Autenticación y Registro Multi-Rol con 2FA TOTP
+
+actor "Usuario" as User
+participant "Frontend\n(PWA React)" as FE
+participant "Backend\n(Auth Blueprint)" as BE
+participant "PostgreSQL\n+ Redis" as DB
+participant "Email/SMS\nProvider" as Ext
+
+== Registro ==
+User -> FE: Ingresa datos + rol (pds|solicitante|merchant)
+FE -> BE: POST /auth/register {email, password, rol, t&c}
+BE -> DB: Validar email único + crear usuario
+BE -> DB: Generar JWT (access 30m, refresh 7d) + role_version=1
+BE --> FE: 201 Created {user, tokens}
+FE --> User: Redirige a onboarding (4 pasos)
+
+== Login ==
+User -> FE: Email + password
+FE -> BE: POST /auth/login
+BE -> DB: Verificar bcrypt + role_version
+alt Credenciales válidas
+    BE -> DB: Verificar 2FA habilitado
+    alt 2FA activo
+        BE --> FE: 200 {requires_2fa: true, user_id}
+        User -> FE: Ingresa código TOTP (app authenticator)
+        FE -> BE: POST /auth/2fa/verify {code}
+        BE -> DB: Validar TOTP (RFC 6238)
+        BE -> DB: Generar nuevos tokens + role_version
+        BE --> FE: 200 {access_token, refresh_token}
+    else 2FA no activo
+        BE -> DB: Generar tokens + role_version
+        BE --> FE: 200 {access_token, refresh_token}
+    end
+else Credenciales inválidas
+    BE --> FE: 401 Unauthorized
+end
+FE --> User: Acceso concedido / Error
+
+== Renovación Token ==
+FE -> BE: POST /auth/refresh {refresh_token}
+BE -> DB: Validar refresh + role_version coincide
+alt Válido
+    BE --> FE: 200 {nuevo_access_token}
+else role_version cambiado (revocación)
+    BE --> FE: 401 Token revocado
+end
+
+@enduml

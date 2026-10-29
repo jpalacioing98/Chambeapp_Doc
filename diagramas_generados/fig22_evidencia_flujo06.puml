@@ -1,0 +1,148 @@
+@startuml
+title Figura 22 - Evidencia Muestra Flujo 06: Capturas Secuenciales 6 Hitos, Video, Script
+
+actor "Evaluador" as Evaluator
+participant "Playwright\nChromium + SwiftShader" as PW
+participant "Frontend\nPWA React" as FE
+participant "Backend\nAPI" as BE
+participant "PostgreSQL\n+ MinIO" as DB
+participant "Artifacts\nStorage" as Artifacts
+
+== Preparación Entorno ==
+Evaluator -> PW: npx playwright flow-06.cjs
+PW -> PW: Lanza Chromium headless\nSwiftShader WebGL\nViewport: 1280x720
+PW -> FE: Navega a /login
+FE -> BE: POST /auth/login
+BE -> DB: Validar credenciales
+BE --> FE: Tokens JWT
+FE -> PW: Login OK → Redirige a /contratos/123
+
+== Captura 1: Vista Contrato Activo ==
+PW -> PW: waitForSelector('[data-test=contrato-detalle]')
+PW -> PW: screenshot: 01-contrato-activo.png
+PW -> FE: UI muestra: Estado EN_PROGRESO, Hito 1 completado, Hito 2 pendiente
+
+== Captura 2: Check-in Entrada (Hito 1) ==
+PW -> FE: Clic "Iniciar trabajo" (Hito 2)
+FE -> FE: Solicita geolocalización GPS
+PW -> FE: Mock GPS: lat=10.463, lon=-73.253 (dentro 50m)
+FE -> BE: POST /pagos/456/checkin_entrada {lat, lon}
+BE -> DB: ST_DWithin(obra, point, 100) = true
+BE -> DB: UPDATE contrato SET estado=EN_PROGRESO, checkin_entrada_at=NOW()
+BE --> FE: 200 {estado: EN_PROGRESO}
+PW -> PW: screenshot: 02-checkin-entrada.png
+PW -> FE: Toast "Check-in confirmado - Inicia Hito 2"
+
+== Captura 3: Evidencia Entrada (Hito 2) ==
+PW -> FE: Clic "Subir evidencias entrada"
+FE -> FE: Abre cámara / galería
+PW -> FE: Sube 3 fotos (mock base64)
+FE -> BE: POST /contratos/123/evidencias_entrada {fotos[]}
+BE -> S3: Upload 3 archivos MinIO
+BE -> DB: INSERT evidencias {tipo: ENTRADA, minio_urls[]}
+BE --> FE: 201 {evidencia_ids}
+PW -> PW: screenshot: 03-evidencias-entrada.png
+PW -> FE: Grid 3 fotos + "Evidencias subidas"
+
+== Captura 4: Adenda (Hito 3 - Opcional) ==
+PW -> FE: Clic "Registrar adenda" → Cambio precio
+FE -> BE: POST /contratos/123/adendas {tipo: PRECIO, monto: 50000}
+BE -> DB: INSERT adenda + UPDATE contrato.monto_total
+BE -> DB: NOTIFICAR PDS (Socket.IO)
+BE --> FE: 201 {adenda_id}
+PW -> PW: screenshot: 04-adenda-precio.png
+PW -> FE: Modal "Adenda registrada - Notificado PDS"
+
+== Captura 5: Check-out Salida (Hito 4) ==
+PW -> FE: Clic "Finalizar trabajo" (Hito 5)
+FE -> FE: Solicita GPS salida + fotos
+PW -> FE: Mock GPS salida (mismo punto) + 3 fotos salida
+FE -> BE: POST /pagos/456/checkin_salida {lat, lon, fotos[]}
+BE -> DB: Validar Haversine < 100m
+BE -> S3: Upload 3 fotos salida
+BE -> DB: INSERT evidencias {tipo: SALIDA}
+BE -> DB: contrato.estado = PENDIENTE_CONFORMIDAD
+BE --> FE: 200 {estado: PENDIENTE_CONFORMIDAD}
+PW -> PW: screenshot: 05-checkin-salida.png
+PW -> FE: "Trabajo finalizado - Esperando conformidad"
+
+== Captura 6: Conformidad Solicitante (Hito 5) ==
+PW -> FE: Cambia usuario → Solicitante (login)
+FE -> BE: POST /auth/login (solicitante)
+BE --> FE: Tokens
+PW -> FE: Navega a /contratos/123 → "Confirmar conformidad"
+FE -> BE: POST /pagos/456/conformidad_solicitante
+BE -> DB: pago.conformidad_solicitante = true
+BE --> FE: 200 "Esperando conformidad PDS"
+PW -> PW: screenshot: 06-conformidad-solicitante.png
+
+== Captura 7: Conformidad PDS (Hito 5) ==
+PW -> FE: Cambia usuario → PDS (login)
+FE -> BE: POST /auth/login (pds)
+BE --> FE: Tokens
+PW -> FE: Navega a /contratos/123 → "Confirmar conformidad"
+FE -> BE: POST /pagos/456/conformidad_pds
+BE -> DB: pago.conformidad_pds = true
+BE -> DB: pago.estado = COMPLETADO
+BE -> DB: wallet_transaction PARTIDA DOBLE (DEBE/HABER)
+BE -> DB: wallet.saldo_disponible += monto
+BE -> DB: UPDATE contrato SET estado=COMPLETADO
+BE --> FE: 200 {estado: COMPLETADO, pago_liberado: true}
+PW -> PW: screenshot: 07-conformidad-pds.png
+PW -> FE: "Pago liberado - Contrato COMPLETADO"
+
+== Captura 8: Calificación Solicitante → PDS (Hito 6) ==
+PW -> FE: Clic "Calificar PDS" → 5★ + "Excelente trabajo"
+FE -> BE: POST /calificaciones/ {contrato_id, pds_id, estrellas: 5, comentario}
+BE -> DB: INSERT calificacion + ACTUALIZAR TrustScore PDS
+BE --> FE: 201 Created
+PW -> PW: screenshot: 08-calificacion-solicitante.png
+
+== Captura 9: Calificación PDS → Solicitante (Hito 6) ==
+PW -> FE: Cambia usuario → PDS
+FE -> BE: POST /calificaciones/ {contrato_id, solicitante_id, estrellas: 5, comentario}
+BE -> DB: INSERT calificacion + ACTUALIZAR TrustScore SOL
+BE --> FE: 201 Created
+PW -> PW: screenshot: 09-calificacion-pds.png
+PW -> FE: "Ambas calificaciones registradas"
+
+== Captura 10: Certificado Ingresos (Post-Flujo) ==
+PW -> FE: Navega a /reportes/certificado-ingresos
+FE -> BE: GET /reportes/certificado-ingresos?meses=12
+BE -> DB: Agregados 12 meses (SUM, COUNT, AVG)
+BE -> BE: Genera PDF reportlab (Ley 527/1999)
+BE --> FE: PDF base64
+PW -> PW: screenshot: 10-certificado-ingresos.png
+PW -> FE: Descarga PDF automática
+
+== Captura 11: Vista Final Dashboard ==
+PW -> FE: Navega a /dashboard (PDS)
+FE -> BE: GET /dashboard/stats
+BE -> DB: Métricas: ingresos, servicios, rating, TrustScore
+BE --> FE: JSON
+PW -> PW: screenshot: 11-dashboard-final.png
+PW -> FE: Cards: Ingresos totales, Servicios mes, Rating 4.8, TrustScore 92
+
+== Generación Video + Script ==
+PW -> PW: Graba video continuo → flow-06.webm (H.264, 45MB)
+PW -> PW: Genera script autónomo → flow-06.cjs (reproducible)
+PW -> Artifacts: Guarda 11 PNG + 1 WebM + 1 .cjs
+PW --> Evaluator: Ejecución completada: PASSED
+
+note right of PW
+  EVIDENCIA FLUJO 06:
+  * 11 capturas PNG (1280x720)
+  * 1 video WebM continuo (4m23s)
+  * 1 script .cjs autónomo
+  * 6 hitos verificados:
+    1. Check-in GPS <100m
+    2. Evidencias entrada MinIO
+    3. Adenda opcional
+    4. Check-out GPS + evidencias salida
+    5. Doble conformidad + PARTIDA DOBLE
+    6. Calificación bilateral 360°
+  * 0 fallos HTTP | 0 rollbacks DB
+  * 8/8 invariantes OK
+end note
+
+@enduml

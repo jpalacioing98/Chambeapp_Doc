@@ -1,0 +1,111 @@
+@startuml
+title Figura 4 - Diagrama de Componentes: 36 Blueprints REST + ML + Socket.IO + MinIO
+
+actor "Usuario\n(PDS/Solicitante/Merchant)" as User
+participant "PWA\nReact 18 + Vite" as PWA
+
+== MÓDULOS BACKEND (36 Blueprints) ==
+
+participant "IDENTIDAD (4)" as MOD_AUTH
+participant "MERCADO (6)" as MOD_MERCADO
+participant "OPERACIONES (5)" as MOD_OPS
+participant "FINANZAS (6)" as MOD_FIN
+participant "GOBERNANZA (5)" as MOD_GOB
+participant "IA/ML (3)" as MOD_ML
+participant "TIEMPO REAL (3)" as MOD_WS
+participant "ALMACENAMIENTO (1)" as MOD_S3
+participant "UTILIDADES (6)" as MOD_UTIL
+
+User -> PWA: Interacciones UI
+PWA -> MOD_AUTH: REST HTTPS
+PWA -> MOD_MERCADO: REST HTTPS
+PWA -> MOD_OPS: REST HTTPS
+PWA -> MOD_FIN: REST HTTPS
+PWA -> MOD_GOB: REST HTTPS
+PWA -> MOD_ML: REST HTTPS
+PWA <-> MOD_WS: WebSocket WSS
+PWA -> MOD_S3: Upload/Download
+PWA -> MOD_UTIL: REST HTTPS
+
+MOD_AUTH --> MOD_MERCADO: Auth middleware
+MOD_AUTH --> MOD_OPS: Auth middleware
+MOD_AUTH --> MOD_FIN: Auth middleware
+MOD_AUTH --> MOD_GOB: Auth middleware
+MOD_MERCADO --> MOD_OPS: Oferta → Contrato
+MOD_OPS --> MOD_FIN: Hitos → Pagos
+MOD_FIN --> MOD_ML: Datos → Entrenamiento
+MOD_GOB --> MOD_WS: Flags → Sockets
+MOD_WS --> MOD_ML: Eventos → Features
+
+note right of MOD_AUTH
+  IDENTIDAD (4 blueprints):
+  • auth.py           → login, register, refresh, logout
+  • two_factor.py     → 2FA TOTP setup, verify, disable
+  • users.py          → perfil, preferencias, onboarding
+  • kyc.py            → 11 docs, 4 grupos, multi-instancia
+end note
+
+note right of MOD_MERCADO
+  MERCADO (6 blueprints):
+  • solicitudes.py    → CRUD chambas, geocerca, 360°
+  • ofertas.py        → postulación, negociación, límites
+  • contratos.py      → firma digital, FSM, adendas
+  • marañas.py        → derivación, micro-trabajos
+  • habilidades.py    → oficios, certificaciones, validación
+  • anuncios.py       → empleo proximidad, negocios
+end note
+
+note right of MOD_OPS
+  OPERACIONES (5 blueprints):
+  • chambas.py        → ciclo 6 hitos, check-in/out GPS
+  • evidencias.py     → fotos MinIO, EXIF, hash SHA256
+  • adendas.py        → cambios alcance/precio, notificaciones
+  • novedades.py      → incidencias, partes, reportes
+  • calificaciones.py → 360° bilateral, TrustScore
+end note
+
+note right of MOD_FIN
+  FINANZAS (6 blueprints):
+  • wallet.py         → billetera, saldo, partida doble
+  • payments.py       → dual digital/efectivo, conformidad
+  • coins.py          → 3 tipos moneda, paquetes, modalidades
+  • precios.py        → sugeridos 10 categorías, histórico
+  • retiros.py        → bancarios, Escrow, saldo_bloqueado
+  • reportes.py       → certificado ingresos Ley 527, CSV
+end note
+
+note right of MOD_GOB
+  GOBERNANZA (5 blueprints):
+  • admin.py          → users, suspensión, roles, región
+  • superadmin.py     → flags, auditoría, multi-región
+  • verificador.py    → KYC review, aprobación docs
+  • soporte.py        → tickets, disputas, moderación
+  • regiones.py       → scoping, catálogo, HA config
+end note
+
+note right of MOD_ML
+  IA/ML (3 blueprints):
+  • ai_recommendations.py → retrieval + ranking
+  • ai_metrics.py      → transparencia, SHAP, bias audit
+  • ai_training.py     → batch nocturno, versionado
+end note
+
+note right of MOD_WS
+  TIEMPO REAL (3 handlers Socket.IO):
+  • chat_socket.py     → mensajería 1:1, protocolo ⟦c:⟧
+  • notification_socket.py → push/in-app, centro alertas
+  • presence_socket.py → online/offline, typing, heartbeat
+end note
+
+note right of MOD_S3
+  ALMACENAMIENTO:
+  • MinIO S3 → evidencias, panorámicas 360°, KYC docs
+end note
+
+note right of MOD_UTIL
+  UTILIDADES (6 blueprints):
+  • health.py, config.py, search.py
+  • notifications.py, upload.py, utils.py
+end note
+
+@enduml

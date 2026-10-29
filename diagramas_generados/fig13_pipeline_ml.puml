@@ -1,0 +1,47 @@
+@startuml
+title Figura 13 - Secuencia: Pipeline ML Recomendación 2 Etapas (Retrieval + Ranking)
+
+actor "PDS Explorador" as PDS
+participant "Frontend\n(Mapbox + Feed)" as FE
+participant "Backend\n(AI Blueprint)" as BE
+participant "PostgreSQL\n+ PostGIS" as DB
+participant "ML Service\n(sentence-transformers)" as ML
+
+== Etapa 1: Retrieval (Filtrado Geoespacial + Vectorial) ==
+PDS -> FE: Abre mapa / feed chambas
+FE -> BE: GET /ai/recommendations?lat=X&lng=Y&radio=5km&k=50
+BE -> DB: SELECT pds_id, habilidades, ubicacion, embedding\nFROM perfiles_pds\nWHERE ST_DWithin(ubicacion, ST_MakePoint(lng,lat), 5000)\nAND verificado = true\nAND disponible = true
+DB --> BE: ~50 candidatos geo-filtrados\ncon embeddings pre-calculados
+BE -> ML: Calcular similitud coseno\n(embedding_solicitud vs embedding_pds)
+ML --> BE: Scores vectoriales (0-1) para cada candidato
+BE -> BE: Top-K por score vectorial\n(Filtrado: rating > 4.0, respuesta < 30min)
+BE --> FE: Lista candidatos retrieval\n{pds_id, nombre, score_vec, distancia_km,\n  rating, habilidades_match}
+FE -> FE: Render Mapbox 3D:\nmarkers + clusters + score badge
+
+== Etapa 2: Ranking (scikit-learn + Explicabilidad) ==
+PDS -> FE: Selecciona chamba → "Ver recomendados"
+FE -> BE: POST /ai/rank {solicitud_id, candidatos_ids[]}
+BE -> DB: Cargar features:\n- Perfil PDS (habilidades, historial, TrustScore)\n- Solicitud (categoria, presupuesto, urgencia)\n- Contexto (hora, clima, eventos locales)
+BE -> ML: Ranking model (LightGBM/XGBoost)\nfeatures → score_final (0-1)
+ML --> BE: Ranking ordenado + SHAP values\nexplicación por feature
+BE -> DB: LOG recommendation_log\n{solicitud_id, pds_id, score_vec, score_final,\n  shap_explanation, timestamp}
+BE --> FE: 200 {ranked_list:\n  [{pds_id, score_final, explicacion:\n    "Match habilidades: 0.85\n    Distancia óptima: 0.92\n    TrustScore alto: 0.78\n    Disponibilidad: 0.88"}...]}
+FE -> FE: Tarjetas recomendadas:\nScore % + chips explicativos\nBotón "Contactar"
+
+== Feature Flag Control ==
+note right of BE : feature_flags.ml_ranking_enabled\n= true/false (caliente, sin redeploy)
+alt Flag DESACTIVADO
+    BE -> BE: Fallback: ranking por distancia +\nrating + TrustScore (heurístico)
+    BE --> FE: Lista sin scores ML
+end
+
+== Re-entrenamiento (Batch Nocturno Celery) ==
+Celery -> BE: Diario 03:00 UTC
+BE -> DB: EXPORT datos entrenamiento\n(contratos completados + calificaciones)
+BE -> ML: Re-entrenar sentence-transformers\nfine-tuning domain-specific
+BE -> ML: Re-entrenar ranker LightGBM\nnuevos features + labels
+ML --> BE: Nuevos modelos versionados\n(model_v{N+1}.pkl)
+BE -> DB: ACTUALIZAR embeddings PDS\nactivar modelo v{N+1}
+BE -> FE: Feature flag ml_model_version = N+1
+
+@enduml

@@ -1,0 +1,215 @@
+                            Figura 20 - Design System: Tokens, Componentes, Reglas, Arquitectura CSS, Iconografía                            
+                                                                                                                                             
+         ┌─┐                                                                                                                                 
+         ║"│                                                                                                                                 
+         └┬┘                                                                                                                                 
+         ┌┼┐                                                                                                                                 
+          │                       ┌───────────────┐                                       ┌────────────────┐           ┌──────────────┐      
+         ┌┴┐                      │Design System  │                                       │Frontend Cliente│           │Frontend Admin│      
+      Diseñador                   │Repo Compartido│                                       │PWA React       │           │Panel Admin   │      
+      UI/UX                       └───────┬───────┘                                       └────────┬───────┘           └───────┬──────┘      
+          │                               │                                                        │                           │             
+          │                               │        ╔════════════════════════════════════╗          │                           │             
+══════════╪═══════════════════════════════╪════════╣ 1. Tokens de Diseño (Fuente Única) ╠══════════╪═══════════════════════════╪═════════════
+          │                               │        ╚════════════════════════════════════╝          │                           │             
+          │                               │                                                        │                           │             
+          │Define tokens base             │                                                        │                           │             
+          │colors.json, spacing.json,     │                                                        │                           │             
+          │typography.json, shadows.json, │                                                        │                           │             
+          │radii.json, motion.json        │                                                        │                           │             
+          │──────────────────────────────>│                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Valida WCAG AA                                    │                           │             
+          │                               │<───┘ Contraste: 4.5:1 (texto)                          │                           │             
+          │                               │      3:1 (UI elements)                                 │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Genera CSS Custom Properties                      │                           │             
+          │                               │<───┘ :root { --color-primary: #...;                    │                           │             
+          │                               │        --spacing-4: 1rem;                              │                           │             
+          │                               │        --font-size-base: 1rem; }                       │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Exporta: tokens.css                               │                           │             
+          │                               │<───┘ + tokens.js (TypeScript)                          │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                 @import 'tokens.css'                   │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│                           │             
+          │                               │                                                        │                           │             
+          │                               │                               @import 'tokens.css'     │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │              ╔═════════════════════════╗               │                           │             
+══════════╪═══════════════════════════════╪══════════════╣ 2. Componentes Atómicos ╠═══════════════╪═══════════════════════════╪═════════════
+          │                               │              ╚═════════════════════════╝               │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Button (primary, secondary, ghost, danger)        │                           │             
+          │                               │<───┘ Input (text, select, textarea, file)              │                           │             
+          │                               │      Badge, Chip, Avatar, Icon                         │                           │             
+          │                               │      LoadingState (spinner, skeleton)                  │                           │             
+          │                               │      EmptyState, Tooltip, Modal                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Props tipadas TypeScript                          │                           │             
+          │                               │<───┘ Variants: size, variant, state                    │                           │             
+          │                               │      Accesibilidad: ARIA, focus-visible                │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                Button, Input, Badge...                 │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│                           │             
+          │                               │                                                        │                           │             
+          │                               │                        Button, Input, Badge... (wrappers)                          │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │             ╔═══════════════════════════╗              │                           │             
+══════════╪═══════════════════════════════╪═════════════╣ 3. Componentes Compuestos ╠══════════════╪═══════════════════════════╪═════════════
+          │                               │             ╚═══════════════════════════╝              │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Card (header, body, footer, actions)              │                           │             
+          │                               │<───┘ Table (sort, filter, pagination, row-click)       │                           │             
+          │                               │      FormField (label, input, error, hint)             │                           │             
+          │                               │      ListItem (avatar, title, subtitle, actions)       │                           │             
+          │                               │      NavigationDrawer, TopBar, BottomBar               │                           │             
+          │                               │      PageHeader, SectionHeader, Divider                │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Composition patterns:                             │                           │             
+          │                               │<───┘   Slot-based (React children)                     │                           │             
+          │                               │        Compound components                             │                           │             
+          │                               │        Render props                                    │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │               Card, Table, FormField...                │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│                           │             
+          │                               │                                                        │                           │             
+          │                               │                       Card, Table, FormField... (wrappers)                         │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │             ╔══════════════════════════╗               │                           │             
+══════════╪═══════════════════════════════╪═════════════╣ 4. Reglas de Composición ╠═══════════════╪═══════════════════════════╪═════════════
+          │                               │             ╚══════════════════════════╝               │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Layout: 8px grid system                           │                           │             
+          │                               │<───┘ Breakpoints: sm(640), md(768), lg(1024), xl(1280) │                           │             
+          │                               │      Container: max-width 1200px                       │                           │             
+          │                               │      Spacing scale: 4, 8, 12, 16, 24, 32, 48, 64       │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Accesibilidad WCAG AA:                            │                           │             
+          │                               │<───┘   Focus visible: outline 2px offset 2px           │                           │             
+          │                               │        Skip links                                      │                           │             
+          │                               │        Landmarks: main, nav, aside                     │                           │             
+          │                               │        Color no solo para info                         │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Responsive patterns:                              │                           │             
+          │                               │<───┘   Mobile-first                                    │                           │             
+          │                               │        Stack → Grid en breakpoints                     │                           │             
+          │                               │        Touch targets: 44x44px mínimo                   │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │            ╔═════════════════════════════╗             │                           │             
+══════════╪═══════════════════════════════╪════════════╣ 5. Arquitectura CSS (Capas) ╠═════════════╪═══════════════════════════╪═════════════
+          │                               │            ╚═════════════════════════════╝             │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Capa 1: Tokens (CSS custom props)                 │                           │             
+          │                               │<───┘ Capa 2: Reset + Base (normalize)                  │                           │             
+          │                               │      Capa 3: Componentes (block__element--modifier)    │                           │             
+          │                               │      Capa 4: Utilidades (spacing, display, flex)       │                           │             
+          │                               │      Capa 5: Overrides (tema, marca blanca)            │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Metodología: BEM + CUBE CSS                       │                           │             
+          │                               │<───┘ Naming: .block__element--modifier                 │                           │             
+          │                               │      No !important (excepto utilidades)                │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Build: PostCSS + cssnano                          │                           │             
+          │                               │<───┘ Source maps + minificación                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │              design-system.css (bundled)               │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│                           │             
+          │                               │                                                        │                           │             
+          │                               │                      design-system.css + admin-overrides.css                       │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │             ╔══════════════════════════╗               │                           │             
+══════════╪═══════════════════════════════╪═════════════╣ 6. Iconografía Unificada ╠═══════════════╪═══════════════════════════╪═════════════
+          │                               │             ╚══════════════════════════╝               │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Librería: Lucide React (base)                     │                           │             
+          │                               │<───┘ Custom SVG: 48 iconos marca                       │                           │             
+          │                               │      Naming: icon-[categoria]-[accion]                 │                           │             
+          │                               │      Sizes: 16, 20, 24, 32, 48px                       │                           │             
+          │                               │      Stroke: 2px, currentColor                         │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ Icon component:                                   │                           │             
+          │                               │<───┘   <Icon name="user" size={24} />                  │                           │             
+          │                               │        Tree-shaking automático                         │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │                    Icon component                      │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│                           │             
+          │                               │                                                        │                           │             
+          │                               │                             Icon component (wrappers)  │                           │             
+          │                               │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ >│             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │        ╔═════════════════════════════════════╗         │                           │             
+══════════╪═══════════════════════════════╪════════╣ 7. Decisiones Abiertas Documentadas ╠═════════╪═══════════════════════════╪═════════════
+          │                               │        ╚═════════════════════════════════════╝         │                           │             
+          │                               │                                                        │                           │             
+          │                               │────┐                                                   │                           │             
+          │                               │    │ ADR-001: Tokens vs ThemeProvider                  │                           │             
+          │                               │<───┘ ADR-002: CSS-in-JS vs CSS Modules                 │                           │             
+          │                               │      ADR-003: Component library vs Copy-paste          │                           │             
+          │                               │      ADR-004: Dark mode strategy                       │                           │             
+          │                               │      ADR-005: Animation reduced-motion                 │                           │             
+          │                               │      ADR-006: Versionado semántico DS                  │                           │             
+          │                               │                                                        │                           │             
+          │                               │                                                        │                           │             
+          │                               │ ╔════════════════════════════════╗                     │                           │             
+          │                               │ ║DESIGN SYSTEM MÉTRICAS:        ░║                     │                           │             
+          │                               │ ║• 12 tokens color (semánticos)  ║                     │                           │             
+          │                               │ ║• 8 spacing scale steps         ║                     │                           │             
+          │                               │ ║• 6 tipografía scales           ║                     │                           │             
+          │                               │ ║• 4 shadow elevations           ║                     │                           │             
+          │                               │ ║• 3 border radii                ║                     │                           │             
+          │                               │ ║• 12 componentes atómicos       ║                     │                           │             
+          │                               │ ║• 8 componentes compuestos      ║                     │                           │             
+          │                               │ ║• 6 reglas composición          ║                     │                           │             
+          │                               │ ║• 5 capas CSS arquitectura      ║                     │                           │             
+          │                               │ ║• 48 iconos (Lucide + custom)   ║                     │                           │             
+          │                               │ ║• 6 ADRs documentados           ║                     │                           │             
+          │                               │ ║• 2 frontends sincronizados     ║                     │                           │             
+      Diseñador                   ┌───────┴─╚════════════════════════════════╝            ┌────────┴───────┐           ┌───────┴──────┐      
+      UI/┌─┐                      │Design System  │                                       │Frontend Cliente│           │Frontend Admin│      
+         ║"│                      │Repo Compartido│                                       │PWA React       │           │Panel Admin   │      
+         └┬┘                      └───────────────┘                                       └────────────────┘           └──────────────┘      
+         ┌┼┐                                                                                                                                 
+          │                                                                                                                                  
+         ┌┴┐                                                                                                                                 
+                                                                                                                                             

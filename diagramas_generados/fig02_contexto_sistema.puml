@@ -1,0 +1,93 @@
+@startuml
+title Figura 2 - Contexto del Sistema: Actores y Flujo Principal (Secuencia)
+
+actor "PDS\n(Prestador Servicios)" as PDS
+actor "Solicitante\n(Empleador)" as SOL
+actor "Comerciante\n(Negocio Local)" as MER
+actor "Verificador\nKYC" as VER
+actor "Soporte\nTickets" as SOP
+actor "Superadmin\nGobernanza" as SAD
+
+participant "PWA\nReact 18 + Mapbox 3D + A-Frame 360°" as PWA
+participant "API\nFlask 36 Blueprints + 3 Socket.IO" as API
+participant "DATA\nPostgreSQL/PostGIS + Redis + MinIO" as DATA
+participant "ML\nPipeline Retrieval+Ranking" as ML
+participant "ASYNC\nCelery Workers" as ASYNC
+
+== PDS: Ciclo Completo ==
+PDS -> PWA: Registro + KYC (11 docs, 4 grupos)
+PDS -> PWA: Perfil habilidades + certificación
+PWA -> API: POST /auth/register, /kyc/documentos
+API -> DATA: Guardar usuario + docs MinIO
+API -> DATA: Kyc verificado → TrustScore base
+
+PDS -> PWA: Explora mapa chambas (Mapbox 3D)
+PWA -> API: GET /ai/recommendations?lat&lon
+API -> ML: Retrieval geo + vectorial
+ML -> API: Top-K candidatos + scores
+API -> DATA: Log recommendation_log
+API --> PWA: Lista chambas con score
+PWA -> PDS: Render clusters + badges ML
+
+PDS -> PWA: Postula a chamba (precio + msg)
+PWA -> API: POST /ofertas/
+API -> DATA: INSERT oferta + notificar
+API --> PWA: 201 Created
+
+PDS -> PWA: Check-in GPS obra (<100m)
+PWA -> API: POST /checkin_entrada
+API -> DATA: Validar Haversine + estado=EN_PROGRESO
+
+PDS -> PWA: Evidencias fotos entrada → MinIO
+PDS -> PWA: Check-out GPS + fotos salida
+PWA -> API: POST /checkin_salida
+API -> DATA: estado=PENDIENTE_CONFORMIDAD
+
+PDS -> PWA: Confirma conformidad pago
+PWA -> API: POST /conformidad_pds
+API -> DATA: Partida doble wallet + COMPLETADO
+
+PDS -> PWA: Califica solicitante (1-5★)
+PWA -> API: POST /calificaciones/
+API -> DATA: TrustScore actualizado
+
+== SOLICITANTE: Publicación y Contratación ==
+SOL -> PWA: "Publicar Chamba" + Mapbox geocerca + A-Frame 360°
+PWA -> API: POST /solicitudes/ {geo, panorama}
+API -> DATA: INSERT + ST_Point + MinIO panorama
+API --> PWA: 201 {solicitud_id}
+
+SOL -> PWA: Recibe ofertas → Negocia → Firma digital
+PWA -> API: PUT /contratos/{id}/firmar
+API -> DATA: estado=PERFECCIONADO + desbloquear coords
+
+SOL -> PWA: Paga Nequi/PSE O efectivo doble check-in
+PWA -> API: POST /pagos/ {metodo}
+API -> DATA: wallet_transaction PARTIDA DOBLE
+
+SOL -> PWA: Conformidad + Califica PDS
+PWA -> API: POST /conformidad_solicitante + /calificaciones/
+
+== COMERCIANTE: Ecosistema Local ==
+MER -> PWA: KYC Merchant + Directorio negocios
+PWA -> API: POST /negocios/ + /kyc/merchant
+API -> DATA: Negocio verificado + stats
+
+MER -> PWA: Anuncios laborales proximidad
+PWA -> API: POST /anuncios/
+API -> DATA: INSERT + geo-index
+
+== ADMINISTRADORES: Gobernanza ==
+VER -> PWA: Panel KYC pendientes → Aprobar/Rechazar
+PWA -> API: GET/POST /admin/kyc/
+API -> DATA: audit_log inmutable
+
+SOP -> PWA: Tickets + Moderación + Disputas
+PWA -> API: /admin/tickets, /admin/moderacion
+API -> DATA: Resolución + acción pago
+
+SAD -> PWA: Feature flags + Multi-región + Auditoría
+PWA -> API: /superadmin/* + /admin/flags
+API -> DATA: feature_flags + region_scope_id
+
+@enduml

@@ -1,0 +1,104 @@
+@startuml
+title Figura 16 - Infraestructura Regional: LB + HA Patroni/Sentinel + Data Planes
+
+actor "Usuario Final\nInternet" as User
+participant "DNS\nRoute53 / Cloudflare" as DNS
+participant "Global LB\nAWS Global Accelerator\n/ Cloudflare Load Balancer" as GLB
+participant "Control Plane\nGlobal" as CP
+
+== REGIÓN 1 - BOGOTÁ (PRIMARY ACTIVE) ==
+participant "API Pods x3\nFlask + Gunicorn" as API1
+participant "Socket.IO x3\nEventlet" as WS1
+participant "Celery x4\nWorkers + Beat" as CELERY1
+database "PG Primary\nPatroni Leader" as PG1
+database "Redis Sentinel\nMaster + 2 Replicas" as REDIS1
+participant "MinIO x4\nErasure Coding" as MINIO1
+
+== REGIÓN 2 - MEDELLÍN (STANDBY) ==
+participant "API Pods x2" as API2
+participant "Socket.IO x2" as WS2
+participant "Celery x2" as CELERY2
+database "PG Replica\nPatroni Follower" as PG2
+database "Redis Sentinel\nRead Replicas" as REDIS2
+participant "MinIO x4" as MINIO2
+
+== REGIÓN 3 - CALI (STANDBY) ==
+participant "API Pods x2" as API3
+participant "Socket.IO x2" as WS3
+participant "Celery x2" as CELERY3
+database "PG Replica\nPatroni Follower" as PG3
+database "Redis Sentinel\nRead Replicas" as REDIS3
+participant "MinIO x4" as MINIO3
+
+== CONTROL PLANE GLOBAL ==
+participant "Feature Flags\nPostgreSQL table" as FLAGS
+participant "Service Mesh\nIstio / Linkerd" as MESH
+participant "Observability\nPrometheus + Grafana\nLoki + Tempo" as OBS
+participant "Secrets\nVault / AWS Secrets" as SECRETS
+participant "CI/CD\nArgoCD / Flux\nGitOps" as CICD
+
+User -> DNS: Resuelve chambeapp.com
+DNS -> GLB: Anycast IP + Health checks
+GLB -> API1: Tráfico 100% (Región 1 Healthy)
+GLB -x API2: Standby (Solo sync)
+GLB -x API3: Standby (Solo sync)
+
+CP -> API1: Config + Deploy + Flags
+CP -> API2: Config + Sync + Promote
+CP -> API3: Config + Sync
+
+API1 -> CP: Métricas + Health + Logs + Traces
+API2 -> CP: Replication Lag + Status
+API3 -> CP: Replication Lag + Status
+
+PG1 -> PG2: Replicación Async\nPatroni (RPO ~1-5s)
+PG1 -> PG3: Replicación Async\nPatroni (RPO ~1-5s)
+REDIS1 -> REDIS2: Sentinel Replication
+REDIS1 -> REDIS3: Sentinel Replication
+MINIO1 -> MINIO2: Cross-region Replication
+MINIO1 -> MINIO3: Cross-region Replication
+
+note right of GLB
+  HEALTH CHECKS GLOBALES:
+  • /health cada 10s por región
+  • Patroni /master endpoint
+  • Redis Sentinel master check
+  • MinIO health endpoint
+  
+  FAILOVER < 60s:
+  1. GLB detecta región unhealthy
+  2. Promueve réplica a primary (Patroni)
+  3. Actualiza DNS (TTL 30s)
+  4. Redirige tráfico a región standby
+  5. Notifica on-call (PagerDuty)
+end note
+
+note right of PG1
+  PATRONI MULTI-REGIÓN:
+  • Leader election: etcd/Consul
+  • Sync replication: RPO=0 (local)
+  • Async replication: RPO~5s (cross-region)
+  • pgBackRest: S3/MinIO backup
+  • PITR: Point-in-time recovery
+  • Switchover manual: < 30s
+end note
+
+note right of REDIS1
+  REDIS SENTINEL:
+  • 3 Sentinels por región
+  • Master + 2 Replicas
+  • Auto-failover local
+  • Pub/Sub para Socket.IO
+  • Celery broker HA
+end note
+
+note right of MINIO1
+  MINIO MULTI-REGIÓN:
+  • 4 nodos por región
+  • Erasure coding (data:parity=2:1)
+  • Replicación async cross-region
+  • Versioning + Object Lock (WORM)
+  • Gateway S3 compatible
+end note
+
+@enduml

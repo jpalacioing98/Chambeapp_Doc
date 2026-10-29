@@ -1,0 +1,95 @@
+                     Figura 1 - Mapa de Calor: Informalidad Laboral en Ciudades Intermedias Colombia 2025-2026                      
+                                                                                                                                    
+            ┌─┐                                                                                                                     
+            ║"│                                                                                                                     
+            └┬┘                                                                                                                     
+            ┌┼┐                                                                                                                     
+             │                  ┌───────────────────┐                  ┌─────────────┐                                              
+            ┌┴┐                 │Procesamiento      │                  │Mapbox GL JS │                                              
+      DANE / GEIH               │Datos Geoespaciales│                  │Visualización│                                              
+      Fuente Oficial            └─────────┬─────────┘                  └──────┬──────┘                                              
+             │                            │                                   │                                                     
+             │                            │  ╔════════════════════════════════╧══════╗                                              
+═════════════╪════════════════════════════╪══╣ Datos Oficiales (DANE GEIH 2025-2026) ╠══════════════════════════════════════════════
+             │                            │  ╚════════════════════════════════╤══════╝                                              
+             │                            │                                   │                                                     
+             │Datos brutos:               │                                   │                                                     
+             │- % informalidad por ciudad │                                   │                                                     
+             │- Población ocupada         │                                   │                                                     
+             │- Sectores económicos       │                                   │                                                     
+             │- Año: 2025-2026            │                                   │                                                     
+             │───────────────────────────>│                                   │                                                     
+             │                            │                                   │                                                     
+             │                            │────┐                              │                                                     
+             │                            │    │ Limpieza y estandarización   │                                                     
+             │                            │<───┘ Geocodificación ciudades     │                                                     
+             │                            │      Cálculo índices compuestos   │                                                     
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │                            │     ╔═════════════════════════════╧═══╗                                                 
+═════════════╪════════════════════════════╪═════╣ Ciudades con Mayor Informalidad ╠═════════════════════════════════════════════════
+             │                            │     ╚═════════════════════════════╤═══╝                                                 
+             │                            │                                   │                                                     
+             │                            │ ╔═════════════════════════════════╧════════╗                                            
+             │                            │ ║TOP 5 CIUDADES INTERMEDIAS:              ░║                                            
+             │                            │ ║1. Valledupar     62.3%  (FOCO PROYECTO)  ║                                            
+             │                            │ ║2. Sincelejo      59.8%                   ║                                            
+             │                            │ ║3. Riohacha       58.1%                   ║                                            
+             │                            │ ║4. Montería       56.7%                   ║                                            
+             │                            │ ║5. Cúcuta         55.9%                   ║                                            
+             │                            │ ║                                          ║                                            
+             │                            │ ║Promedio nacional: 55.1%                  ║                                            
+             │                            │ ║Promedio 13 principales: 48.2%            ║                                            
+             │                            │ ╚═════════════════════════════════╤════════╝                                            
+             │                            │                                   │                                                     
+             │                            │        ╔══════════════════════════╧═╗                                                   
+═════════════╪════════════════════════════╪════════╣ Visualización Mapbox GL JS ╠═══════════════════════════════════════════════════
+             │                            │        ╚══════════════════════════╤═╝                                                   
+             │                            │                                   │                                                     
+             │                            │GeoJSON + propiedades:             │                                                     
+             │                            │{ciudad, %informalidad, poblacion, │                                                     
+             │                            │  lat, lon, sectores_dominantes}   │                                                     
+             │                            │──────────────────────────────────>│                                                     
+             │                            │                                   │                                                     
+             │                            │                                   │────┐                                                
+             │                            │                                   │    │ Estilo heatmap:                                
+             │                            │                                   │<───┘ - Intensidad = % informalidad                  
+             │                            │                                   │      - Radio = población ocupada                    
+             │                            │                                   │      - Color: verde→amarillo→rojo                   
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │                            │                                   │────┐                                                
+             │                            │                                   │    │ Capas interactivas:                            
+             │                            │                                   │<───┘ - Heatmap base                                 
+             │                            │                                   │      - Marcadores con popup detalle                 
+             │                            │                                   │      - Tooltip: ciudad, %, población, sectores      
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │              Mapa web interactivo                              │                                                     
+             │              (Filtrado por año, sector, género)                │                                                     
+             │<─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│                                                     
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │                            │         ╔═════════════════════════╧╗                                                    
+═════════════╪════════════════════════════╪═════════╣ Integración en ChambeApp ╠════════════════════════════════════════════════════
+             │                            │         ╚═════════════════════════╤╝                                                    
+             │                            │                                   │                                                     
+             │                            │                                   │────┐                                                
+             │                            │                                   │    │ Overlay en PWA:                                
+             │                            │                                   │<───┘ - Fondo: heatmap informalidad                  
+             │                            │                                   │      - Foreground: chambas activas                  
+             │                            │                                   │      - Correlación: alta oferta ↔ alta informalidad 
+             │                            │                                   │                                                     
+             │                            │                                   │                                                     
+             │                    Dashboard analítico                         │                                                     
+             │                    para toma de decisiones                     │                                                     
+             │<─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│                                                     
+      DANE / GEIH               ┌─────────┴─────────┐                  ┌──────┴──────┐                                              
+      Fuente┌─┐icial            │Procesamiento      │                  │Mapbox GL JS │                                              
+            ║"│                 │Datos Geoespaciales│                  │Visualización│                                              
+            └┬┘                 └───────────────────┘                  └─────────────┘                                              
+            ┌┼┐                                                                                                                     
+             │                                                                                                                      
+            ┌┴┐                                                                                                                     
+                                                                                                                                    

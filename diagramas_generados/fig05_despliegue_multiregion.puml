@@ -1,0 +1,90 @@
+@startuml
+title Figura 5 - Despliegue Productivo Multi-Región
+
+actor "Usuario\nInternet" as User
+participant "Cloudflare\nCDN + WAF + DNS" as CF
+participant "Load Balancer\nHAProxy / AWS ALB" as LB
+
+== REGIÓN PRIMARIA (Active) ==
+participant "API Pods x3\nFlask + Gunicorn + Eventlet\nPort 8000" as API1
+participant "Socket.IO Pods x3\nEventlet Workers\nPort 8001" as WS1
+participant "Celery Workers x4\nBeat + Workers" as CELERY1
+database "PostgreSQL Primary\nPatroni Leader\nPort 5432" as PG1
+database "Redis Sentinel\nMaster + 2 Replicas\nPort 6379" as REDIS1
+participant "MinIO Cluster\n4 Nodos Distribuidos\nPort 9000" as MINIO1
+participant "Nginx + Certbot\nPWA Static + Proxy\nPort 80/443" as NGINX1
+
+== REGIÓN SECUNDARIA (Standby) ==
+participant "API Pods x2\nFlask + Gunicorn + Eventlet" as API2
+participant "Socket.IO Pods x2\nEventlet Workers" as WS2
+participant "Celery Workers x2\nBeat + Workers" as CELERY2
+database "PostgreSQL Replica\nPatroni Follower\nAsync Replication" as PG2
+database "Redis Sentinel\nReplicas Read-Only" as REDIS2
+participant "MinIO Cluster\n4 Nodos Distribuidos" as MINIO2
+participant "Nginx + Certbot\nPWA Static + Proxy" as NGINX2
+
+== CONTROL PLANE GLOBAL ==
+participant "Feature Flags\nfeature_flags table\nHot reload" as FLAGS
+participant "Service Discovery\nConsul / etcd\nHealth endpoints" as SD
+participant "Monitoring\nPrometheus + Grafana\nAlertmanager" as MON
+participant "Log Aggregation\nELK / Loki\nAudit logs" as LOGS
+participant "Backup/DR\nVelero + pgBackRest\nRPO < 1h" as BACKUP
+
+User -> CF: HTTPS Request
+CF -> LB: Proxy + WAF
+LB -> API1: Ruta activa (health check OK)
+LB -x API2: Standby (solo sync)
+
+API1 --> FLAGS: Métricas + Health + Logs
+API2 --> FLAGS: Replication lag + Status
+FLAGS --> API1: Config flags + Deploy
+FLAGS --> API2: Config flags + Promote
+
+PG1 --> PG2: Replicación async\nPatroni (RPO=0)
+REDIS1 --> REDIS2: Sentinel replication\nPub/Sub sync
+MINIO1 --> MINIO2: Cross-region replication\nAsync + versioning
+
+note right of LB
+  HEALTH CHECKS:
+  • /health → API pods
+  • /ws/health → Socket.IO pods
+  • Patroni: /master → PG leader
+  • Sentinel: master check → Redis
+  Failover < 30s automático
+end note
+
+note right of PG1
+  PATRONI HA:
+  • Leader election (etcd/Consul)
+  • Sync replication (RPO=0)
+  • Auto-failover < 30s
+  • pgBackRest: full + incremental
+  • Point-in-time recovery
+end note
+
+note right of REDIS1
+  REDIS SENTINEL:
+  • 3 Sentinels + Master + 2 Replicas
+  • Auto-failover master
+  • Pub/Sub para Socket.IO adapter
+  • Celery broker HA
+end note
+
+note right of MINIO1
+  MINIO DISTRIBUIDO:
+  • 4 nodos por región (erasure coding)
+  • Replicación cross-region async
+  • Versioning + Object locking
+  • Gateway S3 compatible
+end note
+
+note right of FLAGS
+  CONTROL PLANE:
+  • Feature flags: activación caliente
+  • Service discovery: registro automático
+  • Monitoring: 4 golden signals
+  • Audit logs: inmutables (RNF-AUD)
+  • Backup/DR: RPO<1h, RTO<4h
+end note
+
+@enduml

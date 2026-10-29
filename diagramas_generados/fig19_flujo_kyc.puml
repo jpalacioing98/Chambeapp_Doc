@@ -1,0 +1,77 @@
+@startuml
+title Figura 19 - Secuencia: Flujo KYC Multinivel (11 Documentos, 4 Grupos, Multi-Instancia)
+
+actor "Usuario\n(PDS/Solicitante)" as User
+participant "Frontend\n(KycDocumentsPage)" as FE
+participant "Backend\n(KYC Blueprint)" as BE
+participant "PostgreSQL\n+ MinIO" as DB
+participant "Panel Admin\n(Verificador)" as AdminFE
+participant "Backend\n(Admin KYC)" as AdminBE
+
+== Consulta Documentos Requeridos ==
+User -> FE: Abre "Documentos KYC"
+FE -> BE: GET /kyc/documentos-requeridos
+BE -> DB: SELECT * FROM documento_requerido\nWHERE rol = user.rol\nORDER BY grupo, orden
+DB --> BE: 11 documentos:\nGrupo IDENTIDAD (3):\n  - cedula (obligatorio)\n  - selfie_cedula (obligatorio)\n  - comprobante_residencia (obligatorio)\nGrupo ANTECEDENTES (3):\n  - antecedentes_procuraduria (obligatorio)\n  - antecedentes_contraloria (obligatorio)\n  - antecedentes_policia (opcional)\nGrupo FINANCIERO (2):\n  - cert_bancaria (multi-instancia, obligatorio)\n  - declaracion_renta (opcional)\nGrupo OPCIONAL (3):\n  - certificado_laboral (multi-instancia)\n  - validacion_profesional (multi-instancia)\n  - referencias_personales (opcional)
+BE --> FE: 200 {documentos[]}
+FE -> FE: Render acordeón por grupo\nTarjetas con estado + zona drag-drop
+
+== Subida de Documentos ==
+loop Para cada documento obligatorio
+    User -> FE: Arrastra archivo / Clic "Subir"\n(cámara o galería)
+    FE -> FE: Validar tipo/tamaño\nConvertir base64
+    FE -> BE: POST /kyc/documentos {\n  documento_clave, instancia,\n  archivo_base64, metadatos\n}
+    BE -> DB: INSERT documento_usuario\n{estado: PENDIENTE, instancia}
+    BE -> MinIO: Subir archivo base64 → objeto
+    BE -> DB: ACTUALIZAR documento_usuario\n{minio_url, hash_sha256}
+    BE --> FE: 201 {documento_id, estado: PENDIENTE}
+    FE -> User: Toast "Documento subido - En revisión"
+end
+
+== Panel de Revisión (Verificador) ==
+AdminFE -> AdminBE: GET /admin/kyc/pendientes?page=1
+AdminBE -> DB: SELECT du.*, u.nombre, u.email\nFROM documento_usuario du\nJOIN users u ON du.user_id = u.id\nWHERE du.estado = 'PENDIENTE'\nORDER BY du.created_at
+DB --> AdminBE: Lista paginada
+AdminBE --> AdminFE: 200 {documentos[], pagination}
+AdminFE -> AdminFE: Tabla con:\nUsuario | Documento | Grupo | Instancia | Preview | Acciones
+
+AdminFE -> AdminFE: Clic "Revisar" → Modal preview\nImagen/PDF visor + metadatos EXIF
+AdminFE -> AdminBE: POST /admin/kyc/{id}/revisar {\n  accion: APROBAR|RECHAZAR,\n  observacion: "Foto borrosa"\n}
+AdminBE -> DB: ACTUALIZAR documento_usuario\n{estado: APROBADO|RECHAZADO,\n  revisado_por, revisado_en,\n  observacion}
+AdminBE -> DB: INSERT audit_log\n{actor: verificador_id, accion: KYC_REVIEW,\n  snapshot_diff: {estado_antes, estado_despues}}
+AdminBE --> AdminFE: 200 OK
+AdminFE -> User: Notificación push\n"Documento aprobado/rechazado"
+
+== Verificación de Completitud (Auto) ==
+BE -> DB: TRIGGER AFTER UPDATE ON documento_usuario\n_VERIFICAR_COMPLETITUD(user_id)
+DB -> DB: Verificar: ¿Todos docs obligatorios\n  tienen al menos 1 instancia APROBADA?
+alt Todos aprobados
+    DB -> DB: users.kyc_verificado = true\nkyc_verificado_en = NOW()\nINSERT audit_log {KYC_COMPLETADO}
+else Faltan documentos
+    DB -> DB: users.kyc_verificado = false
+end
+DB --> BE: Resultado verificación (true/false)
+
+== Verificación OTP Telefónica (2FA KYC) ==
+User -> FE: Botón "Verificar teléfono"
+FE -> BE: POST /kyc/solicitar-otp {telefono}
+BE -> Ext: Enviar SMS código 6 dígitos
+BE -> DB: GUARDAR otp_hash + EXPIRE 10 min
+BE --> FE: 200 {otp_enviado: true}
+User -> FE: Ingresa código 6 dígitos
+FE -> BE: POST /kyc/verificar-otp {codigo}
+BE -> DB: VALIDAR otp_hash + NO EXPIRADO
+BE -> DB: ACTUALIZAR users SET telefono_verificado = true
+BE --> FE: 200 {verificado: true}
+FE -> User: "Teléfono verificado - KYC 100%"
+
+== Certificación Ingresos (Ley 527/1999) ==
+User -> FE: "Descargar certificado ingresos"
+FE -> BE: GET /reportes/certificado-ingresos?meses=12
+BE -> DB: SELECT SUM(monto) as total,\n  COUNT(*) as servicios,\n  AVG(monto) as promedio\nFROM wallet_transactions\nWHERE user_id = ?\n  AND tipo IN ('PAGO_CHAMBA','PAGO_MARANA')\n  AND created_at >= NOW() - INTERVAL '12 months'
+DB --> BE: Agregados 12 meses
+BE -> BE: Generar PDF (reportlab)\nCon membrete, firma digital QR,\nCódigo verificación Ley 527/1999
+BE --> FE: 200 {pdf_base64, nombre_archivo}
+FE -> User: Descarga automática PDF
+
+@enduml

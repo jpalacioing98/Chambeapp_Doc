@@ -1,0 +1,59 @@
+@startuml
+title Figura 14 - Cascada Geoespacial: Filtrado PostGIS ST_DWithin + Clustering
+
+actor "PDS\nExplorador" as PDS
+participant "Frontend\nMapbox GL JS 3D" as FE
+participant "Backend\nAI Blueprint" as BE
+participant "PostgreSQL\n+ PostGIS" as DB
+
+== Nivel 1: Filtrado Geoespacial (Base de Datos) ==
+PDS -> FE: Abre mapa → Move/Zoom\nLat: 10.463, Lon: -73.253\nRadio: 5 km
+FE -> BE: GET /solicitudes/?lat=10.463&lng=-73.253&radio=5000
+BE -> DB: SELECT id, categoria, titulo, presupuesto_min,\n       presupuesto_max, ubicacion,\n       ST_Distance(ubicacion, ST_MakePoint(-73.253,10.463)) as dist_m\nFROM solicitudes\nWHERE estado = 'PUBLICADO'\n  AND ST_DWithin(ubicacion, ST_MakePoint(-73.253,10.463), 5000)\n  AND verificado = true\nORDER BY dist_m ASC\nLIMIT 100
+DB --> BE: ~50 registros con geometría POINT\n+ distancia calculada (metros)
+
+== Nivel 2: Filtrado Vectorial + ML (Backend) ==
+BE -> BE: Para cada candidato:\n  - Cargar embedding PDS (pgvector)\n  - Similitud coseno con embedding_solicitud\n  - Score vectorial (0-1)
+BE -> BE: Top-K por score vectorial\n  Filtrado duro: rating > 4.0\n  respuesta_promedio < 30 min\n  disponible = true
+BE -> FE: JSON {chambas: [\n  {id, categoria, titulo, presupuesto,\n   distancia_km, score_vec,\n   rating, habilidades_match}...\n]}
+
+== Nivel 3: Clustering Visual (Frontend Mapbox) ==
+FE -> FE: Mapbox GL JS:\n  Source: GeoJSON FeatureCollection\n  Cluster: radius=50px, maxzoom=14\n  Layer: circle (unclustered)\n  Layer: circle (clustered) + count
+FE -> FE: Heatmap layer:\n  Weight: score_vec * (1/distancia_km)\n  Radius: 30px, Intensity: 0.8
+FE -> FE: Popup on click:\n  Detalle chamba + score ML%\n  Botón "Postularse"
+FE --> PDS: Mapa interactivo 3D\nClusters + Heatmap + Popups
+
+== Nivel 4: Ranking Final (ML Pipeline) ==
+PDS -> FE: Selecciona chamba → "Ver recomendados"
+FE -> BE: POST /ai/rank {solicitud_id, candidatos_ids[]}
+BE -> DB: Cargar features completas
+BE -> ML: LightGBM ranker → score_final + SHAP
+ML --> BE: Ranking ordenado + explicación
+BE --> FE: Tarjetas recomendadas\nScore % + chips explicativos
+
+note right of DB
+  POSTGIS ST_DWithin:
+  • Índice GiST en columna ubicacion
+  • Consulta: ~50ms para 100k registros
+  • Retorna solo geometrías dentro del radio
+  • Evita full table scan
+end note
+
+note right of BE
+  CASCADA COMPLETA:
+  1. ST_DWithin (DB) → ~50 candidatos
+  2. Similitud coseno (BE) → Top-20
+  3. Filtros duros (BE) → Top-10
+  4. Clustering Mapbox (FE) → Visual
+  5. Ranker ML (BE) → Top-5 finales
+end note
+
+note right of FE
+  MAPBOX GL JS 3D:
+  • Source: geojson + cluster
+  • Heatmap: weight = f(score, dist)
+  • Navegación: pitch, bearing, zoom
+  • Fallback: SwiftShader WebGL
+end note
+
+@enduml
