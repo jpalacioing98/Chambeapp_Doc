@@ -1,0 +1,77 @@
+@startuml
+title Figura 11 - Regiones y Scoping Multirregión (Arquitectura Real)
+
+actor "Usuario PWA" as User
+participant "Selector Región\n(React Context + localStorage)" as SEL
+participant "API Regions\n(Flask-Smorest Blueprint)" as API
+participant "Servicios Dominio\nservices/region.py" as DOM
+participant "Modelo Datos\nPostgreSQL + PostGIS" as MOD
+
+User -> SEL: Elige región (manual/autodetect)
+SEL -> API: GET /api/v1/regions (lista catálogo)
+SEL -> API: GET /api/v1/regions/detectar (IP/texto → match)
+
+API -> DOM: services.region.list_regions()
+API -> DOM: services.region.match_region_from_text()
+API -> DOM: services.region.assign_region()
+API -> DOM: services.region.contract_owned_by_region()
+
+DOM -> MOD: regions table (clave UK, departamentos JSON)
+DOM -> MOD: users.region_id FK nullable
+
+note right of API
+  ENDPOINTS REGIONS:
+  • GET /regions           → lista catálogo (código DANE, nombre, depto, lat/lng, radio_km)
+  • GET /regions/detectar  → match_region_from_text(texto) → region_id
+  • GET /admin/regions     → CRUD (superadmin)
+  • POST /superadmin/regions/reindex → reindexar match
+end note
+
+note right of DOM
+  LÓGICA CLAVE services/region.py:
+  • match_region_from_text(texto):
+    - Normaliza (lower, strip, quita tildes)
+    - Busca en regions.nombre + regions.departamentos[]
+    - Retorna region_id o None
+  • assign_region(user_id, region_id):
+    - SOLO asigna si user.region_id IS NULL
+    - NUNCA reasigna staff existente (verificador/admin/soporte)
+    - Superadmin puede forzar reasignación
+  • contract_owned_by_region(contract_id, admin_region_id):
+    - Obtiene region_id del solicitante del contrato
+    - Compara con admin_region_id
+    - True si coinciden (scoping regional estricto)
+end note
+
+note right of MOD
+  TABLAS:
+  regions:
+    id PK, codigo_dane, nombre, departamento,
+    latitud, longitud, radio_km, activa,
+    departamentos JSON[], created_at
+  
+  users.region_id:
+    FK → regions.id, nullable, INDEX
+    NULL = superadmin / sin asignar / global
+    Staff (admin/verificador/soporte) → assigned once
+    Público (pds/solicitante/merchant) → por ubicación
+end note
+
+note right of SEL
+  FRONTEND Selector Región:
+  • RegionContext (React Context) + useRegion()
+  • Persistencia localStorage (última selección)
+  • Autodetección: navigator.geolocation → /detectar
+  • Fallback: IP geolocation (Cloudflare header cf-ipcountry)
+  • Cambio región → recarga queries con region_scope
+end note
+
+note over API, DOM
+  SCOPING REGIONAL ENFORCER:
+  • Middleware region_scope_id extrae de JWT (admin/verificador/soporte)
+  • Filtra automáticamente: users, verifications, solicitudes, contracts, disputes, tickets, contenido
+  • Superadmin: region_scope_id = NULL (acceso global)
+  • Aislamiento estricto: Admin Región 1 no ve datos Región 2 (404)
+end note
+
+@enduml

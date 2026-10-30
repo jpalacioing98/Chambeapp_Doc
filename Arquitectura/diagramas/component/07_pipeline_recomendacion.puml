@@ -1,0 +1,102 @@
+@startuml
+title Figura 7 - Pipeline de Recomendación ML (2 Etapas: Retrieval + Ranking)
+
+actor "Solicitante" as S
+participant "get_recommender()\nservices/ai/recommender.py" as GR
+participant "HybridRecommender\nservices/ai/hybrid.py" as HR
+participant "Retrieval Geo\nPostGIS ST_DWithin" as GEO
+participant "FeatureExtractor\n22 features" as FE
+participant "MLRanker\nLightGBM v1" as MR
+participant "ABTest\nservices/ai/ab_test.py" as AB
+participant "ShadowRecommender\n(heuristic logging)" as SR
+participant "HeuristicRecommender\n(fallback)" as HER
+participant "ThompsonBandit\n(exploración)" as TB
+database "PostgreSQL + pgvector" as DB
+
+S -> GR: recommendations(solicitud_id)
+GR -> HR: rank(solicitud)
+
+== ETAPA 1: RETRIEVAL GEOESPACIAL ==
+HR -> GEO: find_nearby_providers(lat, lng, 15km, limit=50)
+GEO -> DB: SELECT * FROM users WHERE rol='PDS' AND ST_DWithin(geom, POINT(lng lat), 15000)
+DB --> GEO: 50 candidatos PDS cercanos
+GEO --> HR: [pds_id_1, pds_id_2, ...]
+
+== ETAPA 2: RANKING ML ==
+HR -> FE: extract_batch(solicitud, candidatos)
+FE -> DB: JOIN users, profiles, trust_scores, contracts, skills, ratings
+DB --> FE: Features crudas (384-dim embeddings + tabulares)
+FE --> HR: X matrix (50 x 22 features)
+
+HR -> MR: predict(X)
+MR -> DB: LightGBM model (versionado, pgvector embeddings)
+DB --> MR: Model weights + SHAP explainer
+MR --> HR: scores[50] + shap_explanations[50]
+
+== ORQUESTACIÓN Y FALLBACKS ==
+HR -> AB: log_recommendation(solicitud_id, pds_id, score, grupo=A/B)
+HR -> SR: log_shadow(pds_id, heuristic_score)  (no sirve, solo log)
+HR -> TB: ThompsonBandit.select(actions=[ML, Heuristic])
+alt ML disponible y confianza > threshold
+    HR --> GR: ranking_ordenado[{pds_id, score, shap_explicacion}]
+else ML falla / baja confianza
+    HR -> HER: heuristic_score(trust * 0.7 + 1/dist * 0.3)
+    HER --> HR: fallback_ranking
+    HR --> GR: ranking_heuristic + flag fallback=true
+end
+
+GR --> S: [{user_id, score, explicacion_shap, fallback}, ...]
+
+note right of FE
+  FEATURE EXTRACTOR (22 features):
+  1-5.  TrustScore dimensiones (kyc, rating, contratos, portfolio, referidos)
+  6.    TrustScore puntuación final (0-1)
+  7.    Distancia Haversine (km)
+  8.    Skills match Jaccard (solicitud.habilidades ∩ pds.habilidades)
+  9.    Contratos completados PDS (últimos 90d)
+  10.   Rating promedio PDS (1-5)
+  11.   Disponibilidad horaria match
+  12.   Modalidad preferida match (A/B)
+  13.   Categorías match (solicitud.categoria ∈ pds.categorias)
+  14.   Portfolio items aprobados (count)
+  15.   Certificaciones técnicas verificadas (count)
+  16.   Endosos recibidos (count)
+  17.   Disputas historial (count)
+  18.   Tiempo respuesta promedio ofertas (min)
+  19.   Tasa aceptación ofertas (%)
+  20.   Embedding cosine similarity (pgvector 384-dim)
+  21.   Hora del día / día semana (contextual)
+  22.   Urgencia solicitud (hoy/semana/flexible)
+end note
+
+note right of MR
+  MLRANKER (LightGBM v1):
+  • Entrenamiento: batch nocturno Celery (ai_training blueprint)
+  • Datos: recommendation_logs (clicked=1, contratado=1) + features snapshot
+  • Objetivo: binary classification (contratado ~ features)
+  • Métricas: AUC, Precision@K, NDCG@10
+  • SHAP: TreeExplainer → explicación por feature por recomendación
+  • Versionado: modelo_version en recommendation_logs + feature_flags
+  • pgvector: embeddings 384-dim (sentence-transformers all-MiniLM-L6-v2)
+end note
+
+note right of AB
+  A/B TESTING:
+  • Grupo A: LightGBM ranking (producción)
+  • Grupo B: Heuristic ranking (control)
+  • Asignación: hash(user_id + solicitud_id) % 2
+  • Métricas: CTR, Tasa contratación, Tiempo primera oferta, Satisfacción
+  • Decisión: Promote A si lift > 5% significancia 95%
+  • Shadow mode: ShadowRecommender loggea heuristic sin servir
+end note
+
+note right of TB
+  THOMPSON BANDIT (exploración):
+  • Multi-armed bandit: brazos = [ML, Heuristic]
+  • Beta(α=éxitos+1, β=fallos+1) por brazo
+  • Sample θ ~ Beta → elige argmax θ
+  • Balancea exploración/explotación automáticamente
+  • Se adapta si ML degrada (drift detection)
+end note
+
+@enduml

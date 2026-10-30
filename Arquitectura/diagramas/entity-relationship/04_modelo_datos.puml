@@ -1,0 +1,135 @@
+@startuml
+title Figura 4 - Modelo de Datos Relacional Unificado: 35 Entidades SQLAlchemy + PostGIS
+
+actor "DBA / Arquitecto" as DBA
+participant "CORE USUARIOS (6)" as CORE
+participant "SOLICITUDES Y NEGOCIACIÓN (3)" as SOL
+participant "CONTRATOS Y EJECUCIÓN (5)" as CON
+participant "MARAÑAS / REBUSQUE (2)" as MAR
+participant "ANUNCIOS LABORALES (2)" as ANU
+participant "NEGOCIOS / MERCHANT (4)" as NEG
+participant "FINANZAS / WALLET (7)" as FIN
+participant "KYC Y DOCUMENTOS (2)" as KYC
+participant "HABILIDADES Y CERTIFICACIONES (4)" as HAB
+participant "PORTAFOLIO Y CONFIANZA (3)" as POR
+participant "MENSAJERÍA Y NOTIFICACIONES (4)" as COM
+participant "ADMIN Y SISTEMA (3)" as ADM
+participant "ML Y RECOMENDACIONES (1)" as ML
+
+DBA -> CORE: Diseño normalizado 3FN + índices compuestos
+DBA -> SOL: Geocerca PostGIS ST_DWithin + radio_km
+DBA -> CON: FSM 6 estados + check-in/out GPS
+DBA -> MAR: Derivación adenda → micro-trabajo
+DBA -> ANU: No vinculante, solo contacto
+DBA -> NEG: Scoping regional + geom Point 4326
+DBA -> FIN: Partida doble invariante (DEBE/HABER)
+DBA -> KYC: Multi-instancia + hash SHA256
+DBA -> HAB: Rutas certificables quiz/cert + endosos
+DBA -> POR: Moderación workflow + TrustScore ponderado
+DBA -> COM: Socket.IO message log + centro alertas
+DBA -> ADM: Audit logs inmutables + flags calientes
+DBA -> ML: A/B testing + SHAP explanations
+
+note right of CORE
+  CORE USUARIOS (6):
+  1. users                      → PK id, email UK, password_hash, rol[7], status[3], role_version, region_id FK, two_factor_enabled, created_at
+  2. profiles                   → PK user_id FK, habilidades JSON, experiencia, rating_promedio, verificado, badges JSON, foto_perfil, lat/lng, geom Point, plan[3], onboarding
+  3. regions                    → PK id, clave UK, nombre, descripcion, departamentos JSON
+  4. legal_acceptances          → PK id, user_id FK, version_tyc, fecha, ip (Ley 527/1999 clickwrap)
+  5. verifications              → PK id, user_id FK, doc_type, doc_number, status[3], reviewed_by FK, reviewed_at
+  6. user_badges                → PK id, usuario_id FK, tipo[9], activo, otorgado_en
+end note
+
+note right of SOL
+  SOLICITUDES Y NEGOCIACIÓN (3):
+  7. solicitudes                → PK id, solicitante_id FK, titulo, categoria, descripcion, ubicacion, lat/lng, direccion, presupuesto, fecha_deseada, urgencia[3], estado[8], especificaciones JSON, imagen_360, imagenes JSON, radio_km, created_at/updated_at
+  8. ofertas                    → PK id, solicitud_id FK, pds_id FK, monto, mensaje, fecha_deseada, horario, estado[5], contra_monto/mensaje/fecha/horario, created_at/updated_at
+  9. ratings_solicitud          → PK id, service_id FK, autor_id FK, calificado_id FK, puntaje[1-5], comentario, reportado, created_at (UNIQUE service_id, autor_id)
+end note
+
+note right of CON
+  CONTRATOS Y EJECUCIÓN (5):
+  10. contracts                 → PK id, service_id FK, proveedor_id FK, solicitante_id FK, estado[6], motivo_cancelacion, inicio_en, fin_en, confirmado_en, created_at/updated_at
+  11. chambas                   → PK id, contract_id FK UK, estado[7], estado_previo, 6 hitos (activación→finalización), evidencias JSON, adendas JSON, novedades JSON, pago_dual Boolean, rating_estrellas, habilidades_validadas JSON, created_at/updated_at
+  12. disputes                  → PK id, contract_id FK, reason, status[2], resolved_by FK, resolved_at, resolution, created_at
+  13. milestones                → PK id, contract_id FK, numero[1-6], descripcion, monto, estado[3], aprobado_en, created_at
+  14. modalidades               → PK id, service_id FK UK, tipo[A_comision/B_sin_comision], monedas_requeridas, created_at (RF-26)
+end note
+
+note right of MAR
+  MARAÑAS / REBUSQUE (2):
+  15. maranas                   → PK id, chamba_id FK, adenda_idx, solicitante_id FK, titulo, categoria, descripcion, presupuesto, ubicacion, fecha_deseada, horario, estado[5], pago_dual Boolean, pds_asignado_id FK, fechas (asignacion/entrega/pago), created_at/updated_at
+  16. marana_ofertas            → PK id, marana_id FK, pds_id FK, monto, mensaje, estado[4], contra_monto/mensaje, created_at/updated_at
+end note
+
+note right of ANU
+  ANUNCIOS LABORALES (2):
+  17. anuncios_laborales        → PK id, negocio_id FK, titulo, descripcion, categoria, ubicacion, lat/lng, vacantes, estado[2], created_at/updated_at
+  18. anuncios_postulaciones    → PK id, anuncio_id FK, pds_id FK, mensaje, telefono_contacto, email_contacto, estado[3], created_at/updated_at
+end note
+
+note right of NEG
+  NEGOCIOS / MERCHANT (4):
+  19. negocios                  → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[4], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_km, geom Point, categoria_principal, categorias/servicios/palabras JSON, redes sociales JSON, rating_promedio, total_calificaciones, verificado, estado[5], motivo_rechazo, created_at/updated_at
+  20. negocio_horarios          → PK id, negocio_id FK, dia_semana[0-6], abierto, hora_apertura/cierre (UNIQUE negocio_id, dia_semana)
+  21. negocio_ratings           → PK id, negocio_id FK, autor_id FK, puntaje[1-5], comentario, reportado, created_at (UNIQUE negocio_id, autor_id)
+  22. negocio_reportes          → PK id, negocio_id FK, reporter_id FK, tipo[5], descripcion, estado[4], ticket_id FK, created_at
+end note
+
+note right of FIN
+  FINANZAS / WALLET (7):
+  23. wallets                   → PK id, user_id FK UK, saldo, saldo_bloqueado, created_at/updated_at
+  24. transactions              → PK id, wallet_id FK, tipo[5], monto (COP +/−), descripcion, referencia, created_at
+  25. coins                     → PK id, user_id FK, cantidad, tipo[3], vence_en (promocionales), created_at
+  26. payments                  → PK id, contract_id FK UK, monto, comision_pds(12%), comision_solicitante(8%), estado[4], pasarela[mock/nequi], referencia_pasarela, motivo_reembolso, created_at/updated_at
+  27. metodos_pago              → PK id, user_id FK, tipo[billetera/banco], banco, numero_cuenta, es_principal, created_at
+  28. merchant_payment_methods  → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON, principal, activo, created_at
+  29. merchant_preferences      → PK id, user_id FK UK, notif_* Boolean, push_enabled, email_digest[daily/weekly/never], idioma, tema
+end note
+
+note right of KYC
+  KYC Y DOCUMENTOS (2):
+  30. documentos_requeridos     → PK id, rol[pds/solicitante], clave, nombre, descripcion, obligatorio, grupo[4], multi_instancia, orden (UNIQUE rol, clave)
+  31. documentos_usuario        → PK id, user_id FK, documento_requerido_id FK, documento_clave, instancia, rol, estado[4], url, archivo_base64, nombre_archivo, mime_type, fecha_envio, revisado_en, revisor_id FK, nota (UNIQUE user_id, documento_clave, instancia)
+end note
+
+note right of HAB
+  HABILIDADES Y CERTIFICACIONES (4):
+  32. habilidades               → PK id, nombre UK, descripcion, categoria[5], habilidades JSON (competencias), niveles JSON (quiz/cert), activa, created_at
+  33. habilidad_niveles         → PK id, user_id FK, habilidad_id FK, nivel_index, metodo[quiz/cert], evidencia_url, fecha (UNIQUE user_id, habilidad_id, nivel_index)
+  34. endoso_habilidades        → PK id, contract_id FK, pds_id FK, solicitante_id FK, habilidad_id FK, competencia, created_at (UNIQUE contract, pds, habilidad, competencia)
+  35. certificaciones_tecnicas  → PK id, user_id FK, habilidad_id FK, institucion, titulo, anio, codigo_verificacion, documento_url, estado[3], created_at
+end note
+
+note right of POR
+  PORTAFOLIO Y CONFIANZA (3):
+  36. portfolio_items           → PK id, pds_id FK, titulo, descripcion, tipo[foto/video/doc], categoria, s3_key, url, file_size, mime_type, estado[3], verificado_por FK, verificado_en, vistas, created_at
+  37. trust_scores              → PK id, pds_id FK UK, kyc_verificado, portfolio_calidad, rating_score, contratos_completados, referidos_count, puntuacion[0-1], nivel[nuevo/confiable/verificado/experto], componentes_json, calculado_en, version (Pesos: KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%)
+  38. badges                    → PK id, usuario_id FK, tipo[9], activo, otorgado_en
+end note
+
+note right of COM
+  MENSAJERÍA Y NOTIFICACIONES (4):
+  39. conversations             → PK id, user_a_id FK, user_b_id FK, creado_en (UNIQUE user_a, user_b normalizado)
+  40. messages                  → PK id, conversation_id FK, sender_id FK, contenido, leido, creado_en
+  41. notifications             → PK id, user_id FK, tipo[40], titulo, mensaje, datos JSON, leida, creado_en
+  42. tickets                   → PK id, user_id FK, subject, body, status[3], priority[3], assigned_to, created_at, resolved_at
+end note
+
+note right of ADM
+  ADMIN Y SISTEMA (3):
+  43. audit_logs                → PK id, actor_id, action, entity_type, entity_id, before_json, after_json, ip, created_at (inmutable append-only)
+  44. system_configs            → PK id, key UK, value, value_type[int/float/string/bool/json], description, updated_by, updated_at
+  45. feature_flags             → PK id, key UK, enabled, description
+end note
+
+note right of ML
+  ML Y RECOMENDACIONES (1):
+  46. recommendation_logs       → PK id, solicitud_id FK, pds_id FK, puntuacion, ranking_pos, features_snapshot JSON, modelo_nombre[lightgbm_v1/heuristic], modelo_version, notificado, respondio, aceptado, experiment_group[A/B], created_at
+end note
+
+note over CON, ML
+  TOTAL: 35 entidades principales + enums (RolUsuario, EstadoSolicitud, EstadoOferta, EstadoContrato, EstadoChamba, EstadoMarana, EstadoMaranaOferta, EstadoAnuncio, EstadoPostulacionAnuncio, TipoNegocio, EstadoNegocio, EstadoReporte, TipoReporte, TipoModalidad, EstadoHito, UrgenciaSolicitud, TipoTransaccion, TipoMoneda, EstadoPago, BadgeType) + PostGIS geometry(Point,4326) en users.profiles.geom, solicitudes, negocios, anuncios_laborales
+end note
+
+@enduml

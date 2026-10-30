@@ -1,0 +1,89 @@
+@startuml
+title Figura 3 - Flujo Solicitud → Pago Dual (Secuencia Completa)
+
+actor "Solicitante" as S
+actor "PDS" as P
+participant "Solicitud\n(solicitudes blueprint)" as SOL
+participant "Recomendador ML\nget_recommender()" as REC
+participant "Cascade Manager\nservices/cascade.py" as CAS
+participant "Socket.IO\n(notification_socket)" as SIO
+participant "Contrato\n(contracts blueprint)" as CON
+participant "Chat\n(chat_socket)" as CH
+participant "Pago Dual\n(payments blueprint)" as PAY
+participant "Wallet\n(wallet blueprint)" as WAL
+
+== PUBLICACIÓN Y RECOMENDACIÓN ==
+S -> SOL: POST /solicitudes {titulo, categoria, presupuesto, lat/lng, radio_km, imagen_360}
+SOL -> REC: recommendations(solicitud_id)
+REC -> REC: 1. Retrieval PostGIS ST_DWithin(15km, top 50)
+REC -> REC: 2. Ranking LightGBM (22 features: trust, rating, distancia, skills, historial)
+REC --> SOL: [{pds_id, score, explicacion_shap}, ...]
+SOL -> CAS: start_cascade(solicitud_id)
+
+== CASCADA GEOESPACIAL TIEMPO REAL ==
+CAS -> SIO: Fase 1 (2km, 300s, max 5 PDS)
+SIO -> P: emit 'notificacion:nueva' room=user:<pds_id>
+P -> SOL: POST /ofertas {solicitud_id, monto, mensaje, fecha, horario}
+SIO -> S: emit 'oferta:nueva' room=user:<solicitante_id>
+
+== NEGOCIACIÓN Y CONTRATO ==
+S -> CON: POST /contracts {oferta_id} → acepta oferta
+CON -> CH: habilita conversación (protocolo ⟦c:action⟧)
+CH -> S: emit 'message' (contrato_perfeccionado)
+CH -> P: emit 'message' (contrato_perfeccionado)
+
+== EJECUCIÓN CHAMBA (6 HITOS) ==
+P -> CON: POST /chambas/checkin_entrada {lat, lng, evidencias[]}
+CON -> CON: Valida GPS < 100m (Haversine) + hash SHA256 evidencias
+P -> CON: POST /chambas/ejecucion {adendas, novedades}
+S -> CON: POST /chambas/solicitud_cierre {habilidades_validadas[]}
+P -> CON: POST /chambas/checkin_salida {lat, lng, evidencias[]}
+
+== PAGO DUAL CONFORMIDAD ==
+CON -> PAY: genera Payment {monto, comision_pds=12%, comision_solicitante=8%}
+PAY -> S: POST /payments/:id/conformidad_solicitante (firma digital)
+PAY -> P: POST /payments/:id/conformidad_pds (firma digital)
+alt Ambas conformidades OK
+    PAY -> WAL: Wallet.transfer(solicitante → pds, monto_neto)
+    PAY -> WAL: Wallet.comision(platform, comision_total)
+    PAY -> WAL: Transaction DEBE/HABER (partida doble)
+    PAY --> S: Payment liberado, recibo PDF (Ley 527)
+    PAY --> P: Saldo disponible en wallet
+else Una parte no confirma
+    PAY -> CAS: Escrow 72h → mediación automática
+end
+
+note right of REC
+  PIPELINE ML 2 ETAPAS:
+  1. RETRIEVAL: PostGIS ST_DWithin(geom, 15km) → top 50 candidatos
+  2. RANKING: LightGBM v1 (22 features):
+     - TrustScore (KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%)
+     - Distancia Haversine
+     - Skills match (Jaccard)
+     - Historial contratos completados
+     - Disponibilidad horaria
+     - Modalidad preferida
+  FALLBACK: HeuristicRecommender (score = trust * 0.7 + 1/dist * 0.3)
+  SHADOW: ShadowRecommender loggea predicciones sin servir
+end note
+
+note right of CAS
+  CASCADA 3 FASES (configurable):
+  Fase 1:  2km,  5min, max 5 notificaciones
+  Fase 2:  5km, 10min, max 10 notificaciones
+  Fase 3: 15km, 15min, max 15 notificaciones
+  Total tiempo entrega < 1s (Socket.IO + Redis adapter)
+  Límite diario por PDS configurable (feature flag)
+end note
+
+note right of PAY
+  PAGO DUAL (RF-23 + RF-08):
+  • Conformidad Solicitante: firma digital SHA256 + timestamp
+  • Conformidad PDS: firma digital SHA256 + timestamp
+  • Ambas requeridas → liberación inmediata (Escrow 0s)
+  • Comisión: 12% PDS + 8% Solicitante = 20% plataforma
+  • Modalidad B (monedas): usa Coin COMPRADA, sin comisión
+  • Partida doble: WalletTransaction DEBE/HABER invariante
+end note
+
+@enduml

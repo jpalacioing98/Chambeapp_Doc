@@ -1,0 +1,105 @@
+@startuml
+title Figura 13 - Infraestructura Regional — Topología Objetivo Multi-Región HA
+
+box "Borde / Edge (Global)" #E8EAF6
+  participant "DNS + HTTPS\nCloudflare / Route53" as DNS
+  participant "Load Balancer\nHAProxy / AWS ALB / Cloud LB\nHealth: /health /ready /ws/health" as LB
+end box
+
+box "Capa Aplicación (Réplicas Horizontales por Región)" #E3F2FD
+  participant "API Pods x3\nFlask + Gunicorn + Eventlet (-w 1)\nPort 8000\n/health /ready" as BE1
+  participant "API Pods x2 (Standby)\nFlask + Gunicorn + Eventlet" as BE2
+  participant "Socket.IO Pods x3\nEventlet + Redis Adapter\nPort 8001\n/ws/health" as WS1
+  participant "Socket.IO Pods x2 (Standby)" as WS2
+  participant "Celery Workers x4\nBeat Scheduler + 3 Workers\nRedis Broker + Result Backend" as CW
+  participant "Celery Beat x1\nScheduler distribuido (redis lock)" as CB
+end box
+
+box "Capa Datos (HA por Región)" #E8F5E9
+  database "PostgreSQL 16 + PostGIS\nPatroni Cluster (etcd)\nPrimary + 2 Sync Replicas\nPgBouncer 6432 (pool tx/session)\nÍndices: ix_users_region_id, ix_solicitudes_solicitante_id, GIST geom" as PG
+  database "Redis 7 Sentinel HA\n3 Sentinels + Master + 2 Replicas\nPort 6379/26379\nPub/Sub Socket.IO adapter\nCelery broker + cache\nRead replicas para queries no críticas" as RD
+  participant "MinIO Distribuido\n4 Nodos/región (Erasure Coding 2+2)\nPort 9000 API / 9001 Console\nReplicación cross-region async\nVersioning + Object Lock (WORM KYC)\nBuckets: chambeapp /region/<clave>/evidencias|kyc|portfolio|360" as MINIO
+end box
+
+box "Paneles y Aislamiento por Rol" #FFF3E0
+  participant "PWA Cliente\nReact 18 + Vite 6 + Mapbox GL + A-Frame\nService Worker PWA (offline)" as PWA
+  participant "Panel Admin\nReact 18 + Vite 6 + Vanilla JS\nAdmin/Verificador/Soporte\nScoped por region_id (JWT claim)" as PANEL
+end box
+
+box "Control Plane (Global)" #F3E5F5
+  participant "Superadmin · Config · Flags · Auditoría\nLegal · IA · Catálogo Regiones\nfeature_flags table (hot reload <1s)" as CP
+end box
+
+DNS --> LB: DNS resolution + WAF
+LB --> BE1: Active region (health 200)
+LB --> WS1: Active region (ws health 200)
+LB -x BE2: Standby (sync only)
+LB -x WS2: Standby (sync only)
+
+BE1 --> PG: Primary (escrituras + lecturas consistentes)
+BE1 --> RD: Master (cache + broker + pubsub)
+BE1 --> MINIO: Storage (evidencias, KYC, 360, portfolio)
+WS1 --> RD: Redis adapter (pub/sub rooms user:<id>, conversation:<id>)
+CW --> RD: Broker (tasks) + Result backend
+CB --> RD: Beat schedule (persistent en Redis)
+BE2 --> PG: Replica (lecturas eventuales, sync replication)
+BE2 --> RD: Replica (read-only cache)
+WS2 --> RD: Replica (pub/sub sync)
+PWA --> LB: HTTPS/WSS (assets + API + WebSocket)
+PANEL --> LB: HTTPS (admin scoped)
+CP --> PG: Global writes (flags, audit, regions, config)
+CP --> RD: Global pub/sub (flag changes broadcast)
+
+note right of LB
+  HEALTH CHECKS MULTI-CAPA:
+  • API: GET /health (DB+Redis+MinIO connectivity) + /ready (migraciones OK)
+  • Socket.IO: GET /ws/health (Redis adapter connected)
+  • Patroni: GET /master (leader endpoint) + /replica (lag < 1s)
+  • Sentinel: master check (quorum 2/3)
+  • Failover automático < 30s (Patroni + Sentinel + LB)
+end note
+
+note right of PG
+  PATRONI HA (por región):
+  • Leader election via etcd/Consul (Raft consensus)
+  • Replicación síncrona (RPO=0) dentro de región
+  • Auto-failover < 30s (demote leader, promote best replica)
+  • pgBackRest: Full (semanal) + Incremental (diario) + WAL archive
+  • Point-in-time recovery (PITR)
+  • PgBouncer pooling: transaction (API) / session (Celery) / statement (admin)
+  • Índices GIST en geom (PostGIS) para búsquedas ST_DWithin
+end note
+
+note right of RD
+  REDIS SENTINEL HA (por región):
+  • 3 Sentinels + 1 Master + 2 Replicas
+  • Auto-failover master (quorum 2/3)
+  • Pub/Sub adapter para Socket.IO multi-pod (rooms)
+  • Celery broker HA (visibility timeout + retry)
+  • Read replicas para cache no crítico (analytics, ML features)
+  • TTL automático: sessions 7d, cache 1h, cascade 15m
+end note
+
+note right of MINIO
+  MINIO DISTRIBUido (ERASURE CODING):
+  • 4 nodos/región (2 data + 2 parity, tolera 2 fallos simultáneos)
+  • Replicación cross-region async (bucket mirroring, eventual consistency)
+  • Versioning habilitado en todos los buckets
+  • Object Locking (WORM) para bucket KYC (compliance Ley 1581)
+  • Gateway S3 compatible (boto3, aws-cli, presigned URLs)
+  • Estructura: /region/<clave>/evidencias|kyc|portfolio|360|anuncios
+  • Lifecycle: transition a cold storage 90d, expire KYC 10 años
+end note
+
+note right of CP
+  CONTROL PLANE GLOBAL:
+  • Feature flags: feature_flags table, poll 5s, hot reload sin deploy
+  • Service discovery: Consul/etcd, auto-registro pods + health checks
+  • Monitoring: Prometheus + Grafana (4 golden signals: latency, traffic, errors, saturation)
+  • Logs: Loki + Promtail (structured JSON, correlation IDs)
+  • Audit: audit_logs append-only inmutable (RNF-AUD, hash chain)
+  • Backup/DR: Velero (K8s resources) + pgBackRest (DB), RPO<1h RTO<4h
+  • Multi-región: Active (Caribe) / Standby (Andina) / Future (Pacífica, Orinoquía, Amazonía)
+end note
+
+@enduml
