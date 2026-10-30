@@ -97,7 +97,7 @@
 **Criterios de Aceptación:**
 1. WHEN solicitante crea solicitud THEN sistema SHALL exigir título, descripción, categoría y ubicación.
 2. WHEN se define presupuesto numérico THEN sistema SHALL validar mínimo de $50.000; si no se especifica, queda registrado como "a convenir".
-3. WHEN ubicación está fuera de la cobertura principal (Medellín/Valledupar) THEN sistema SHALL emitir advertencia geográfica sin bloquear la publicación.
+3. WHEN ubicación está fuera de la cobertura principal (Valledupar) THEN sistema SHALL emitir advertencia geográfica sin bloquear la publicación.
 4. WHEN solicitud es publicada exitosamente THEN sistema SHALL asignarla a la región geográfica correspondiente según su ubicación.
 
 **CU-04.1 Publicar solicitud (Actor: Solicitante)**

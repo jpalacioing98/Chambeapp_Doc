@@ -77,8 +77,7 @@ interface UserLocationCoords {
 }
 
 // Constantes exportadas
-MEDELLIN_CENTER: [6.2442, -75.5812]
-EL_POBLADO_CENTER: [6.2096, -75.5646]
+VALLEDUPAR_CENTER: [10.4806, -73.2495]
 DEFAULT_ZOOM = 13
 DEFAULT_MAP_STYLE = 'mapbox://styles/mapbox/light-v11'
 STANDARD_MAP_STYLE = 'mapbox://styles/mapbox/standard'
@@ -109,17 +108,17 @@ fitPinsInView(map, pins, padding?)                    // bounds + fitBounds
 
 | Página | Uso |
 |--------|-----|
-| `publico/NegociosMapaPage` | pins `MOCK_MAP_PINS` (lat/lng El Poblado), `clustering`, h=500 |
+| `publico/NegociosMapaPage` | pins `MOCK_MAP_PINS` (lat/lng Valledupar), `clustering`, h=500 |
 | `publico/NegocioDetallePage` | pin del negocio + `radiusKm=coverageRadius`, `interactive={false}` |
 | `pds/PdsBuscarPage` | pins `pdsJobs`, `radiusKm={filterRadius}` (8 km default), `clustering`, fill del `map-box` |
-| `negocio/NegocioMiNegocioPage` | `<BusinessMap>` (2 usos): centro coords negocio (default Medellín) + pin + radio cobertura |
+| `negocio/NegocioMiNegocioPage` | `<BusinessMap>` (2 usos): centro coords negocio (default Valledupar) + pin + radio cobertura |
 | `solicitante/SolicitudDetailPage` | pin con `solicitud.latitud/longitud` reales de la API |
-| `dev/ComponentsGallery` | demo MapboxMap (El Poblado, radio 2 km) + demo MapPlaceholder |
+| `dev/ComponentsGallery` | demo MapboxMap (Valledupar, radio 2 km) + demo MapPlaceholder |
 
 Mocks: `MapBusiness`, `BusinessDetail`, `PdsJob`, `BusinessProfile` ahora llevan
-`lat`/`lng` (Medellín) además de `x`/`y` legacy. El backend (`/negocios/mapa`)
+`lat`/`lng` (Valledupar) además de `x`/`y` legacy. El backend (`/negocios/mapa`)
 devuelve pins con `lat`/`lng` (verificado contra `localhost:5000`: `{clusters, pins}`,
-hoy vacío por falta de datos seed) → el reemplazo mock→API es directo.
+con el negocio seed en Valledupar) → el reemplazo mock→API es directo.
 
 ## 6. Pruebas
 
