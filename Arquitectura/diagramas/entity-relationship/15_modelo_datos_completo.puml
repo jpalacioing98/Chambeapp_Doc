@@ -1,0 +1,746 @@
+@startuml
+!pragma layout smetana
+title ChambeApp - Modelo de Datos Completo (ER Diagram)
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Monospace
+
+' ── Core Users & Auth ──────────────────────────────────────
+class User {
+  + id: Integer PK
+  + email: String(255) UK
+  + password_hash: String(255)
+  + rol: Enum[RolUsuario] [PDS, SOLICITANTE, MERCHANT, VERIFICADOR, SOPORTE, ADMIN, SUPERADMIN]
+  + status: String(20) [active, suspended, banned]
+  + role_version: Integer
+  + nombre: String(120)
+  + username: String(60) UK
+  + telefono: String(30)
+  + edad_verificada: Boolean
+  + acepto_tyc: Boolean
+  + consentimiento_datos: Boolean
+  + email_verificado: Boolean
+  + fecha_registro: DateTime
+  + last_login: DateTime
+  + activo: Boolean
+  + two_factor_enabled: Boolean
+  + region_id: Integer FK
+}
+
+class Profile {
+  + user_id: Integer PK,FK
+  + habilidades: JSON
+  + experiencia: Text
+  + zona: String(120)
+  + calificacion_promedio: Float
+  + verificado: Boolean
+  + badges: JSON
+  + portafolio: JSON
+  + categorias: JSON
+  + perfil_completo: Boolean
+  + foto_perfil: String(500)
+  + latitud: Float
+  + longitud: Float
+  + geom: Geometry(POINT,4326)
+  + plan: String(20) [free, basico, profesional]
+  + destacado: Boolean
+  + onboarding_completed: Boolean
+  + onboarding_step: Integer
+}
+
+class Region {
+  + id: Integer PK
+  + clave: String(40) UK
+  + nombre: String(120)
+  + descripcion: Text
+  + departamentos: JSON
+  + created_at: DateTime
+}
+
+class LegalAcceptance {
+  + id: Integer PK
+  + user_id: Integer FK
+  + version_tyc: String(20)
+  + fecha: DateTime
+  + ip: String(45)
+}
+
+class Verification {
+  + id: Integer PK
+  + user_id: Integer FK
+  + document_type: String(50)
+  + document_number: String(100)
+  + status: String(20) [pending, approved, rejected]
+  + reviewed_by: Integer FK
+  + reviewed_at: DateTime
+  + reason: Text
+  + created_at: DateTime
+}
+
+' ── Solicitudes & Negotiation ───────────────────────────────
+class Solicitud {
+  + id: Integer PK
+  + solicitante_id: Integer FK
+  + titulo: String(200)
+  + categoria: String(120)
+  + descripcion: Text
+  + ubicacion: String(120)
+  + latitud: Float
+  + longitud: Float
+  + direccion: String(255)
+  + presupuesto: Integer
+  + fecha_deseada: Date
+  + urgencia: Enum[UrgenciaSolicitud] [hoy, semana, flexible]
+  + estado: Enum[EstadoSolicitud] [borrador, publicado, en_progreso, completado, cancelado, oculto, rechazado, asignada]
+  + especificaciones_tecnicas: JSON
+  + imagen_360: Text
+  + horario: String(80)
+  + imagenes: JSON
+  + radio_km: Float
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class Oferta {
+  + id: Integer PK
+  + solicitud_id: Integer FK
+  + pds_id: Integer FK
+  + monto: Float
+  + mensaje: Text
+  + fecha_deseada: Date
+  + horario: String(80)
+  + estado: String(20) [pendiente, aceptada, rechazada, contraoferta, cancelada]
+  + contra_monto: Float
+  + contra_mensaje: Text
+  + contra_fecha_deseada: Date
+  + contra_horario: String(80)
+  + created_at: DateTime
+  + updated_at: DateTime
+}
+
+class Rating {
+  + id: Integer PK
+  + service_id: Integer FK
+  + autor_id: Integer FK
+  + calificado_id: Integer FK
+  + puntaje: Integer (1-5)
+  + comentario: Text
+  + reportado: Boolean
+  + creado_en: DateTime
+}
+
+' ── Contracts & Execution ──────────────────────────────────
+class Contract {
+  + id: Integer PK
+  + service_id: Integer FK
+  + proveedor_id: Integer FK
+  + solicitante_id: Integer FK
+  + estado: Enum[EstadoContrato] [pendiente, en_progreso, completado_pendiente, completado, cancelado, marcado]
+  + motivo_cancelacion: String(500)
+  + inicio_en: DateTime
+  + fin_en: DateTime
+  + confirmado_en: DateTime
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class Chamba {
+  + id: Integer PK
+  + contract_id: Integer FK,UK
+  + estado: Enum[EstadoChamba] [programada, en_proceso, en_ejecucion, pausada, pendiente_validacion, liquidacion_confirmada, finalizada]
+  + estado_previo: Enum[EstadoChamba]
+  + fecha_activacion: DateTime
+  + fecha_inicio_obra: DateTime
+  + fecha_solicitud_cierre: DateTime
+  + fecha_validacion: DateTime
+  + fecha_liquidacion: DateTime
+  + fecha_finalizacion: DateTime
+  + evidencia_entrada: JSON
+  + evidencia_salida: JSON
+  + adendas: JSON
+  + novedades: JSON
+  + pago_confirmado_solicitante: Boolean
+  + pago_confirmado_prestador: Boolean
+  + pago_directo_confirmado: Boolean
+  + pago_monto_final: Integer
+  + rating_estrellas: Integer
+  + rating_comentario: Text
+  + habilidades_validadas: JSON
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class Dispute {
+  + id: Integer PK
+  + contract_id: Integer FK
+  + reason: Text
+  + status: String(20) [abierta, resuelta]
+  + resolved_by: Integer FK
+  + resolved_at: DateTime
+  + resolution: Text
+  + created_at: DateTime
+}
+
+class Milestone {
+  + id: Integer PK
+  + contract_id: Integer FK
+  + numero: Integer
+  + descripcion: Text
+  + monto: Integer
+  + estado: Enum[EstadoHito] [pendiente, aprobado, rechazado]
+  + aprobado_en: DateTime
+  + created_at: DateTime
+}
+
+class Modalidad {
+  + id: Integer PK
+  + service_id: Integer FK,UK
+  + tipo: Enum[TipoModalidad] [A_comision, B_sin_comision]
+  + monedas_requeridas: Integer
+  + created_at: DateTime
+}
+
+' ── Marana (Rebusque) ──────────────────────────────────────
+class Marana {
+  + id: Integer PK
+  + chamba_id: Integer FK
+  + adenda_idx: Integer
+  + solicitante_id: Integer FK
+  + titulo: String(200)
+  + categoria: String(120)
+  + descripcion: Text
+  + presupuesto: Integer
+  + ubicacion: String(120)
+  + fecha_deseada: Date
+  + horario: String(80)
+  + estado: Enum[EstadoMarana] [publicado, asignado, completado, pagado, cancelado]
+  + pago_confirmado_solicitante: Boolean
+  + pago_confirmado_prestador: Boolean
+  + pago_monto_final: Integer
+  + pds_asignado_id: Integer FK
+  + fecha_asignacion: DateTime
+  + fecha_entrega: DateTime
+  + fecha_pago: DateTime
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class MaranaOferta {
+  + id: Integer PK
+  + marana_id: Integer FK
+  + pds_id: Integer FK
+  + monto: Integer
+  + mensaje: Text
+  + estado: String(20) [pendiente, aceptada, rechazada, contraoferta]
+  + contra_monto: Integer
+  + contra_mensaje: Text
+  + created_at: DateTime
+  + updated_at: DateTime
+}
+
+' ── Anuncios Laborales ─────────────────────────────────────
+class AnuncioLaboral {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + titulo: String(200)
+  + descripcion: Text
+  + categoria: String(120)
+  + ubicacion: String(160)
+  + latitud: Float
+  + longitud: Float
+  + vacantes: Integer
+  + estado: Enum[EstadoAnuncio] [publicado, cerrado]
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class AnuncioPostulacion {
+  + id: Integer PK
+  + anuncio_id: Integer FK
+  + pds_id: Integer FK
+  + mensaje: Text
+  + telefono_contacto: String(40)
+  + email_contacto: String(120)
+  + estado: Enum[EstadoPostulacionAnuncio] [pendiente, contactado, descartado]
+  + created_at: DateTime
+  + updated_at: DateTime
+}
+
+' ── Negocios ───────────────────────────────────────────────
+class Negocio {
+  + id: Integer PK
+  + owner_id: Integer FK
+  + nombre: String(150)
+  + slug: String(170) UK
+  + descripcion: Text
+  + tipo: String(30) [comercio, servicio, virtual, hibrido]
+  + logo_url: String(500)
+  + banner_url: String(500)
+  + imagenes: JSON
+  + latitud: Float
+  + longitud: Float
+  + direccion: String(255)
+  + ciudad: String(100)
+  + departamento: String(100)
+  + radio_cobertura_km: Float
+  + geom: Geometry(POINT,4326)
+  + categoria_principal: String(120)
+  + categorias_secundarias: JSON
+  + servicios: JSON
+  + palabras_clave: JSON
+  + whatsapp: String(30)
+  + whatsapp_mensaje_pre: Text
+  + instagram: String(255)
+  + facebook: String(255)
+  + tiktok: String(255)
+  + sitio_web: String(255)
+  + calificacion_promedio: Float
+  + total_calificaciones: Integer
+  + verificado: Boolean
+  + estado: String(30) [borrador, pendiente_verificacion, activo, suspendido, rechazado]
+  + motivo_rechazo: Text
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class NegocioHorario {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + dia_semana: Integer (0=Lun, 6=Dom)
+  + abierto: Boolean
+  + hora_apertura: Time
+  + hora_cierre: Time
+}
+
+class NegocioRating {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + autor_id: Integer FK
+  + puntaje: Integer (1-5)
+  + comentario: Text
+  + reportado: Boolean
+  + creado_en: DateTime
+}
+
+class NegocioReporte {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + reporter_id: Integer FK
+  + tipo: String(30) [fraude, spam, contenido_inapropiado, servicio_no_prestado, otro]
+  + descripcion: Text
+  + estado: String(30) [abierto, investigando, resuelto, desestimado]
+  + ticket_id: Integer FK
+  + creado_en: DateTime
+}
+
+' ── Wallet & Payments ──────────────────────────────────────
+class Wallet {
+  + id: Integer PK
+  + user_id: Integer FK,UK
+  + saldo: Integer (COP)
+  + saldo_bloqueado: Integer (COP)
+  + created_at: DateTime
+  + updated_at: DateTime
+}
+
+class Transaction {
+  + id: Integer PK
+  + wallet_id: Integer FK
+  + tipo: Enum[TipoTransaccion] [comision, monedas, retiro, reembolso, deposito]
+  + monto: Integer (COP)
+  + descripcion: Text
+  + referencia: String(100)
+  + created_at: DateTime
+}
+
+class Coin {
+  + id: Integer PK
+  + user_id: Integer FK
+  + cantidad: Integer
+  + tipo: Enum[TipoMoneda] [comprada, promocional, ganada]
+  + vence_en: DateTime
+  + created_at: DateTime
+}
+
+class Payment {
+  + id: Integer PK
+  + contract_id: Integer FK,UK
+  + monto: Integer (COP)
+  + comision_pds: Integer (12%)
+  + comision_solicitante: Integer (8%)
+  + estado: Enum[EstadoPago] [pendiente, completado, reembolsado, fallido]
+  + pasarela: String(50) [mock, nequi]
+  + referencia_pasarela: String(255)
+  + motivo_reembolso: String(500)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class MetodoPago {
+  + id: Integer PK
+  + user_id: Integer FK
+  + tipo: String(30) [billetera, banco]
+  + banco: String(120)
+  + numero_cuenta: String(60)
+  + es_principal: Boolean
+  + creado_en: DateTime
+}
+
+class MerchantPaymentMethod {
+  + id: Integer PK
+  + user_id: Integer FK
+  + tipo: String(30) [nequi, bancolombia, efectivo, ...]
+  + detalle: JSON
+  + principal: Boolean
+  + activo: Boolean
+  + creado_en: DateTime
+}
+
+class MerchantPreference {
+  + id: Integer PK
+  + user_id: Integer FK,UK
+  + notif_nueva_solicitud: Boolean
+  + notif_nueva_resena: Boolean
+  + notif_estado_kyc: Boolean
+  + notif_pago_recibido: Boolean
+  + push_enabled: Boolean
+  + email_digest: String(10) [daily, weekly, never]
+  + idioma: String(5)
+  + tema: String(10) [system, light, dark]
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class Subscription {
+  + id: Integer PK
+  + user_id: Integer FK,UK
+  + plan: String(20) [free, basico, profesional]
+  + estado: String(20) [activa, cancelada, vencida]
+  + inicio_en: DateTime
+  + fin_en: DateTime
+  + monto: Integer
+  + metodo_pago: String(20)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+' ── KYC & Documents ────────────────────────────────────────
+class DocumentoRequerido {
+  + id: Integer PK
+  + rol: String(30) [pds, solicitante]
+  + clave: String(60)
+  + nombre: String(120)
+  + descripcion: Text
+  + obligatorio: Boolean
+  + grupo: String(30) [identidad, antecedentes, financiero, opcional]
+  + multi_instancia: Boolean
+  + orden: Integer
+}
+
+class DocumentoUsuario {
+  + id: Integer PK
+  + user_id: Integer FK
+  + documento_requerido_id: Integer FK
+  + documento_clave: String(60)
+  + instancia: String(120)
+  + rol: String(30)
+  + estado: String(20) [no_enviado, enviado, aprobado, rechazado]
+  + url: String(512)
+  + archivo_base64: Text
+  + nombre_archivo: String(255)
+  + tipo_mime: String(100)
+  + fecha_envio: DateTime
+  + revisado_en: DateTime
+  + revisor_id: Integer FK
+  + nota: Text
+}
+
+' ── Skills & Certifications ────────────────────────────────
+class Habilidad {
+  + id: Integer PK
+  + nombre: String(120) UK
+  + descripcion: String(500)
+  + categoria: String(60) [construccion, climatizacion, domesticos, estetica, mecanica]
+  + habilidades: JSON
+  + niveles: JSON [(nombre, tipo: quiz|certificacion, quiz: [...])]
+  + activa: Boolean
+  + creado_en: DateTime
+}
+
+class HabilidadNivel {
+  + id: Integer PK
+  + user_id: Integer FK
+  + habilidad_id: Integer FK
+  + nivel_index: Integer
+  + metodo: String(20) [quiz, certificacion]
+  + evidencia_url: String(500)
+  + fecha: DateTime
+}
+
+class EndosoHabilidad {
+  + id: Integer PK
+  + contract_id: Integer FK
+  + pds_id: Integer FK
+  + solicitante_id: Integer FK
+  + habilidad_id: Integer FK
+  + competencia: String(150)
+  + creado_en: DateTime
+}
+
+class CertificacionTecnica {
+  + id: Integer PK
+  + user_id: Integer FK
+  + habilidad_id: Integer FK
+  + institucion: String(150)
+  + titulo: String(200)
+  + anio: Integer
+  + codigo_verificacion: String(120)
+  + documento_url: String(500)
+  + estado: String(20) [en_revision, verificado, rechazado]
+  + creado_en: DateTime
+}
+
+' ── Portfolio & Trust ──────────────────────────────────────
+class PortfolioItem {
+  + id: Integer PK
+  + pds_id: Integer FK
+  + titulo: String(100)
+  + descripcion: String(500)
+  + tipo: Enum [foto, video, documento]
+  + categoria: String(50)
+  + s3_key: String(500)
+  + url: String(500)
+  + file_size_bytes: BigInteger
+  + mime_type: String(50)
+  + estado: Enum [pendiente_revision, aprobado, rechazado]
+  + verificado_por: Integer FK
+  + verificado_en: DateTime
+  + vistas: Integer
+  + created_at: DateTime
+}
+
+class TrustScore {
+  + id: Integer PK
+  + pds_id: Integer FK,UK
+  + kyc_verificado: Boolean
+  + portfolio_calidad: Float
+  + rating_score: Float
+  + contratos_completados: Integer
+  + referidos_count: Integer
+  + puntuacion: Float (0-1)
+  + nivel: Enum [nuevo, confiable, verificado, experto]
+  + componentes_json: JSON
+  + calculado_en: DateTime
+  + version: Integer
+}
+
+class Badge {
+  + id: Integer PK
+  + usuario_id: Integer FK
+  + tipo: String(50) [primer_contrato, diez_contratos, cien_contratos, verificado, perfil_completo, primer_servicio, top_rated, sin_disputas, monedero_activo]
+  + activo: Boolean
+  + otorgado_en: DateTime
+}
+
+' ── Messaging & Notifications ──────────────────────────────
+class Conversation {
+  + id: Integer PK
+  + user_a_id: Integer FK
+  + user_b_id: Integer FK
+  + creado_en: DateTime
+}
+
+class Message {
+  + id: Integer PK
+  + conversation_id: Integer FK
+  + sender_id: Integer FK
+  + contenido: Text
+  + leido: Boolean
+  + creado_en: DateTime
+}
+
+class Notification {
+  + id: Integer PK
+  + user_id: Integer FK
+  + tipo: String(40)
+  + titulo: String(200)
+  + mensaje: Text
+  + datos: JSON
+  + leida: Boolean
+  + creado_en: DateTime
+}
+
+class Ticket {
+  + id: Integer PK
+  + user_id: Integer FK
+  + subject: String(200)
+  + body: Text
+  + status: String(20) [open, pending, closed]
+  + priority: String(20) [low, normal, high]
+  + assigned_to: Integer
+  + created_at: DateTime
+  + resolved_at: DateTime
+}
+
+' ── Admin & System ─────────────────────────────────────────
+class AuditLog {
+  + id: Integer PK
+  + actor_id: Integer
+  + action: String(100)
+  + entity_type: String(50)
+  + entity_id: Integer
+  + before_json: Text
+  + after_json: Text
+  + ip: String(45)
+  + created_at: DateTime
+}
+
+class SystemConfig {
+  + id: Integer PK
+  + key: String(100) UK
+  + value: Text
+  + value_type: String(20) [int, float, string, bool, json]
+  + description: Text
+  + updated_by: Integer
+  + updated_at: DateTime
+}
+
+class FeatureFlag {
+  + id: Integer PK
+  + key: String(100) UK
+  + enabled: Boolean
+  + description: Text
+}
+
+' ── ML & Recommendations ───────────────────────────────────
+class RecommendationLog {
+  + id: Integer PK
+  + solicitud_id: Integer FK
+  + pds_id: Integer FK
+  + puntuacion: Float
+  + ranking_pos: Integer
+  + features_snapshot: JSON
+  + modelo_nombre: String(50) [lightgbm_v1, heuristic]
+  + modelo_version: String(50)
+  + notificado: Boolean
+  + respondio: Boolean
+  + aceptado: Boolean
+  + experiment_group: String(50) [A, B]
+  + created_at: DateTime
+}
+
+' ═════════════════════════════════════════════════════════════
+' RELATIONSHIPS (sintaxis PlantUML válida, sin notación crow's foot)
+' ═════════════════════════════════════════════════════════════
+
+' User core
+User "1" -- "1" Profile : "1:1"
+User "1" -- "0..*" LegalAcceptance : "1:N"
+User "1" -- "0..*" Verification : "1:N"
+User "1..*" -- "0..1" Region : "N:1"
+User "1" -- "1" Wallet : "1:1"
+User "1" -- "0..*" Coin : "1:N"
+User "1" -- "0..*" MetodoPago : "1:N"
+User "1" -- "1" Subscription : "1:1"
+User "1" -- "0..*" PortfolioItem : "pds"
+User "1" -- "1" TrustScore : "1:1"
+User "1" -- "0..*" Badge : "1:N"
+User "1" -- "0..*" DocumentoUsuario : "1:N"
+User "1" -- "0..*" HabilidadNivel : "1:N"
+User "1" -- "0..*" CertificacionTecnica : "1:N"
+User "1" -- "0..*" EndosoHabilidad : "pds"
+User "1" -- "0..*" EndosoHabilidad : "solicitante"
+User "1" -- "0..*" Conversation : "user_a"
+User "1" -- "0..*" Conversation : "user_b"
+User "1" -- "0..*" Message : "sender"
+User "1" -- "0..*" Notification : "1:N"
+User "1" -- "0..*" Ticket : "1:N"
+
+' Solicitudes
+User "1" -- "0..*" Solicitud : "solicitante"
+Solicitud "1" -- "0..*" Oferta : "1:N"
+Solicitud "1" -- "0..*" Rating : "1:N"
+Solicitud "1" -- "0..1" Contract : "service"
+Solicitud "1" -- "1" Modalidad : "1:1"
+Solicitud "1" -- "0..*" RecommendationLog : "1:N"
+
+User "1" -- "0..*" Oferta : "pds"
+User "1" -- "0..*" Rating : "autor"
+User "1" -- "0..*" Rating : "calificado"
+
+' Contracts
+User "1" -- "0..*" Contract : "proveedor"
+User "1" -- "0..*" Contract : "solicitante"
+Contract "1" -- "0..*" Dispute : "1:N"
+Contract "1" -- "1" Chamba : "1:1"
+Contract "1" -- "0..*" Milestone : "1:N"
+Contract "1" -- "1" Payment : "1:1"
+Contract "1" -- "0..*" EndosoHabilidad : "1:N"
+
+Chamba "1" -- "0..*" Marana : "1:N"
+
+' Marana
+User "1" -- "0..*" Marana : "solicitante"
+User "1" -- "0..*" Marana : "pds_asignado"
+Marana "1" -- "0..*" MaranaOferta : "1:N"
+User "1" -- "0..*" MaranaOferta : "pds"
+
+' Anuncios
+User "1" -- "0..*" AnuncioLaboral : "negocio"
+AnuncioLaboral "1" -- "0..*" AnuncioPostulacion : "1:N"
+User "1" -- "0..*" AnuncioPostulacion : "pds"
+
+' Negocios
+User "1" -- "0..*" Negocio : "owner"
+Negocio "1" -- "0..*" NegocioHorario : "1:N"
+Negocio "1" -- "0..*" NegocioRating : "1:N"
+Negocio "1" -- "0..*" NegocioReporte : "1:N"
+User "1" -- "0..*" NegocioRating : "autor"
+User "1" -- "0..*" NegocioReporte : "reporter"
+
+' Wallet
+Wallet "1" -- "0..*" Transaction : "1:N"
+
+' KYC
+DocumentoRequerido "1" -- "0..*" DocumentoUsuario : "1:N"
+
+' Skills
+Habilidad "1" -- "0..*" HabilidadNivel : "1:N"
+Habilidad "1" -- "0..*" EndosoHabilidad : "1:N"
+Habilidad "1" -- "0..*" CertificacionTecnica : "1:N"
+
+' Portfolio
+User "1" -- "0..*" PortfolioItem : "verificado_por"
+
+' Messaging
+Conversation "1" -- "0..*" Message : "1:N"
+
+' Notes
+note right of User
+  Entidad central con 7 roles.
+  RBAC Fase 1-3 implementado.
+end note
+
+note right of Chamba
+  Ciclo 6 hitos:
+  PROGRAMADA → EN_PROCESO → EN_EJECUCION
+  → PENDIENTE_VALIDACION → LIQUIDACION_CONFIRMADA → FINALIZADA
+end note
+
+note right of Modalidad
+  A_comision: 12% PDS + 8% Solicitante
+  B_sin_comision: usa monedas (Coin)
+end note
+
+note right of TrustScore
+  Score 0-1 ponderado:
+  KYC 25% + Rating 25% + Contratos 20%
+  + Portfolio 15% + Referidos 15%
+  Niveles: nuevo <0.4, confiable <0.6, verificado <0.8, experto
+end note
+
+note right of RecommendationLog
+  A/B testing para ML recommender
+  lightgbm_v1 vs heuristic
+end note
+
+@enduml

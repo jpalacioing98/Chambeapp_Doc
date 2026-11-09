@@ -1,0 +1,95 @@
+@startuml
+title Figura 2 - Despliegue Productivo Multi-Región (HA + Patroni + Sentinel)
+
+actor "Usuario\nInternet / PWA" as User
+participant "Cloudflare\nCDN + WAF + DNS + Turnstile" as CF
+participant "Load Balancer\nHAProxy / AWS ALB\nHealth checks activos" as LB
+
+== REGIÓN PRIMARIA (Active - ej. Caribe) ==
+participant "API Pods x3\nFlask + Gunicorn + Eventlet (-w 1)\nPort 8000 /health /ready" as API1
+participant "Socket.IO Pods x3\nEventlet Workers + Redis Adapter\nPort 8001 /ws/health" as WS1
+participant "Celery Workers x4\nBeat Scheduler + 3 Workers\nRedis Broker" as CELERY1
+database "PostgreSQL Primary\nPatroni Leader (etcd)\nPort 5432 + PgBouncer 6432" as PG1
+database "Redis Sentinel\nMaster + 2 Replicas\n3 Sentinels (26379)" as REDIS1
+participant "MinIO Cluster\n4 Nodos Distribuidos (Erasure Coding)\nPort 9000/9001 Console" as MINIO1
+participant "Nginx + Certbot\nPWA Static (React Build)\nProxy API/WSS + SSL Termination" as NGINX1
+
+== REGIÓN SECUNDARIA (Standby - ej. Andina) ==
+participant "API Pods x2\nFlask + Gunicorn + Eventlet" as API2
+participant "Socket.IO Pods x2\nEventlet Workers" as WS2
+participant "Celery Workers x2\nBeat + Workers" as CELERY2
+database "PostgreSQL Replica\nPatroni Follower\nAsync Replication (RPO≈0)" as PG2
+database "Redis Sentinel\nReplicas Read-Only\nSentinels Sync" as REDIS2
+participant "MinIO Cluster\n4 Nodos Distribuidos" as MINIO2
+participant "Nginx + Certbot\nPWA Static + Proxy" as NGINX2
+
+== CONTROL PLANE GLOBAL ==
+participant "Feature Flags\nfeature_flags table\nHot reload < 1s" as FLAGS
+participant "Service Discovery\nConsul / etcd\nHealth endpoints /health" as SD
+participant "Monitoring\nPrometheus + Grafana\n4 Golden Signals + Alertmanager" as MON
+participant "Log Aggregation\nLoki + Promtail\nAudit logs inmutables (RNF-AUD)" as LOGS
+participant "Backup/DR\nVelero (K8s) + pgBackRest\nRPO < 1h, RTO < 4h" as BACKUP
+
+User -> CF: HTTPS/WSS Request
+CF -> LB: Proxy + WAF (rate limit, bot protection)
+LB -> API1: Ruta activa (health check 200 OK)
+LB -x API2: Standby (solo replica sync, no tráfico)
+
+API1 --> FLAGS: Métricas + Health + Logs + Config
+API2 --> FLAGS: Replication lag + Status
+FLAGS --> API1: Config flags + Deploy + Promote
+FLAGS --> API2: Config flags + Promote on failover
+
+PG1 --> PG2: Replicación async Patroni (etcd leader election)
+REDIS1 --> REDIS2: Sentinel replication (Pub/Sub sync)
+MINIO1 --> MINIO2: Cross-region replication (async + versioning)
+
+note right of LB
+  HEALTH CHECKS CRÍTICOS:
+  • GET /health → API pods (DB + Redis + MinIO connectivity)
+  • GET /ready → API pods (migraciones aplicadas)
+  • GET /ws/health → Socket.IO pods (Redis adapter OK)
+  • Patroni: GET /master → PG leader endpoint
+  • Sentinel: master check → Redis master
+  Failover automático < 30s
+end note
+
+note right of PG1
+  PATRONI HIGH AVAILABILITY:
+  • Leader election via etcd/Consul (consensus Raft)
+  • Synchronous replication (RPO=0) dentro de región
+  • Auto-failover < 30s (demote leader, promote replica)
+  • pgBackRest: full (semanal) + incremental (diario)
+  • Point-in-time recovery (PITR) WAL archiving
+  • PgBouncer pooling (transacciones / sesión / statement)
+end note
+
+note right of REDIS1
+  REDIS SENTINEL HA:
+  • 3 Sentinels + 1 Master + 2 Replicas por región
+  • Auto-failover master (quorum 2/3 sentinels)
+  • Pub/Sub adapter para Socket.IO multi-pod
+  • Celery broker HA (retry + visibility timeout)
+  • Read replicas para cache queries no críticas
+end note
+
+note right of MINIO1
+  MINIO DISTRIBUido (ERASURE CODING):
+  • 4 nodos por región (paridad 2+2, tolera 2 fallos)
+  • Replicación cross-region async (bucket mirroring)
+  • Versioning habilitado + Object Locking (WORM KYC)
+  • Gateway S3 compatible (boto3 / aws-cli)
+  • Prefijos: /region/<clave>/evidencias|kyc|portfolio|360
+end note
+
+note right of FLAGS
+  CONTROL PLANE GLOBAL:
+  • Feature flags: activación caliente sin deploy (DB poll 5s)
+  • Service discovery: registro automático pods + health
+  • Monitoring: 4 golden signals (latency, traffic, errors, saturation)
+  • Audit logs: inmutables append-only (RNF-AUD)
+  • Backup/DR: RPO < 1h (pgBackRest), RTO < 4h (Velero)
+  • Multi-región: active/standby por región DANE
+end note
+
+@enduml

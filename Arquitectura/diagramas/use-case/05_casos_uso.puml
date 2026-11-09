@@ -1,0 +1,113 @@
+@startuml
+!pragma layout smetana
+title Figura 5 - Casos de Uso Implementados (Roles y Funcionalidades)
+
+actor "Solicitante" as SOL
+actor "PDS" as PDS
+actor "Admin Regional" as ADM
+actor "Merchant" as MER
+actor "Verificador" as VER
+actor "Soporte" as SOP
+actor "Superadmin" as SUP
+
+rectangle "Plataforma ChambeApp" {
+  package "Solicitudes y Mercado" {
+    SOL -- (Publicar solicitud con geocerca + 360°)
+    SOL -- (Recibir recomendación ML 2-etapas)
+    SOL -- (Gestionar ofertas + contraofertas)
+    SOL -- (Aceptar oferta → Contrato digital)
+    PDS -- (Explorar solicitudes cercanas Mapbox 3D)
+    PDS -- (Enviar oferta con negociación)
+    PDS -- (Ver Trust Score + Badges propios)
+  }
+
+  package "Ejecución y Operaciones" {
+    SOL -- (Ejecutar Chamba: 6 hitos + evidencias GPS)
+    PDS -- (Ejecutar Chamba: check-in/out <100m + adendas)
+    SOL -- (Validar habilidades en sitio + solicitud cierre)
+    PDS -- (Pago dual conformidad + calificación 360°)
+    SOL -- (Lanzar Marana desde adenda → micro-trabajo)
+    PDS -- (Ofertar y responder Marana ágil)
+  }
+
+  package "Finanzas y Wallet" {
+    SOL -- (Pagar servicio: digital/efectivo + conformidad)
+    PDS -- (Recibir saldo neto + gestionar wallet)
+    SOL -- (Comprar paquetes Coins modalidad B)
+    PDS -- (Retirar a Nequi/Bancolombia + Escrow)
+    SOL -- (Descargar certificado ingresos Ley 527)
+  }
+
+  package "Negocios y Empleo" {
+    MER -- (Crear Negocio + horarios + imágenes MinIO)
+    MER -- (Gestionar payment methods + preferencias)
+    MER -- (Publicar AnuncioLaboral + moderar postulaciones)
+    PDS -- (Postularse a anuncio + contactar negocio)
+    SOL -- (Explorar directorio negocios Mapbox + filtros)
+  }
+
+  package "Habilidades y Certificación" {
+    PDS -- (Certificarse: quiz opción múltiple ≥70%)
+    PDS -- (Certificarse: subir certificado estudios)
+    PDS -- (Recibir endoso habilidad al cerrar contrato)
+    VER -- (Aprobar/rechazar certificaciones técnicas)
+  }
+
+  package "Gobernanza y Soporte" {
+    VER -- (Revisar KYC 11 docs + multi-instancia)
+    VER -- (Aprobar/rechazar verificación identidad)
+    SOP -- (Atender tickets regionales + disputas)
+    ADM -- (Panel stats scoped: users, solicitudes, contratos, disputas)
+    ADM -- (Suspender usuarios + resolver disputas región)
+    SUP -- (Feature flags calientes + auditoría forense)
+    SUP -- (Gestionar regiones + reindex match + admins globales)
+  }
+
+  package "Comunicación Tiempo Real" {
+    SOL -- (Chat 1:1 con PDS + acciones contractuales ⟦c:⟧)
+    PDS -- (Recibir notificaciones push/in-app cascada)
+    SOL -- (Centro notificaciones persistente RF-10)
+  }
+}
+
+note right of SOL
+  SOLICITANTE (rol público):
+  • Publica solicitudes con geocerca radio_km
+  • Recibe ranking ML explicable (SHAP)
+  • Negocia ofertas (contraofertas precio/fecha/horario)
+  • Firma contrato digital SHA256
+  • Ejecuta chamba: 6 hitos GPS + evidencias
+  • Pago dual conformidad + calificación bilateral
+  • Lanza maranas desde adendas
+end note
+
+note right of PDS
+  PDS (rol trabajador):
+  • Explora mapa 3D + cascada notificaciones tiempo real
+  • Envía ofertas con negociación completa
+  • Trust Score + Badges visibles para solicitante
+  • Check-in/out GPS < 100m + hash evidencias
+  • Pago dual → saldo wallet inmediato
+  • Certificación habilidades (quiz + certificado)
+  • Endosos clientes + TrustScore recálculo nocturno
+end note
+
+note right of ADM
+  ADMIN REGIONAL (scoped):
+  • Stats KPIs filtrados por region_scope_id
+  • Users, solicitudes, contratos, disputas, tickets → SOLO su región
+  • Suspensión usuarios + roles (dentro scope)
+  • Resolución disputas + laudo (dentro scope)
+  • 404 estricto si intenta acceder datos otra región
+end note
+
+note right of SUP
+  SUPERADMIN (global):
+  • Feature flags hot reload (ml_ranking_enabled, etc.)
+  • Audit logs inmutables (hash chain, 10 años)
+  • CRUD regiones + departamentos JSON + reindex
+  • Crear/editar admins globales + asignar region_scope
+  • Bypass region_scope (region_scope_id = NULL)
+end note
+
+@enduml

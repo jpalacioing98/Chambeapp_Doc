@@ -1,0 +1,108 @@
+@startuml
+title Figura 14 - Moderación, Soporte y Gobernanza Superadmin (Flujo Completo)
+
+actor "Solicitante" as SOL
+actor "PDS (Trabajador)" as PDS
+actor "Admin Regional\n(Región 1 - Caribe)" as ADM
+actor "Superadmin\n(Universal - Sin scope)" as SUP
+
+box "Frontend React (Vite + Admin Panel)" #E3F2FD
+  participant "Centro Disputas\nDisputasPage.tsx" as FE_DISP
+  participant "Consola Moderación\nAdminPanel / SuperadminPanel" as FE_ADM
+end box
+
+box "API Gateway (Flask-Smorest + Blueprints)" #FFF3E0
+  participant "/api/v1/contracts/:id/disputes\n(contracts blueprint)" as API_DISP
+  participant "/api/v1/tickets/\n(tickets blueprint)" as API_TICK
+  participant "/api/v1/admin/stats\n(admin blueprint)" as API_STATS
+  participant "/api/v1/admin/disputes/:id/resolve\n(admin blueprint)" as API_RES
+  participant "/api/v1/superadmin/flags\n(superadmin blueprint)" as API_FLAGS
+  participant "/api/v1/superadmin/audit-logs\n(superadmin blueprint)" as API_AUDIT
+end box
+
+box "Control Regional y Seguridad" #F3E5F5
+  participant "region_scope_id Enforcer\n(Middleware JWT + RBAC)" as SCOPE
+end box
+
+box "PostgreSQL 16 + PostGIS" #E8F5E9
+  database "disputes\n(estado, resolucion, resuelto_por)" as DB_DISP
+  database "tickets\n(tipo, prioridad, estado, asignado_a)" as DB_TICK
+  database "feature_flags\n(nombre, habilitado, descripcion)" as DB_FLAGS
+  database "audit_logs\n(actor, accion, entidad, snapshot_diff, timestamp)\nINMUTABLE APPEND-ONLY (RNF-AUD)" as DB_AUDIT
+end box
+
+== DISPUTA: RADICACIÓN Y ESCALAMIENTO ==
+SOL -> FE_DISP: Radica disputa (Contrato #1, tipo=PAGO)
+FE_DISP -> API_DISP: POST /contracts/1/disputes {tipo, reason}
+API_DISP -> DB_DISP: INSERT dispute (estado=abierta, iniciado_por=SOL)
+API_DISP --> FE_DISP: 201 {dispute_id, estado=abierta}
+FE_DISP --> SOL: Disputa radicada #DISP-001
+
+== TICKET: ASISTENCIA FORMALIZACIÓN ==
+PDS -> API_TICK: POST /tickets/ {tipo=SOPORTE, prioridad=high, body}
+API_TICK -> DB_TICK: INSERT ticket (estado=open, asignado_a=NULL)
+API_TICK --> PDS: 201 {ticket_id, estado=open}
+
+== ADMIN REGIONAL: GESTIÓN SCOPED ==
+ADM -> FE_ADM: Abre panel Admin (JWT: rol=admin, region_scope=1)
+FE_ADM -> API_STATS: GET /admin/stats (Authorization: Bearer <JWT>)
+API_STATS -> SCOPE: Extrae region_scope_id=1 de JWT claims
+SCOPE -> DB_DISP: SELECT * FROM disputes WHERE contract.solicitante.region_id=1
+SCOPE -> DB_TICK: SELECT * FROM tickets WHERE user.region_id=1
+API_STATS --> FE_ADM: 200 {kpis_region_1, disputes[], tickets[]}
+FE_ADM --> ADM: Dashboard KPIs Región 1 (solo su scope)
+
+== AISLAMIENTO REGIONAL ESTRICTO ==
+ADM -> FE_ADM: Intenta ver disputa #DISP-002 (Región 2 - Andina)
+FE_ADM -> API_DISP: GET /admin/disputes/2 (JWT region_scope=1)
+API_DISP -> SCOPE: Valida contract.solicitante.region_id=2 vs scope=1
+SCOPE --> API_DISP: MISMATCH → HTTP 404 Not Found (aislamiento)
+API_DISP --> FE_ADM: 404 (no existe en tu región)
+FE_ADM --> ADM: "Disputa no encontrada" (no filtra, 404 directo)
+
+== SUPERADMIN: ARBITRAJE Y FLAGS CALIENTES ==
+SUP -> FE_ADM: Abre SuperadminPanel (JWT: rol=superadmin, region_scope=NULL)
+FE_ADM -> API_RES: POST /admin/disputes/2/resolve {resolucion, laudo}
+API_RES -> DB_DISP: UPDATE dispute SET estado=resuelta, resolucion=..., resuelto_por=SUP, resuelto_en=NOW()
+API_RES -> DB_AUDIT: INSERT audit_log {actor=SUP, action=DISPUTE_RESOLVE, entity=dispute, entity_id=2, after_json={...}, timestamp}
+API_RES --> FE_ADM: 200 {dispute_id=2, estado=resuelta}
+
+FE_ADM -> API_FLAGS: PATCH /flags/ml_ranking_enabled {habilitado: false}
+API_FLAGS -> DB_FLAGS: UPDATE feature_flags SET habilitado=false, actualizado_por=SUP, actualizado_en=NOW()
+API_FLAGS -> DB_AUDIT: INSERT audit_log {actor=SUP, action=FLAG_UPDATE, entity=feature_flag, entity_id=ml_ranking_enabled, before_json={habilitado:true}, after_json={habilitado:false}, timestamp}
+API_FLAGS --> FE_ADM: 200 {flag: ml_ranking_enabled, habilitado: false}
+
+FE_ADM -> API_AUDIT: GET /superadmin/audit-logs?actor=SUP&desde=2024-01-01
+API_AUDIT -> DB_AUDIT: SELECT * FROM audit_logs WHERE actor_id=SUP ORDER BY timestamp DESC
+API_AUDIT --> FE_ADM: 200 [audit_log_1, audit_log_2, ...]
+FE_ADM --> SUP: Pista forense completa (inmutable, hash chain)
+
+note right of SCOPE
+  REGION_SCOPE ENFORCER (middleware):
+  • Ejecuta ANTES de cada endpoint /admin/*
+  • Lee JWT claims: {rol, region_scope_id, role_version}
+  • Superadmin: region_scope_id = NULL → bypass (acceso global)
+  • Admin/Verificador/Soporte: region_scope_id = región asignada
+  • Inyecta WHERE region_id = scope en TODAS las queries
+  • 404 (no 403) para evitar enumeración cross-region
+end note
+
+note right of DB_AUDIT
+  AUDIT LOGS INMUTABLES (RNF-AUD):
+  • Append-only: NUNCA UPDATE/DELETE
+  • snapshot_diff_json: {before: {...}, after: {...}}
+  • Hash chain: cada log incluye hash(prev_log) → detección manipulación
+  • Retención: 10 años (compliance Ley 1581/2012 Habeas Data)
+  • Solo Superadmin READ (no incluso Admin regional)
+end note
+
+note right of API_FLAGS
+  FEATURE FLAGS HOT RELOAD:
+  • Tabla feature_flags: nombre UK, habilitado, descripcion, modelo_version
+  • Backend: cache en memoria + invalidación pub/sub Redis (5s TTL)
+  • Frontend: polling /api/v1/config/flags cada 30s
+  • Cambio Superadmin → broadcast Redis → todos pods invalidan cache
+  • Auditoría automática en audit_logs (diff before/after)
+end note
+
+@enduml

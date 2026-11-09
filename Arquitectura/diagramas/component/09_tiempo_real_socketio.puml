@@ -1,0 +1,118 @@
+@startuml
+title Figura 9 - Tiempo Real Socket.IO (3 Handlers + Redis Adapter)
+
+actor "Usuario" as U
+participant "Cliente PWA\nuseNotificationSocket /\nuseChatSocket / usePresenceSocket" as C
+participant "notification_socket\n(handlers/notification_socket.py)" as NS
+participant "chat_socket\n(handlers/chat_socket.py)" as CS
+participant "presence_socket\n(handlers/presence_socket.py)" as PS
+participant "oferta_socket\n(handlers/oferta_socket.py)" as OS
+database "Redis 7 Sentinel\nPub/Sub + Adapter" as RD
+participant "CascadeManager\n+ Chat Service\n+ Oferta Service" as SV
+
+U -> C: Login (JWT access_token)
+C -> NS: socket.emit('join', {token: JWT})
+C -> CS: socket.emit('join_conversation', {conversation_id})
+C -> PS: socket.emit('presence:join', {user_id})
+C -> OS: auto-join (conecta automático)
+
+NS -> NS: Valida JWT + extrae user_id + region_scope
+NS -> NS: socket.join(`user:${user_id}`)
+NS --> C: ack {joined: true, room: `user:${user_id}`}
+
+CS -> CS: Valida JWT + conversation_id
+CS -> CS: Verifica participante (user_a o user_b)
+CS -> CS: socket.join(`conversation:${conversation_id}`)
+CS --> C: ack {joined: true, room: `conversation:${conversation_id}`}
+
+PS -> PS: socket.join(`presence:${user_id}`)
+PS -> PS: Inicia heartbeat 30s (ping/pong)
+PS -> RD: SETEX `presence:${user_id}` 60s {online: true, socket_id, last_seen}
+
+== EVENTOS NOTIFICACIONES ==
+SV -> NS: cascade_service.notify_new_solicitud(pds_id, data)
+NS -> RD: PUBLISH `notifications:user:${pds_id}` {event: 'notificacion:nueva', payload}
+RD -> NS: (todos pods) ENTREGA a sockets en room `user:${pds_id}`
+NS --> C: emit('notificacion:nueva', {id, titulo, mensaje, datos, fase})
+C -> C: setNotifications + badge + toast
+
+== EVENTOS CHAT (PROTOCOLO ⟦c:action⟧) ==
+U -> C: Escribe mensaje / Acción contractual
+C -> CS: emit('message', {conversation_id, contenido, tipo})
+CS -> RD: PUBLISH `chat:conversation:${conversation_id}` {event: 'message', payload}
+RD -> CS: ENTREGA a sockets en room `conversation:${conversation_id}`
+CS --> C: emit('message', {id, sender_id, contenido, tipo, leido, creado_en})
+C -> C: Render burbuja (texto / ⟦c:oferta_aceptada⟧ / ⟦c:pago_confirmado⟧)
+
+== EVENTOS OFERTAS ==
+SV -> OS: oferta_service.notify_new_oferta(solicitante_id, oferta)
+OS -> RD: PUBLISH `notifications:user:${solicitante_id}` {event: 'oferta:nueva', payload}
+RD -> OS: ENTREGA a room `user:${solicitante_id}`
+OS --> C: emit('oferta:nueva', {oferta_id, monto, mensaje, estado})
+C -> C: Toast + navega a detalle solicitud
+
+== PRESENCE Y TYPING ==
+C -> PS: emit('typing:start', {conversation_id})
+PS -> RD: PUBLISH `chat:conversation:${conversation_id}` {event: 'typing', user_id, start:true}
+RD -> PS: ENTREGA a otro participante
+PS --> C: emit('typing', {user_id, start:true}) → muestra "escribiendo..."
+
+U -> C: Cierra app / Navega fuera
+PS -> PS: clearInterval(heartbeat)
+PS -> RD: DEL `presence:${user_id}`
+PS -> RD: PUBLISH `presence:updates` {user_id, online: false, last_seen}
+RD -> PS: ENTREGA a contactos (rooms presence)
+PS --> C: emit('presence:update', {user_id, online: false})
+
+note right of NS
+  NOTIFICATION_SOCKET:
+  • Salas: user:<user_id> (1 sala por usuario)
+  • Eventos out: 'notificacion:nueva', 'notificacion:leida', 'notificacion:eliminar'
+  • Eventos in: 'join' (auth), 'mark_read' (leída), 'delete'
+  • Centro alertas RF-10: persiste en notifications table (leida=false)
+  • Agrupación UI: por solicitud_id, muestra fase más reciente
+end note
+
+note right of CS
+  CHAT_SOCKET (protocolo ⟦c:action⟧):
+  • Salas: conversation:<conversation_id> (2 usuarios normalizados user_a < user_b)
+  • Tipos mensaje: TEXTO | ACCION_CONTRACTUAL | SISTEMA
+  • Acciones contractuales:
+    - ⟦c:oferta_enviada⟧ {oferta_id}
+    - ⟦c:oferta_aceptada⟧ {contrato_id}
+    - ⟦c:contraoferta⟧ {monto, mensaje}
+    - ⟦c:checkin_entrada⟧ {lat, lng}
+    - ⟦c:checkin_salida⟧ {lat, lng}
+    - ⟦c:pago_confirmado⟧ {payment_id}
+    - ⟦c:calificacion⭐⟧ {estrellas}
+  • Firma digital SHA256 en payload acciones
+  • Leído: double-tick (entregado) + blue-tick (leído)
+end note
+
+note right of PS
+  PRESENCE_SOCKET:
+  • Salas: presence:<user_id> + broadcast presence:updates
+  • Heartbeat: 30s ping/pong (Eventlet)
+  • TTL Redis: 60s (SETEX) → auto-expira si disconnect
+  • Online/Offline: real-time para chat + cascada (solo notifica PDS online)
+  • Typing indicators: broadcast conversation room (debounce 500ms)
+end note
+
+note right of OS
+  OFERTA_SOCKET:
+  • Reusa salas user:<user_id> (no salas dedicadas)
+  • Eventos: 'oferta:nueva', 'oferta:actualizada', 'oferta:expirada'
+  • Push inmediato al solicitante cuando PDS envía oferta
+  • Integración con CascadeManager: fase 0 (inmediata) + fases 1-3 (geo)
+end note
+
+note right of RD
+  REDIS ADAPTER (Socket.IO):
+  • 3 pods API × 2 regiones = 6 instancias Socket.IO
+  • Pub/Sub channels: notifications:user:*, chat:conversation:*, presence:updates
+  • Message format: {event, payload, timestamp, origin_pod}
+  • Deduplicación: origin_pod evita eco (no re-emitir lo que envió)
+  • Escalabilidad horizontal: añadir pods sin cambios código
+end note
+
+@enduml

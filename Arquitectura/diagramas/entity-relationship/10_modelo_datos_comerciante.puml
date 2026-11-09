@@ -1,0 +1,70 @@
+@startuml
+title Figura 10 - Modelo de Datos: Módulo Comerciante (Negocios + Merchant)
+
+actor "DBA / Arquitecto" as DBA
+participant "CONTEXTO USUARIO (1)" as CTX
+participant "NEGOCIO CORE (1)" as NEG
+participant "HORARIOS Y REPUTACIÓN (3)" as HOR
+participant "NUEVAS ENTIDADES MERCHANT (2)" as NEW
+
+DBA -> CTX: Usuario base con rol MERCHANT
+DBA -> NEG: Establecimiento geolocalizado
+DBA -> HOR: Horarios semanales + ratings + reportes
+DBA -> NEW: Preferencias + Métodos de pago
+
+note right of CTX
+  CONTEXTO USUARIO (1):
+  1. users (rol=MERCHANT)     → PK id, email, password_hash, status, role_version, region_id, verificado, kyc_verificado
+end note
+
+note right of NEG
+  NEGOCIO CORE (1):
+  2. negocios                 → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[comercio/servicio/virtual/hibrido], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_cobertura_km, geom Point 4326, categoria_principal, categorias_secundarias/servicios/palabras JSON, whatsapp/instagram/facebook/tiktok/sitio_web, rating_promedio, total_calificaciones, verificado, estado[borrador/pendiente_verificacion/activo/suspendido/rechazado], motivo_rechazo, created_at/updated_at
+end note
+
+note right of HOR
+  HORARIOS Y REPUTACIÓN (3):
+  3. negocio_horarios         → PK id, negocio_id FK, dia_semana[0-6], abierto, hora_apertura, hora_cierre (UNIQUE negocio_id, dia_semana, ordenados)
+  4. negocio_ratings          → PK id, negocio_id FK, autor_id FK, puntaje[1-5], comentario, reportado, creado_en (UNIQUE negocio_id, autor_id, CHECK puntaje 1-5)
+  5. negocio_reportes         → PK id, negocio_id FK, reporter_id FK, tipo[fraude/spam/contenido_inapropiado/servicio_no_prestado/otro], descripcion, estado[abierto/investigando/resuelto/desestimado], ticket_id FK, creado_en
+end note
+
+note right of NEW
+  NUEVAS ENTIDADES MERCHANT (2):
+  6. merchant_preferences     → PK id, user_id FK UK, notif_nueva_solicitud, notif_nueva_resena, notif_estado_kyc, notif_pago_recibido, push_enabled, email_digest[daily/weekly/never], idioma, tema[system/light/dark], creado_en/actualizado_en
+  7. merchant_payment_methods → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON (numero, titular, etc.), principal, activo, creado_en
+end note
+
+note right of CTX
+  RELACIONES:
+  User (1) ── (1) Negocio : owner_id
+  Negocio (1) ── (7) NegocioHorario : dia_semana 0-6
+  Negocio (1) ── (*) NegocioRating : calificaciones clientes
+  Negocio (1) ── (*) NegocioReporte : quejas/reportes
+  User (1) ── (1) MerchantPreference : preferencias notif/UI
+  User (1) ── (*) MerchantPaymentMethod : métodos pago negocio
+end note
+
+note right of NEG
+  ÍNDICES CLAVE:
+  • ix_negocios_owner_id (FK)
+  • ix_negocios_slug (UK)
+  • ix_negocios_geom (GIST PostGIS para búsquedas proximidad)
+  • ix_negocios_estado_categoria (compuesto para filtros)
+  • ix_negocio_horarios_negocio_dia (UK)
+  • ix_negocio_ratings_negocio_autor (UK)
+end note
+
+note over CTX, NEW
+  FLUJO MERCHANT ONBOARDING:
+  1. User.register(rol=MERCHANT) → users
+  2. POST /merchant/negocios → crear Negocio (estado=borrador)
+  3. Subir logo/banner/imagenes → MinIO → URLs en Negocio
+  4. Configurar horarios → NegocioHorario (7 días)
+  5. KYC negocio → NegocioKYCDocumento (docs requeridos)
+  6. Verificador aprueba → Negocio.estado=ACTIVO, verificado=true
+  7. Configurar MerchantPreference + MerchantPaymentMethod
+  8. Publicar AnuncioLaboral / recibir Solicitudes cercanas
+end note
+
+@enduml
