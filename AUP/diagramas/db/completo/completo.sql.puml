@@ -1,0 +1,711 @@
+@startuml
+title Diagrama Completo - ChambeApp (Esquema SQL, sin tablas huérfanas)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+' ==================== IDENTIDAD ====================
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  password_hash: varchar(255) [NN]
+  rol: enum [NN]
+  status: varchar(20) DEFAULT 'active'
+  role_version: int DEFAULT 1
+  nombre: varchar(120)
+  username: varchar(60) [UK]
+  telefono: varchar(30)
+  edad_verificada: bool DEFAULT false
+  acepto_tyc: bool DEFAULT false
+  consentimiento_datos: bool DEFAULT false
+  email_verificado: bool DEFAULT false
+  fecha_registro: datetime DEFAULT NOW()
+  last_login: datetime
+  activo: bool DEFAULT true
+  two_factor_enabled: bool DEFAULT false
+  region_id: int [FK -> regions.id]
+}
+
+entity "profiles" as P {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  habilidades: json DEFAULT '[]'
+  experiencia: text
+  zona: varchar(120)
+  calificacion_promedio: float DEFAULT 0.0
+  verificado: bool DEFAULT false
+  badges: json DEFAULT '[]'
+  portafolio: json DEFAULT '[]'
+  categorias: json DEFAULT '[]'
+  perfil_completo: bool DEFAULT false
+  foto_perfil: varchar(500)
+  latitud: float
+  longitud: float
+  geom: Geometry(POINT,4326)
+  plan: varchar(20) DEFAULT 'free'
+  destacado: bool DEFAULT false
+  onboarding_completed: bool DEFAULT false
+  onboarding_step: int DEFAULT 0
+}
+
+entity "roles" as R {
+  * id: int [PK]
+  --
+  nombre: enum [NN]
+  permisos_json: json
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+  descripcion: text
+  departamentos: json DEFAULT '[]'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "user_sessions" as S {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  refresh_token_hash: varchar
+  device_info: varchar
+  ip: varchar
+  expira_en: datetime
+  revocado: bool DEFAULT false
+}
+
+entity "legal_acceptances" as LA {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  version_tyc: varchar(20) [NN]
+  fecha: datetime DEFAULT NOW()
+  ip: varchar(45)
+}
+
+entity "verifications" as V {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [KYC/EMAIL/PHONE/IDENTITY] [NN]
+  status: varchar(20) [NN] DEFAULT 'pending'
+  document_type: varchar(50)
+  document_number: varchar(100)
+  codigo_hash: varchar
+  expira_en: datetime
+  reviewed_by: int [FK -> users.id]
+  reviewed_at: datetime
+  reason: text
+  created_at: datetime DEFAULT NOW()
+  updated_at: datetime
+}
+
+' ==================== KYC ====================
+entity "kyc_required_documents" as KYC_R {
+  * clave: varchar [PK]
+  --
+  grupo: varchar
+  obligatorio: bool DEFAULT false
+  multi_instancia: bool DEFAULT false
+  orden: int
+  rol_aplicable: varchar
+}
+
+entity "user_kyc_documents" as KYC_U {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  documento_clave: varchar [FK -> kyc_required_documents.clave]
+  instancia: int DEFAULT 1
+  estado: varchar DEFAULT 'pendiente'
+  minio_url: varchar
+  hash_sha256: varchar
+  revisado_por: int [FK -> users.id]
+  revisado_en: datetime
+  observacion: text
+  created_at: datetime DEFAULT NOW()
+}
+
+' ==================== SERVICIOS ====================
+entity "solicitudes" as SOL {
+  * id: int [PK]
+  --
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  categoria: varchar(120) [NN]
+  titulo: varchar(200) [NN]
+  descripcion: text [NN]
+  ubicacion: varchar(120) DEFAULT 'Valledupar'
+  latitud: float
+  longitud: float
+  direccion: varchar(255)
+  presupuesto: int
+  fecha_deseada: date
+  urgencia: enum DEFAULT 'semana'
+  estado: enum DEFAULT 'publicado'
+  especificaciones_tecnicas: json
+  imagen_360: text
+  horario: varchar(80)
+  imagenes: json
+  radio_km: float DEFAULT 5.0
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "ofertas" as OF {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  monto: float
+  mensaje: text
+  fecha_deseada: date
+  horario: varchar(80)
+  estado: enum DEFAULT 'pendiente'
+  contra_monto: float
+  contra_mensaje: text
+  contra_fecha_deseada: date
+  contra_horario: varchar(80)
+  created_at: datetime DEFAULT NOW()
+  updated_at: datetime DEFAULT NOW()
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  proveedor_id: int [FK -> users.id ON DELETE CASCADE]
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  estado: enum DEFAULT 'pendiente'
+  motivo_cancelacion: varchar(500)
+  monto_total: int
+  inicio_en: datetime
+  fin_en: datetime
+  confirmado_en: datetime
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "contract_execution" as CE {
+  * contract_id: int [PK, FK -> contracts.id ON DELETE CASCADE]
+  --
+  estado: enum [NN] DEFAULT 'programada'
+  estado_previo: enum
+  fecha_activacion: datetime
+  fecha_inicio_obra: datetime
+  fecha_solicitud_cierre: datetime
+  fecha_validacion: datetime
+  fecha_liquidacion: datetime
+  fecha_finalizacion: datetime
+  evidencia_entrada: json DEFAULT '[]'
+  evidencia_salida: json DEFAULT '[]'
+  novedades: json DEFAULT '[]'
+  pago_confirmado_solicitante: bool DEFAULT false
+  pago_confirmado_prestador: bool DEFAULT false
+  pago_directo_confirmado: bool DEFAULT false
+  pago_monto_final: int
+  rating_estrellas: int
+  rating_comentario: text
+  habilidades_validadas: json DEFAULT '[]'
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "adendas" as AD {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ALCANCE/PRECIO/NOVEDAD/DERIVACION]
+  descripcion: text
+  monto_ajuste: numeric
+  estado: varchar
+  creado_por: int [FK -> users.id ON DELETE CASCADE]
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "evidencias" as EV {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ENTRADA/SALIDA/ADENDA/NOVEDAD]
+  minio_urls: json
+  hash_sha256: json
+  metadatos_exif_json: json
+  subido_por: int [FK -> users.id ON DELETE CASCADE]
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "hitos" as HI {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  numero: int [1-6]
+  nombre: varchar [NN]
+  estado: varchar
+  aprobado_por: int [FK -> users.id]
+  aprobado_en: datetime
+  observacion: text
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "ratings_solicitud" as RS {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  autor_id: int [FK -> users.id ON DELETE CASCADE]
+  calificado_id: int [FK -> users.id ON DELETE CASCADE]
+  puntaje: int [1-5] [NN]
+  comentario: text
+  reportado: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "contract_checkins" as CC {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ENTRADA/SALIDA]
+  latitud: float
+  longitud: float
+  distancia_m: float
+  evidencias_urls: json
+  creado_en: datetime DEFAULT NOW()
+}
+
+' ==================== MARANAS ====================
+entity "maranas" as MA {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  descripcion: text
+  presupuesto: numeric
+  estado: varchar DEFAULT 'activa'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "ofertas_marana" as OM {
+  * id: int [PK]
+  --
+  marana_id: int [FK -> maranas.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  precio: numeric
+  mensaje: text
+  estado: varchar DEFAULT 'pendiente'
+  created_at: datetime DEFAULT NOW()
+}
+
+' ==================== FINANZAS ====================
+entity "wallets" as W {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  saldo: int DEFAULT 0
+  saldo_bloqueado: int DEFAULT 0
+  updated_at: datetime DEFAULT NOW()
+}
+
+entity "transactions" as T {
+  * id: int [PK]
+  --
+  wallet_id: int [FK -> wallets.user_id ON DELETE CASCADE]
+  tipo: enum [comision/monedas/retiro/reembolso/deposito] [NN]
+  monto: int [NN]
+  descripcion: text
+  referencia: varchar(100)
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "payments" as PAY {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE, UK]
+  monto: int [NN]
+  comision_pds: int DEFAULT 0
+  comision_solicitante: int DEFAULT 0
+  estado: enum DEFAULT 'pendiente'
+  pasarela: varchar(50) DEFAULT 'mock'
+  referencia_pasarela: varchar(255)
+  motivo_reembolso: varchar(500)
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "coins" as CO {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [COMPRADA/PROMOCIONAL/GANADA] [NN]
+  cantidad: int DEFAULT 0
+  vence_en: datetime
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "coin_packages" as CP {
+  * id: int [PK]
+  --
+  nombre: varchar [NN]
+  monedas: int [NN]
+  precio_cop: int [NN]
+  modalidad: enum [A/B]
+  activo: bool DEFAULT true
+}
+
+entity "precios_sugeridos" as PS {
+  * id: int [PK]
+  --
+  categoria: varchar [NN]
+  precio_min: int
+  precio_max: int
+  precio_promedio: int
+  muestra_n: int
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+' ==================== NEGOCIOS ====================
+entity "negocios" as NEG {
+  * id: int [PK]
+  --
+  owner_id: int [FK -> users.id ON DELETE CASCADE]
+  nombre: varchar(150) [NN]
+  slug: varchar(170) [UK]
+  descripcion: text
+  tipo: enum DEFAULT 'comercio'
+  logo_url: varchar(500)
+  banner_url: varchar(500)
+  imagenes: json DEFAULT '[]'
+  latitud: float [NN]
+  longitud: float [NN]
+  direccion: varchar(255) [NN]
+  ciudad: varchar(100) DEFAULT 'Valledupar'
+  departamento: varchar(100)
+  radio_cobertura_km: float DEFAULT 5.0
+  geom: Geometry(POINT,4326)
+  categoria_principal: varchar(120) [NN]
+  categorias_secundarias: json DEFAULT '[]'
+  servicios: json DEFAULT '[]'
+  palabras_clave: json DEFAULT '[]'
+  whatsapp: varchar(30)
+  whatsapp_mensaje_pre: text
+  instagram: varchar(255)
+  facebook: varchar(255)
+  tiktok: varchar(255)
+  sitio_web: varchar(255)
+  calificacion_promedio: float DEFAULT 0.0
+  total_calificaciones: int DEFAULT 0
+  verificado: bool DEFAULT false
+  estado: enum DEFAULT 'borrador'
+  motivo_rechazo: text
+  comision_pct: float
+  cuenta_bancaria_encriptada: varchar
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "negocio_horarios" as NH {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  dia_semana: int [0-6] [NN]
+  abierto: bool DEFAULT true
+  hora_apertura: time
+  hora_cierre: time
+}
+
+entity "negocio_ratings" as NR {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  autor_id: int [FK -> users.id ON DELETE CASCADE]
+  puntaje: int [1-5] [NN]
+  comentario: text
+  reportado: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "negocio_reportes" as NREP {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  reporter_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [fraude/spam/contenido_inapropiado/servicio_no_prestado/otro] [NN]
+  descripcion: text
+  estado: enum DEFAULT 'abierto'
+  ticket_id: int [FK -> tickets.id]
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "anuncios_laborales" as AN {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  titulo: varchar [NN]
+  descripcion: text
+  requisitos: text
+  salario_ofrecido: int
+  tipo_contrato: varchar
+  ubicacion: varchar
+  estado: varchar DEFAULT 'activo'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "postulaciones_anuncio" as PA {
+  * id: int [PK]
+  --
+  anuncio_id: int [FK -> anuncios_laborales.id ON DELETE CASCADE]
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  cv_url: varchar
+  mensaje: text
+  estado: varchar DEFAULT 'pendiente'
+  created_at: datetime DEFAULT NOW()
+}
+
+' ==================== COMUNICACION ====================
+entity "conversations" as CV {
+  * id: int [PK]
+  --
+  user_a_id: int [FK -> users.id ON DELETE CASCADE]
+  user_b_id: int [FK -> users.id ON DELETE CASCADE]
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "messages" as MSG {
+  * id: int [PK]
+  --
+  conversation_id: int [FK -> conversations.id ON DELETE CASCADE]
+  sender_id: int [FK -> users.id ON DELETE CASCADE]
+  contenido: text [NN]
+  leido: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "notifications" as NOTIF {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: varchar(40) [NN]
+  titulo: varchar(200)
+  mensaje: text [NN]
+  datos: json
+  leida: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "notification_preferences" as NP {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  push_habilitado: bool DEFAULT true
+  in_app_habilitado: bool DEFAULT true
+  email_habilitado: bool DEFAULT true
+  categorias_json: json
+}
+
+entity "presence" as PR {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  online: bool DEFAULT false
+  last_seen: datetime
+  socket_id: varchar
+  heartbeat_at: datetime
+}
+
+' ==================== GOBERNANZA ====================
+entity "audit_logs" as AL {
+  * id: int [PK]
+  --
+  actor_id: int [FK -> users.id ON DELETE CASCADE]
+  accion: varchar [NN]
+  entidad_tipo: varchar [NN]
+  entidad_id: int [NN]
+  snapshot_diff_json: json
+  ip_address: varchar
+  user_agent: varchar
+  timestamp_utc: datetime DEFAULT NOW()
+}
+
+entity "disputes" as D {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  iniciado_por: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [pago/calificacion/alcance/incumplimiento] [NN]
+  estado: enum DEFAULT 'abierta'
+  resolucion: text
+  resuelto_por: int [FK -> users.id]
+  resuelto_en: datetime
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "tickets" as TK {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [soporte/reclamo/sugerencia] [NN]
+  prioridad: enum
+  estado: enum DEFAULT 'abierto'
+  asignado_a: int [FK -> users.id]
+  respuesta: text
+  creado_en: datetime DEFAULT NOW()
+  cerrado_en: datetime
+}
+
+entity "moderacion_contenido" as MC {
+  * id: int [PK]
+  --
+  entidad_tipo: varchar [NN]
+  entidad_id: int [NN]
+  reportado_por: int [FK -> users.id ON DELETE CASCADE]
+  motivo: text [NN]
+  estado: enum DEFAULT 'pendiente'
+  accion_tomada: varchar
+  moderador_id: int [FK -> users.id]
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "region_scoping" as RS2 {
+  * admin_id: int [FK -> users.id ON DELETE CASCADE]
+  * region_id: int [FK -> regions.id ON DELETE CASCADE]
+  --
+  permiso: enum [LECTURA/ESCRITURA/ADMIN] [NN]
+}
+
+' ==================== IA ====================
+entity "pds_embeddings" as PE {
+  * pds_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  embedding: vector(384) [NN]
+  modelo_version: varchar [NN]
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "solicitud_embeddings" as SE {
+  * solicitud_id: int [PK, FK -> solicitudes.id ON DELETE CASCADE]
+  --
+  embedding: vector(384) [NN]
+  modelo_version: varchar [NN]
+}
+
+entity "recommendation_logs" as RL {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  score_retrieval: float [NN]
+  score_ranking: float [NN]
+  shap_explanation_json: json
+  clicked: bool DEFAULT false
+  contratado: bool DEFAULT false
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "feature_flags" as FF {
+  * nombre: varchar [PK]
+  --
+  habilitado: bool DEFAULT false
+  descripcion: text
+  modelo_version: varchar
+  actualizado_por: int [FK -> users.id]
+}
+
+' ============================================================
+' RELACIONES
+' ============================================================
+
+U ||--o| P : "tiene un perfil"
+P ||--|| U : "pertenece a"
+R ||--|{ U : "asigna rol a"
+REG ||--|{ U : "agrupa usuarios en"
+U ||--|{ S : "mantiene sesiones"
+U ||--|{ LA : "acepta terminos"
+U ||--|{ V : "tiene verificaciones"
+U }|--o{ V : "revisa verificaciones (verificador)"
+
+U ||--|{ KYC_U : "sube documentos KYC"
+KYC_R ||--|{ KYC_U : "define tipos de documento"
+
+U ||--|{ SOL : "publica solicitudes (solicitante)"
+SOL ||--|{ OF : "recibe ofertas"
+U ||--|{ OF : "PDS hace ofertas"
+SOL ||--|{ CON : "da origen a contratos"
+U ||--|{ CON : "proveedor firma"
+U ||--|{ CON : "solicitante contrata"
+CON ||--|| CE : "expediente de ejecucion (1:1)"
+CON ||--|{ AD : "tiene adendas"
+CON ||--|{ EV : "soporta evidencias"
+CON ||--|{ HI : "tiene hitos de cierre"
+CON ||--|{ CC : "registra checkins geograficos"
+SOL ||--|{ RS : "calificada"
+U ||--|{ RS : "autor califica"
+U ||--|{ RS : "calificado"
+
+CON ||--|{ MA : "deriva a marañas"
+U ||--|{ MA : "PDS gestiona marana"
+MA ||--|{ OM : "recibe ofertas de marana"
+U ||--|{ OM : "PDS ofertar en marana"
+
+U ||--|| W : "tiene billetera (1:1)"
+W ||--|{ T : "registra movimientos"
+U ||--|{ CO : "posee monedas"
+CON ||--|| PAY : "tiene un pago (1:1)"
+
+U ||--|{ NEG : "es dueno de negocios"
+NEG ||--|{ NH : "tiene horarios"
+NEG ||--|{ NR : "calificado por usuarios"
+U ||--|{ NR : "califica negocios"
+NEG ||--|{ NREP : "es reportado"
+U ||--|{ NREP : "reporta negocios"
+TK ||--o{ NREP : "vinculado a ticket (opcional)"
+NEG ||--|{ AN : "publica anuncios laborales"
+AN ||--|{ PA : "recibe postulaciones"
+U ||--|{ PA : "postula a anuncios"
+
+U ||--|{ CV : "participante A"
+U ||--|{ CV : "participante B"
+CV ||--|{ MSG : "contiene mensajes"
+U ||--|{ MSG : "envia mensajes"
+U ||--|{ NOTIF : "recibe notificaciones"
+U ||--|| NP : "configura notificaciones (1:1)"
+U ||--|| PR : "presencia en tiempo real (1:1)"
+
+U ||--|{ AL : "actor de auditoria"
+CON ||--|{ D : "genera disputas"
+U ||--|{ D : "inicia disputa"
+U }|--o{ D : "resuelve disputa (opcional)"
+U ||--|{ TK : "abre tickets"
+U }|--o{ TK : "asignado a tickets (opcional)"
+U ||--|{ MC : "reportado por"
+U ||--|{ MC : "moderado por"
+U ||--|{ RS2 : "admin con alcance regional"
+REG ||--|{ RS2 : "alcance regional de"
+
+U ||--|| PE : "embedding PDS (1:1)"
+SOL ||--|| SE : "embedding solicitud (1:1)"
+SOL ||--|{ RL : "recomendada en logs"
+U ||--|{ RL : "PDS recomendado en logs"
+U }|--o{ FF : "actualiza feature flags (opcional)"
+
+note bottom of U
+  Tablas ELIMINADAS del completo (sin relacion FK con el dominio):
+  - system_config, migrations_log, seed_data, api_rate_limits
+
+  Indices clave:
+  users(email, username, region_id, status)
+  solicitudes(estado, creado_en), (solicitante_id, creado_en)
+  ofertas(solicitud_id, created_at), (pds_id, created_at)
+  contracts(proveedor_id, creado_en), (solicitante_id, creado_en), (estado, creado_en)
+  wallets(user_id PK)
+  payments(contract_id UK)
+  negocios(estado, calificacion_promedio), (estado, categoria_principal)
+  conversations(user_a_id, creado_en), (user_b_id, creado_en)
+  messages(conversation_id, creado_en)
+  notifications(user_id, creado_en), (user_id, leida, creado_en)
+
+  Herencia: No existe herencia de tablas.
+end note
+
+@enduml

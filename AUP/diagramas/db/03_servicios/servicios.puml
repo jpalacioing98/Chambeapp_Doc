@@ -1,0 +1,191 @@
+@startuml
+title Modulo 3 - Servicios (Solicitudes, Ofertas, Contratos, Ejecucion)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+  region_id: int [FK -> regions.id]
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+}
+
+entity "solicitudes" as SOL {
+  * id: int [PK]
+  --
+  solicitante_id: int [FK -> users.id]
+  categoria: varchar(120)
+  titulo: varchar(200)
+  descripcion: text
+  ubicacion: varchar(120)
+  latitud: float
+  longitud: float
+  direccion: varchar(255)
+  presupuesto: int
+  fecha_deseada: date
+  urgencia: enum
+  estado: enum
+  especificaciones_tecnicas: json
+  imagen_360: text
+  horario: varchar(80)
+  imagenes: json
+  radio_km: float
+  creado_en: datetime
+  actualizado_en: datetime
+}
+
+entity "ofertas" as OF {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id]
+  pds_id: int [FK -> users.id]
+  monto: float
+  mensaje: text
+  fecha_deseada: date
+  horario: varchar(80)
+  estado: enum
+  contra_monto: float
+  contra_mensaje: text
+  contra_fecha_deseada: date
+  contra_horario: varchar(80)
+  created_at: datetime
+  updated_at: datetime
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id]
+  proveedor_id: int [FK -> users.id]
+  solicitante_id: int [FK -> users.id]
+  estado: enum
+  motivo_cancelacion: varchar(500)
+  monto_total: int
+  inicio_en: datetime
+  fin_en: datetime
+  confirmado_en: datetime
+  creado_en: datetime
+  actualizado_en: datetime
+}
+
+entity "contract_execution" as CE {
+  * contract_id: int [PK, FK -> contracts.id]
+  --
+  estado: enum [NN]
+  estado_previo: enum
+  fecha_activacion: datetime
+  fecha_inicio_obra: datetime
+  fecha_solicitud_cierre: datetime
+  fecha_validacion: datetime
+  fecha_liquidacion: datetime
+  fecha_finalizacion: datetime
+  evidencia_entrada: json
+  evidencia_salida: json
+  novedades: json
+  pago_confirmado_solicitante: bool
+  pago_confirmado_prestador: bool
+  pago_directo_confirmado: bool
+  pago_monto_final: int
+  rating_estrellas: int
+  rating_comentario: text
+  habilidades_validadas: json
+  creado_en: datetime
+  actualizado_en: datetime
+}
+
+entity "adendas" as AD {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id]
+  tipo: enum [ALCANCE/PRECIO/NOVEDAD/DERIVACION]
+  descripcion: text
+  monto_ajuste: numeric
+  estado: varchar
+  creado_por: int [FK -> users.id]
+  created_at: datetime
+}
+
+entity "evidencias" as EV {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id]
+  tipo: enum [ENTRADA/SALIDA/ADENDA/NOVEDAD]
+  minio_urls: json
+  hash_sha256: json
+  metadatos_exif_json: json
+  subido_por: int [FK -> users.id]
+  created_at: datetime
+}
+
+entity "hitos" as HI {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id]
+  numero: int [1-6]
+  nombre: varchar
+  estado: varchar
+  aprobado_por: int [FK -> users.id]
+  aprobado_en: datetime
+  observacion: text
+  created_at: datetime
+}
+
+entity "ratings_solicitud" as RS {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id]
+  autor_id: int [FK -> users.id]
+  calificado_id: int [FK -> users.id]
+  puntaje: int [1-5]
+  comentario: text
+  reportado: bool
+  creado_en: datetime
+}
+
+entity "contract_checkins" as CC {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id]
+  tipo: enum [ENTRADA/SALIDA]
+  latitud: float
+  longitud: float
+  distancia_m: float
+  evidencias_urls: json
+  creado_en: datetime
+}
+
+U ||--|{ SOL : "publica solicitudes (solicitante)"
+
+SOL ||--|{ OF : "recibe ofertas"
+U ||--|{ OF : "PDS hace ofertas"
+
+SOL ||--|{ CON : "da origen a contratos"
+U ||--|{ CON : "proveedor firma"
+U ||--|{ CON : "solicitante contrata"
+
+CON ||--|| CE : "expediente de ejecucion (1:1)"
+CON ||--|{ AD : "tiene adendas"
+CON ||--|{ EV : "soporta evidencias"
+CON ||--|{ HI : "tiene hitos de cierre"
+CON ||--|{ CC : "registra checkins geograficos"
+
+SOL ||--|{ RS : "calificada"
+U ||--|{ RS : "autor califica"
+U ||--|{ RS : "calificado"
+
+REG ||--|{ U : "agrupa usuarios en"
+
+@enduml

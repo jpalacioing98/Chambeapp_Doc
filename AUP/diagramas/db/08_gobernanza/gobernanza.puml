@@ -1,0 +1,107 @@
+@startuml
+title Modulo 8 - Gobernanza y Auditoria
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+  region_id: int [FK -> regions.id]
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id]
+  proveedor_id: int [FK -> users.id]
+  solicitante_id: int [FK -> users.id]
+  estado: enum
+  monto_total: int
+  creado_en: datetime
+}
+
+entity "audit_logs" as AL {
+  * id: int [PK]
+  --
+  actor_id: int [FK -> users.id]
+  accion: varchar
+  entidad_tipo: varchar
+  entidad_id: int
+  snapshot_diff_json: json
+  ip_address: varchar
+  user_agent: varchar
+  timestamp_utc: datetime
+}
+
+entity "disputes" as D {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id]
+  iniciado_por: int [FK -> users.id]
+  tipo: enum
+  estado: enum
+  resolucion: text
+  resuelto_por: int [FK -> users.id]
+  resuelto_en: datetime
+  created_at: datetime
+}
+
+entity "tickets" as TK {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id]
+  tipo: enum
+  prioridad: enum
+  estado: enum
+  asignado_a: int [FK -> users.id]
+  respuesta: text
+  creado_en: datetime
+  cerrado_en: datetime
+}
+
+entity "moderacion_contenido" as MC {
+  * id: int [PK]
+  --
+  entidad_tipo: varchar
+  entidad_id: int
+  reportado_por: int [FK -> users.id]
+  motivo: text
+  estado: enum
+  accion_tomada: varchar
+  moderador_id: int [FK -> users.id]
+  created_at: datetime
+}
+
+entity "region_scoping" as RS2 {
+  * admin_id: int [FK -> users.id]
+  * region_id: int [FK -> regions.id]
+  --
+  permiso: enum [LECTURA/ESCRITURA/ADMIN]
+}
+
+U ||--|{ AL : "actor de auditoria"
+CON ||--|{ D : "genera disputas"
+U ||--|{ D : "inicia disputa"
+U }|--o{ D : "resuelve disputa (opcional)"
+U ||--|{ TK : "abre tickets"
+U }|--o{ TK : "asignado a tickets (opcional)"
+U ||--|{ MC : "reportado por"
+U ||--|{ MC : "moderado por"
+U ||--|{ RS2 : "admin con alcance regional"
+REG ||--|{ RS2 : "alcance regional de"
+
+@enduml

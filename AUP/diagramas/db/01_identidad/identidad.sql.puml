@@ -1,0 +1,128 @@
+@startuml
+title Modulo 1 - Identidad y Autenticacion (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  password_hash: varchar(255) [NN]
+  rol: enum [NN]
+  status: varchar(20) DEFAULT 'active'
+  role_version: int DEFAULT 1
+  nombre: varchar(120)
+  username: varchar(60) [UK]
+  telefono: varchar(30)
+  edad_verificada: bool DEFAULT false
+  acepto_tyc: bool DEFAULT false
+  consentimiento_datos: bool DEFAULT false
+  email_verificado: bool DEFAULT false
+  fecha_registro: datetime DEFAULT NOW()
+  last_login: datetime
+  activo: bool DEFAULT true
+  two_factor_enabled: bool DEFAULT false
+  region_id: int [FK -> regions.id]
+}
+
+entity "profiles" as P {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  habilidades: json DEFAULT '[]'
+  experiencia: text
+  zona: varchar(120)
+  calificacion_promedio: float DEFAULT 0.0
+  verificado: bool DEFAULT false
+  badges: json DEFAULT '[]'
+  portafolio: json DEFAULT '[]'
+  categorias: json DEFAULT '[]'
+  perfil_completo: bool DEFAULT false
+  foto_perfil: varchar(500)
+  latitud: float
+  longitud: float
+  geom: Geometry(POINT,4326)
+  plan: varchar(20) DEFAULT 'free'
+  destacado: bool DEFAULT false
+  onboarding_completed: bool DEFAULT false
+  onboarding_step: int DEFAULT 0
+}
+
+entity "roles" as R {
+  * id: int [PK]
+  --
+  nombre: enum [NN]
+  permisos_json: json
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+  descripcion: text
+  departamentos: json DEFAULT '[]'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "user_sessions" as S {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  refresh_token_hash: varchar
+  device_info: varchar
+  ip: varchar
+  expira_en: datetime
+  revocado: bool DEFAULT false
+}
+
+entity "legal_acceptances" as LA {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  version_tyc: varchar(20) [NN]
+  fecha: datetime DEFAULT NOW()
+  ip: varchar(45)
+}
+
+entity "verifications" as V {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [KYC/EMAIL/PHONE/IDENTITY] [NN]
+  status: varchar(20) [NN] DEFAULT 'pending'
+  document_type: varchar(50)
+  document_number: varchar(100)
+  codigo_hash: varchar
+  expira_en: datetime
+  reviewed_by: int [FK -> users.id]
+  reviewed_at: datetime
+  reason: text
+  created_at: datetime DEFAULT NOW()
+  updated_at: datetime
+}
+
+index "ix_verifications_status_creado" on V(status, created_at)
+
+U ||--o| P : "tiene un perfil"
+P ||--|| U : "pertenece a"
+R ||--|{ U : "asigna rol a"
+REG ||--|{ U : "agrupa usuarios en"
+U ||--|{ S : "mantiene sesiones"
+U ||--|{ LA : "acepta terminos"
+U ||--|{ V : "tiene verificaciones"
+U }|--o{ V : "revisa verificaciones (verificador)"
+
+note bottom of U
+  Indices: users(email, username, region_id, status)
+           profiles(user_id PK)
+           user_sessions(user_id)
+           legal_acceptances(user_id)
+           verifications(user_id, status, created_at)
+end note
+
+@enduml

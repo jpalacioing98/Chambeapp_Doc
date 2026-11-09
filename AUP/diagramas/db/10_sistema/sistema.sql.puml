@@ -1,0 +1,54 @@
+@startuml
+title Modulo 10 - Sistema y Utilidades (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "system_config" as SC {
+  * clave: varchar [PK]
+  --
+  valor_json: json [NN]
+  descripcion: text
+  editable: bool DEFAULT true
+}
+
+entity "migrations_log" as ML {
+  * version: varchar [PK]
+  --
+  descripcion: text [NN]
+  aplicado_en: datetime DEFAULT NOW()
+  exito: bool DEFAULT true
+  checksum: varchar
+}
+
+entity "seed_data" as SD {
+  * tabla: varchar [PK]
+  --
+  registro_json: json [NN]
+  version: varchar [NN]
+  aplicado: bool DEFAULT false
+}
+
+entity "api_rate_limits" as ARL {
+  * endpoint: varchar [PK]
+  * metodo: varchar [PK]
+  --
+  limite_ventana: int [NN]
+  ventana_segundos: int [NN]
+  rol_excluido: varchar
+}
+
+note top of SC
+  Modulo de utilidades del sistema.
+  Sin relaciones foraneas con el dominio principal.
+  system_config: configuracion global editable
+  migrations_log: historial de migraciones Alembic
+  seed_data: datos semilla por tabla y version
+  api_rate_limits: limites de velocidad por endpoint y rol
+end note
+
+@enduml

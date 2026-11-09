@@ -1,0 +1,61 @@
+@startuml
+title Modulo 4 - Maranas (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  proveedor_id: int [FK -> users.id ON DELETE CASCADE]
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  estado: enum DEFAULT 'pendiente'
+  monto_total: int
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "maranas" as MA {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  descripcion: text
+  presupuesto: numeric
+  estado: varchar DEFAULT 'activa'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "ofertas_marana" as OM {
+  * id: int [PK]
+  --
+  marana_id: int [FK -> maranas.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  precio: numeric
+  mensaje: text
+  estado: varchar DEFAULT 'pendiente'
+  created_at: datetime DEFAULT NOW()
+}
+
+CON ||--|{ MA : "deriva a marañas"
+U ||--|{ MA : "PDS gestiona marana"
+MA ||--|{ OM : "recibe ofertas de marana"
+U ||--|{ OM : "PDS ofertar en marana"
+
+note bottom of MA
+  Indices: maranas(contract_id, pds_id)
+           ofertas_marana(marana_id, pds_id)
+end note
+
+@enduml

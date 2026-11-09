@@ -1,0 +1,85 @@
+@startuml
+title Modulo 7 - Comunicacion (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "conversations" as CV {
+  * id: int [PK]
+  --
+  user_a_id: int [FK -> users.id ON DELETE CASCADE]
+  user_b_id: int [FK -> users.id ON DELETE CASCADE]
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "messages" as MSG {
+  * id: int [PK]
+  --
+  conversation_id: int [FK -> conversations.id ON DELETE CASCADE]
+  sender_id: int [FK -> users.id ON DELETE CASCADE]
+  contenido: text [NN]
+  leido: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "notifications" as NOTIF {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: varchar(40) [NN]
+  titulo: varchar(200)
+  mensaje: text [NN]
+  datos: json
+  leida: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "notification_preferences" as NP {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  push_habilitado: bool DEFAULT true
+  in_app_habilitado: bool DEFAULT true
+  email_habilitado: bool DEFAULT true
+  categorias_json: json
+}
+
+entity "presence" as PR {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  online: bool DEFAULT false
+  last_seen: datetime
+  socket_id: varchar
+  heartbeat_at: datetime
+}
+
+index "ix_conversations_user_a_creado" on CV(user_a_id, creado_en)
+index "ix_conversations_user_b_creado" on CV(user_b_id, creado_en)
+index "ix_messages_conversation_creado" on MSG(conversation_id, creado_en)
+index "ix_notifications_user_creado" on NOTIF(user_id, creado_en)
+index "ix_notifications_user_leida_creado" on NOTIF(user_id, leida, creado_en)
+
+U ||--|{ CV : "participante A"
+U ||--|{ CV : "participante B"
+CV ||--|{ MSG : "contiene mensajes"
+U ||--|{ MSG : "envia mensajes"
+U ||--|{ NOTIF : "recibe notificaciones"
+U ||--|| NP : "configura notificaciones (1:1)"
+U ||--|| PR : "presencia en tiempo real (1:1)"
+
+note bottom of CV
+  Restriccion: unique(user_a_id, user_b_id) para evitar conversaciones duplicadas
+  Normalizacion: user_a_id < user_b_id
+end note
+
+@enduml

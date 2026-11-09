@@ -1,0 +1,128 @@
+@startuml
+title Modulo 1 - Identidad y Autenticacion
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  password_hash: varchar(255) [NN]
+  rol: enum [NN]
+  status: varchar(20)
+  role_version: int
+  nombre: varchar(120)
+  username: varchar(60) [UK]
+  telefono: varchar(30)
+  edad_verificada: bool
+  acepto_tyc: bool
+  consentimiento_datos: bool
+  email_verificado: bool
+  fecha_registro: datetime
+  last_login: datetime
+  activo: bool
+  two_factor_enabled: bool
+  region_id: int [FK -> regions.id]
+}
+
+entity "profiles" as P {
+  * user_id: int [PK, FK -> users.id]
+  --
+  habilidades: json
+  experiencia: text
+  zona: varchar(120)
+  calificacion_promedio: float
+  verificado: bool
+  badges: json
+  portafolio: json
+  categorias: json
+  perfil_completo: bool
+  foto_perfil: varchar(500)
+  latitud: float
+  longitud: float
+  geom: Geometry(POINT,4326)
+  plan: varchar(20)
+  destacado: bool
+  onboarding_completed: bool
+  onboarding_step: int
+}
+
+entity "roles" as R {
+  * id: int [PK]
+  --
+  nombre: enum [NN]
+  permisos_json: json
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+  descripcion: text
+  departamentos: json
+  created_at: datetime
+}
+
+entity "user_sessions" as S {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id]
+  refresh_token_hash: varchar
+  device_info: varchar
+  ip: varchar
+  expira_en: datetime
+  revocado: bool
+}
+
+entity "legal_acceptances" as LA {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id]
+  version_tyc: varchar(20)
+  fecha: datetime
+  ip: varchar(45)
+}
+
+entity "verifications" as V {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id]
+  tipo: enum [KYC/EMAIL/PHONE/IDENTITY] [NN]
+  status: varchar(20) [NN]
+  document_type: varchar(50)
+  document_number: varchar(100)
+  codigo_hash: varchar
+  expira_en: datetime
+  reviewed_by: int [FK -> users.id]
+  reviewed_at: datetime
+  reason: text
+  created_at: datetime
+  updated_at: datetime
+}
+
+U ||--o| P : "tiene un perfil"
+P ||--|| U : "pertenece a"
+
+R ||--|{ U : "asigna rol a"
+
+REG ||--|{ U : "agrupa usuarios en"
+
+U ||--|{ S : "mantiene sesiones"
+
+U ||--|{ LA : "acepta terminos"
+
+U ||--|{ V : "tiene verificaciones"
+U }|--o{ V : "revisa verificaciones (verificador)"
+
+note bottom of U
+  Herencia: No existe herencia de tablas.
+  Todas las relaciones son asociacion mediante FK.
+end note
+
+@enduml

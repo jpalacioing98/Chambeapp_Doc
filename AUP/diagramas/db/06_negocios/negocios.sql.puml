@@ -1,0 +1,134 @@
+@startuml
+title Modulo 6 - Negocios / Merchant (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "negocios" as NEG {
+  * id: int [PK]
+  --
+  owner_id: int [FK -> users.id ON DELETE CASCADE]
+  nombre: varchar(150) [NN]
+  slug: varchar(170) [UK]
+  descripcion: text
+  tipo: enum DEFAULT 'comercio'
+  logo_url: varchar(500)
+  banner_url: varchar(500)
+  imagenes: json DEFAULT '[]'
+  latitud: float [NN]
+  longitud: float [NN]
+  direccion: varchar(255) [NN]
+  ciudad: varchar(100) DEFAULT 'Valledupar'
+  departamento: varchar(100)
+  radio_cobertura_km: float DEFAULT 5.0
+  geom: Geometry(POINT,4326)
+  categoria_principal: varchar(120) [NN]
+  categorias_secundarias: json DEFAULT '[]'
+  servicios: json DEFAULT '[]'
+  palabras_clave: json DEFAULT '[]'
+  whatsapp: varchar(30)
+  whatsapp_mensaje_pre: text
+  instagram: varchar(255)
+  facebook: varchar(255)
+  tiktok: varchar(255)
+  sitio_web: varchar(255)
+  calificacion_promedio: float DEFAULT 0.0
+  total_calificaciones: int DEFAULT 0
+  verificado: bool DEFAULT false
+  estado: enum DEFAULT 'borrador'
+  motivo_rechazo: text
+  comision_pct: float
+  cuenta_bancaria_encriptada: varchar
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "negocio_horarios" as NH {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  dia_semana: int [0-6] [NN]
+  abierto: bool DEFAULT true
+  hora_apertura: time
+  hora_cierre: time
+}
+
+entity "negocio_ratings" as NR {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  autor_id: int [FK -> users.id ON DELETE CASCADE]
+  puntaje: int [1-5] [NN]
+  comentario: text
+  reportado: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "negocio_reportes" as NREP {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  reporter_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [fraude/spam/contenido_inapropiado/servicio_no_prestado/otro] [NN]
+  descripcion: text
+  estado: enum DEFAULT 'abierto'
+  ticket_id: int [FK -> tickets.id]
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "anuncios_laborales" as AN {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id ON DELETE CASCADE]
+  titulo: varchar [NN]
+  descripcion: text
+  requisitos: text
+  salario_ofrecido: int
+  tipo_contrato: varchar
+  ubicacion: varchar
+  estado: varchar DEFAULT 'activo'
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "postulaciones_anuncio" as PA {
+  * id: int [PK]
+  --
+  anuncio_id: int [FK -> anuncios_laborales.id ON DELETE CASCADE]
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  cv_url: varchar
+  mensaje: text
+  estado: varchar DEFAULT 'pendiente'
+  created_at: datetime DEFAULT NOW()
+}
+
+U ||--|{ NEG : "es dueno de negocios"
+NEG ||--|{ NH : "tiene horarios"
+NEG ||--|{ NR : "calificado por usuarios"
+U ||--|{ NR : "califica negocios"
+NEG ||--|{ NREP : "es reportado"
+U ||--|{ NREP : "reporta negocios"
+TK ||--o{ NREP : "vinculado a ticket (opcional)"
+NEG ||--|{ AN : "publica anuncios laborales"
+AN ||--|{ PA : "recibe postulaciones"
+U ||--|{ PA : "postula a anuncios"
+
+note bottom of NEG
+  Indices: negocios(estado, calificacion_promedio)
+           negocios(estado, categoria_principal)
+           negocio_horarios(negocio_id, dia_semana) UK
+           negocio_ratings(negocio_id, autor_id) UK
+           negocio_reportes(negocio_id, estado)
+end note
+
+@enduml

@@ -1,0 +1,125 @@
+@startuml
+title Modulo 6 - Negocios / Merchant
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "negocios" as NEG {
+  * id: int [PK]
+  --
+  owner_id: int [FK -> users.id]
+  nombre: varchar(150)
+  slug: varchar(170) [UK]
+  descripcion: text
+  tipo: enum
+  logo_url: varchar(500)
+  banner_url: varchar(500)
+  imagenes: json
+  latitud: float
+  longitud: float
+  direccion: varchar(255)
+  ciudad: varchar(100)
+  departamento: varchar(100)
+  radio_cobertura_km: float
+  geom: Geometry(POINT,4326)
+  categoria_principal: varchar(120)
+  categorias_secundarias: json
+  servicios: json
+  palabras_clave: json
+  whatsapp: varchar(30)
+  whatsapp_mensaje_pre: text
+  instagram: varchar(255)
+  facebook: varchar(255)
+  tiktok: varchar(255)
+  sitio_web: varchar(255)
+  calificacion_promedio: float
+  total_calificaciones: int
+  verificado: bool
+  estado: enum
+  motivo_rechazo: text
+  comision_pct: float
+  cuenta_bancaria_encriptada: varchar
+  creado_en: datetime
+  actualizado_en: datetime
+}
+
+entity "negocio_horarios" as NH {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id]
+  dia_semana: int [0-6]
+  abierto: bool
+  hora_apertura: time
+  hora_cierre: time
+}
+
+entity "negocio_ratings" as NR {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id]
+  autor_id: int [FK -> users.id]
+  puntaje: int [1-5]
+  comentario: text
+  reportado: bool
+  creado_en: datetime
+}
+
+entity "negocio_reportes" as NREP {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id]
+  reporter_id: int [FK -> users.id]
+  tipo: enum
+  descripcion: text
+  estado: enum
+  ticket_id: int [FK -> tickets.id]
+  creado_en: datetime
+}
+
+entity "anuncios_laborales" as AN {
+  * id: int [PK]
+  --
+  negocio_id: int [FK -> negocios.id]
+  titulo: varchar
+  descripcion: text
+  requisitos: text
+  salario_ofrecido: int
+  tipo_contrato: varchar
+  ubicacion: varchar
+  estado: varchar
+  created_at: datetime
+}
+
+entity "postulaciones_anuncio" as PA {
+  * id: int [PK]
+  --
+  anuncio_id: int [FK -> anuncios_laborales.id]
+  user_id: int [FK -> users.id]
+  cv_url: varchar
+  mensaje: text
+  estado: varchar
+  created_at: datetime
+}
+
+U ||--|{ NEG : "es dueno de negocios"
+NEG ||--|{ NH : "tiene horarios"
+NEG ||--|{ NR : "calificado por usuarios"
+U ||--|{ NR : "califica negocios"
+NEG ||--|{ NREP : "es reportado"
+U ||--|{ NREP : "reporta negocios"
+NEG ||--|{ AN : "publica anuncios laborales"
+AN ||--|{ PA : "recibe postulaciones"
+U ||--|{ PA : "postula a anuncios"
+
+@enduml

@@ -1,0 +1,106 @@
+@startuml
+title Modulo 5 - Finanzas (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  proveedor_id: int [FK -> users.id ON DELETE CASCADE]
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  estado: enum DEFAULT 'pendiente'
+  monto_total: int
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "wallets" as W {
+  * user_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  saldo: int DEFAULT 0
+  saldo_bloqueado: int DEFAULT 0
+  updated_at: datetime DEFAULT NOW()
+}
+
+entity "transactions" as T {
+  * id: int [PK]
+  --
+  wallet_id: int [FK -> wallets.user_id ON DELETE CASCADE]
+  tipo: enum [comision/monedas/retiro/reembolso/deposito] [NN]
+  monto: int [NN]
+  descripcion: text
+  referencia: varchar(100)
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "payments" as PAY {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE, UK]
+  monto: int [NN]
+  comision_pds: int DEFAULT 0
+  comision_solicitante: int DEFAULT 0
+  estado: enum DEFAULT 'pendiente'
+  pasarela: varchar(50) DEFAULT 'mock'
+  referencia_pasarela: varchar(255)
+  motivo_reembolso: varchar(500)
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "coins" as CO {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id ON DELETE CASCADE]
+  tipo: enum [COMPRADA/PROMOCIONAL/GANADA] [NN]
+  cantidad: int DEFAULT 0
+  vence_en: datetime
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "coin_packages" as CP {
+  * id: int [PK]
+  --
+  nombre: varchar [NN]
+  monedas: int [NN]
+  precio_cop: int [NN]
+  modalidad: enum [A/B]
+  activo: bool DEFAULT true
+}
+
+entity "precios_sugeridos" as PS {
+  * id: int [PK]
+  --
+  categoria: varchar [NN]
+  precio_min: int
+  precio_max: int
+  precio_promedio: int
+  muestra_n: int
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+U ||--|| W : "tiene billetera (1:1)"
+W ||--|{ T : "registra movimientos"
+U ||--|{ CO : "posee monedas"
+CON ||--|| PAY : "tiene un pago (1:1)"
+
+note bottom of W
+  Indices: wallets(user_id PK, UK)
+           transactions(wallet_id, created_at)
+           payments(contract_id UK)
+           coins(user_id, tipo)
+end note
+
+@enduml

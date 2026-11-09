@@ -1,0 +1,58 @@
+@startuml
+title Modulo 2 - KYC Documentos
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  password_hash: varchar(255) [NN]
+  rol: enum [NN]
+  region_id: int [FK -> regions.id]
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+}
+
+entity "kyc_required_documents" as KYC_R {
+  * clave: varchar [PK]
+  --
+  grupo: varchar
+  obligatorio: bool
+  multi_instancia: bool
+  orden: int
+  rol_aplicable: varchar
+}
+
+entity "user_kyc_documents" as KYC_U {
+  * id: int [PK]
+  --
+  user_id: int [FK -> users.id]
+  documento_clave: varchar [FK -> kyc_required_documents.clave]
+  instancia: int
+  estado: varchar
+  minio_url: varchar
+  hash_sha256: varchar
+  revisado_por: int [FK -> users.id]
+  revisado_en: datetime
+  observacion: text
+  created_at: datetime
+}
+
+U ||--|{ KYC_U : "sube documentos KYC"
+KYC_R ||--|{ KYC_U : "define tipos de documento"
+U }|--o{ KYC_U : "revisado por verificador"
+
+REG ||--|{ U : "agrupa usuarios en"
+
+@enduml

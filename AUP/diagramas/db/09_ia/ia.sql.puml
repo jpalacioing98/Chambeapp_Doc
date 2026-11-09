@@ -1,0 +1,78 @@
+@startuml
+title Modulo 9 - IA y Recomendacion (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "solicitudes" as SOL {
+  * id: int [PK]
+  --
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  categoria: varchar(120) [NN]
+  titulo: varchar(200) [NN]
+  estado: enum DEFAULT 'publicado'
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "pds_embeddings" as PE {
+  * pds_id: int [PK, FK -> users.id ON DELETE CASCADE]
+  --
+  embedding: vector(384) [NN]
+  modelo_version: varchar [NN]
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "solicitud_embeddings" as SE {
+  * solicitud_id: int [PK, FK -> solicitudes.id ON DELETE CASCADE]
+  --
+  embedding: vector(384) [NN]
+  modelo_version: varchar [NN]
+}
+
+entity "recommendation_logs" as RL {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  score_retrieval: float [NN]
+  score_ranking: float [NN]
+  shap_explanation_json: json
+  clicked: bool DEFAULT false
+  contratado: bool DEFAULT false
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "feature_flags" as FF {
+  * nombre: varchar [PK]
+  --
+  habilitado: bool DEFAULT false
+  descripcion: text
+  modelo_version: varchar
+  actualizado_por: int [FK -> users.id]
+}
+
+U ||--|| PE : "embedding PDS (1:1)"
+SOL ||--|| SE : "embedding solicitud (1:1)"
+SOL ||--|{ RL : "recomendada en logs"
+U ||--|{ RL : "PDS recomendado en logs"
+U }|--o{ FF : "actualiza feature flags (opcional)"
+
+note bottom of PE
+  Extension: pgvector para busqueda semantica de similitud coseno
+  Indices: pds_embeddings(pds_id PK)
+           solicitud_embeddings(solicitud_id PK)
+           recommendation_logs(solicitud_id, pds_id)
+end note
+
+@enduml

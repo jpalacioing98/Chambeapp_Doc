@@ -1,0 +1,71 @@
+@startuml
+title Modulo 9 - IA y Recomendacion
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+}
+
+entity "solicitudes" as SOL {
+  * id: int [PK]
+  --
+  solicitante_id: int [FK -> users.id]
+  categoria: varchar(120)
+  titulo: varchar(200)
+  estado: enum
+  creado_en: datetime
+}
+
+entity "pds_embeddings" as PE {
+  * pds_id: int [PK, FK -> users.id]
+  --
+  embedding: vector(384)
+  modelo_version: varchar
+  actualizado_en: datetime
+}
+
+entity "solicitud_embeddings" as SE {
+  * solicitud_id: int [PK, FK -> solicitudes.id]
+  --
+  embedding: vector(384)
+  modelo_version: varchar
+}
+
+entity "recommendation_logs" as RL {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id]
+  pds_id: int [FK -> users.id]
+  score_retrieval: float
+  score_ranking: float
+  shap_explanation_json: json
+  clicked: bool
+  contratado: bool
+  created_at: datetime
+}
+
+entity "feature_flags" as FF {
+  * nombre: varchar [PK]
+  --
+  habilitado: bool
+  descripcion: text
+  modelo_version: varchar
+  actualizado_por: int [FK -> users.id]
+}
+
+U ||--|| PE : "embedding PDS (1:1)"
+SOL ||--|| SE : "embedding solicitud (1:1)"
+SOL ||--|{ RL : "recomendada en logs"
+U ||--|{ RL : "PDS recomendado en logs"
+U }|--o{ FF : "actualiza feature flags (opcional)"
+
+@enduml

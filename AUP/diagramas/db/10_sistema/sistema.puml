@@ -1,0 +1,50 @@
+@startuml
+title Modulo 10 - Sistema y Utilidades
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "system_config" as SC {
+  * clave: varchar [PK]
+  --
+  valor_json: json
+  descripcion: text
+  editable: bool
+}
+
+entity "migrations_log" as ML {
+  * version: varchar [PK]
+  --
+  descripcion: text
+  aplicado_en: datetime
+  exito: bool
+  checksum: varchar
+}
+
+entity "seed_data" as SD {
+  * tabla: varchar [PK]
+  --
+  registro_json: json
+  version: varchar
+  aplicado: bool
+}
+
+entity "api_rate_limits" as ARL {
+  * endpoint: varchar [PK]
+  * metodo: varchar [PK]
+  --
+  limite_ventana: int
+  ventana_segundos: int
+  rol_excluido: varchar
+}
+
+note top of SC
+  Modulo de utilidades del sistema.
+  Sin relaciones foraneas con el dominio principal.
+end note
+
+@enduml

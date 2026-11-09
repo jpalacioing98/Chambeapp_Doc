@@ -1,0 +1,200 @@
+@startuml
+title Modulo 3 - Servicios (Esquema SQL)
+
+skinparam monochrome true
+skinparam shadowing false
+hide stereotype
+hide circle
+hide methods
+hide empty members
+
+entity "users" as U {
+  * id: int [PK]
+  --
+  email: varchar(255) [UK, NN]
+  rol: enum [NN]
+  region_id: int [FK -> regions.id]
+}
+
+entity "regions" as REG {
+  * id: int [PK]
+  --
+  clave: varchar(40) [UK]
+  nombre: varchar(120) [NN]
+}
+
+entity "solicitudes" as SOL {
+  * id: int [PK]
+  --
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  categoria: varchar(120) [NN]
+  titulo: varchar(200) [NN]
+  descripcion: text [NN]
+  ubicacion: varchar(120) DEFAULT 'Valledupar'
+  latitud: float
+  longitud: float
+  direccion: varchar(255)
+  presupuesto: int
+  fecha_deseada: date
+  urgencia: enum DEFAULT 'semana'
+  estado: enum DEFAULT 'publicado'
+  especificaciones_tecnicas: json
+  imagen_360: text
+  horario: varchar(80)
+  imagenes: json
+  radio_km: float DEFAULT 5.0
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "ofertas" as OF {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  pds_id: int [FK -> users.id ON DELETE CASCADE]
+  monto: float
+  mensaje: text
+  fecha_deseada: date
+  horario: varchar(80)
+  estado: enum DEFAULT 'pendiente'
+  contra_monto: float
+  contra_mensaje: text
+  contra_fecha_deseada: date
+  contra_horario: varchar(80)
+  created_at: datetime DEFAULT NOW()
+  updated_at: datetime DEFAULT NOW()
+}
+
+entity "contracts" as CON {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  proveedor_id: int [FK -> users.id ON DELETE CASCADE]
+  solicitante_id: int [FK -> users.id ON DELETE CASCADE]
+  estado: enum DEFAULT 'pendiente'
+  motivo_cancelacion: varchar(500)
+  monto_total: int
+  inicio_en: datetime
+  fin_en: datetime
+  confirmado_en: datetime
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "contract_execution" as CE {
+  * contract_id: int [PK, FK -> contracts.id ON DELETE CASCADE]
+  --
+  estado: enum [NN] DEFAULT 'programada'
+  estado_previo: enum
+  fecha_activacion: datetime
+  fecha_inicio_obra: datetime
+  fecha_solicitud_cierre: datetime
+  fecha_validacion: datetime
+  fecha_liquidacion: datetime
+  fecha_finalizacion: datetime
+  evidencia_entrada: json DEFAULT '[]'
+  evidencia_salida: json DEFAULT '[]'
+  novedades: json DEFAULT '[]'
+  pago_confirmado_solicitante: bool DEFAULT false
+  pago_confirmado_prestador: bool DEFAULT false
+  pago_directo_confirmado: bool DEFAULT false
+  pago_monto_final: int
+  rating_estrellas: int
+  rating_comentario: text
+  habilidades_validadas: json DEFAULT '[]'
+  creado_en: datetime DEFAULT NOW()
+  actualizado_en: datetime DEFAULT NOW()
+}
+
+entity "adendas" as AD {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ALCANCE/PRECIO/NOVEDAD/DERIVACION]
+  descripcion: text
+  monto_ajuste: numeric
+  estado: varchar
+  creado_por: int [FK -> users.id ON DELETE CASCADE]
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "evidencias" as EV {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ENTRADA/SALIDA/ADENDA/NOVEDAD]
+  minio_urls: json
+  hash_sha256: json
+  metadatos_exif_json: json
+  subido_por: int [FK -> users.id ON DELETE CASCADE]
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "hitos" as HI {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  numero: int [1-6]
+  nombre: varchar [NN]
+  estado: varchar
+  aprobado_por: int [FK -> users.id]
+  aprobado_en: datetime
+  observacion: text
+  created_at: datetime DEFAULT NOW()
+}
+
+entity "ratings_solicitud" as RS {
+  * id: int [PK]
+  --
+  solicitud_id: int [FK -> solicitudes.id ON DELETE CASCADE]
+  autor_id: int [FK -> users.id ON DELETE CASCADE]
+  calificado_id: int [FK -> users.id ON DELETE CASCADE]
+  puntaje: int [1-5] [NN]
+  comentario: text
+  reportado: bool DEFAULT false
+  creado_en: datetime DEFAULT NOW()
+}
+
+entity "contract_checkins" as CC {
+  * id: int [PK]
+  --
+  contract_id: int [FK -> contracts.id ON DELETE CASCADE]
+  tipo: enum [ENTRADA/SALIDA]
+  latitud: float
+  longitud: float
+  distancia_m: float
+  evidencias_urls: json
+  creado_en: datetime DEFAULT NOW()
+}
+
+index "ix_solicitudes_estado_creado" on SOL(estado, creado_en)
+index "ix_solicitudes_solicitante_creado" on SOL(solicitante_id, creado_en)
+index "ix_ofertas_solicitud_creado" on OF(solicitud_id, created_at)
+index "ix_ofertas_pds_creado" on OF(pds_id, created_at)
+index "ix_contracts_proveedor_creado" on CON(proveedor_id, creado_en)
+index "ix_contracts_solicitante_creado" on CON(solicitante_id, creado_en)
+index "ix_contracts_estado_creado" on CON(estado, creado_en)
+
+U ||--|{ SOL : "publica solicitudes (solicitante)"
+SOL ||--|{ OF : "recibe ofertas"
+U ||--|{ OF : "PDS hace ofertas"
+SOL ||--|{ CON : "da origen a contratos"
+U ||--|{ CON : "proveedor firma"
+U ||--|{ CON : "solicitante contrata"
+CON ||--|| CE : "expediente de ejecucion (1:1)"
+CON ||--|{ AD : "tiene adendas"
+CON ||--|{ EV : "soporta evidencias"
+CON ||--|{ HI : "tiene hitos de cierre"
+CON ||--|{ CC : "registra checkins geograficos"
+SOL ||--|{ RS : "calificada"
+U ||--|{ RS : "autor califica"
+U ||--|{ RS : "calificado"
+
+note bottom of SOL
+  Indices: solicitudes(estado, creado_en), (solicitante_id, creado_en)
+           ofertas(solicitud_id, created_at), (pds_id, created_at)
+           contracts(proveedor_id, creado_en), (solicitante_id, creado_en), (estado, creado_en)
+           ratings_solicitud(service_id, autor_id) UK
+end note
+
+@enduml
