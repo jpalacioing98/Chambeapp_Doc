@@ -25,11 +25,13 @@ Dado que los trabajadores ejecutan la labor presencialmente, representan el mayo
 | 6 | **Antecedentes de Procuraduría** | Consulta de antecedentes disciplinarios ante la Procuraduría General de la Nación. Verifica sanciones disciplinarias vigentes. | Single |
 | 7 | **Antecedentes de Contraloría** | Consulta de responsabilidad fiscal ante la Contraloría General de la República. Verifica que no existan pendientes por responsabilidad fiscal. | Single |
 
-### 1.3 Trazabilidad Financiera (Obligatorio)
+### 1.3 Trazabilidad Financiera (Opcional — pagos en fase posterior)
 
 | # | Documento | Descripción | Tipo |
 |---|-----------|-------------|------|
 | 8 | **Certificación Bancaria** | Registro de cuenta bancaria o billetera digital (Nequi, Daviplata, Bancolombia, etc.) a nombre exclusivo del titular. **No se permite el registro de cuentas de terceros.** | **Multi-instancia** (una por cuenta) |
+
+> La certificación bancaria **no bloquea** las funcionalidades del PDS: los pagos y retiros se gestionan en una fase posterior del producto.
 
 ### 1.4 Validaciones Opcionales
 
@@ -60,13 +62,20 @@ Para proteger a los trabajadores y asegurar la viabilidad transaccional, los con
 | # | Documento | Descripción | Tipo |
 |---|-----------|-------------|------|
 | 1 | **Documento de Identidad** | Cédula de Ciudadanía (CC), Cédula de Extranjería (CE) o NIT (en caso de personas jurídicas). | Single |
-| 2 | **Verificación de Contacto** | Validación del número de teléfono celular mediante código OTP (One-Time Password) enviado por SMS durante el registro. | Single |
+| 2 | **Prueba de Vida (Selfie)** | Selfie frontal para biometría facial. Confirma que eres tú. | Single |
+| 3 | **Verificación de Contacto** | Validación del número de teléfono celular mediante código OTP (One-Time Password) enviado por SMS. Se aprueba automáticamente al validar el código. | Single |
 
-### 2.2 Seguridad Transaccional (Obligatorio)
+### 2.2 Seguridad Transaccional (fase posterior)
 
 | # | Documento | Descripción | Tipo |
 |---|-----------|-------------|------|
-| 3 | **Validación de Método de Pago** | Micro-cargo de autorización vía pasarela de pagos (ej. MercadoPago) para confirmar validez, titularidad y disponibilidad de fondos. | Single |
+| 4 | **Validación de Método de Pago** | Micro-cargo de autorización vía pasarela de pagos (ej. MercadoPago) para confirmar validez, titularidad y disponibilidad de fondos. | Single |
+
+> La validación de método de pago queda **fuera del mínimo obligatorio** por ahora: los pagos se gestionan en una fase posterior. No bloquea publicar, contratar ni calificar.
+
+### 2.3 Comerciante (merchant)
+
+El comerciante usa el mismo mínimo que el solicitante: documento de identidad, prueba de vida y verificación de contacto (OTP). RUT, certificado de existencia y representación legal, y foto del local son **opcionales**.
 
 ---
 
@@ -76,7 +85,7 @@ Para proteger a los trabajadores y asegurar la viabilidad transaccional, los con
 2. **Subida de documentos** → El usuario sube los documentos requeridos para su rol.
 3. **Revisión** → Un verificador (rol `verificador`, `admin` o `superadmin`) revisa y aprueba/rechaza cada documento.
 4. **Cálculo automático** → `Profile.verificado` se marca `True` cuando **todos** los documentos obligatorios del rol tienen estado "aprobado".
-5. **Permisos** → Solo usuarios verificados pueden acceder a funcionalidades avanzadas (contratar, publicar servicios, recibir pagos).
+5. **Permisos** → Solo usuarios verificados pueden acceder a las funcionalidades transaccionales de su rol: publicar solicitudes (solicitante/merchant), ofertar y postularse (PDS), crear negocio y anuncios, y contratar (merchant). Los pagos, retiros y la compra de monedas se gestionan en una fase posterior y no forman parte del bloqueo actual.
 
 ---
 
