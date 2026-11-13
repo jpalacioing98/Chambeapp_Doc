@@ -2,6 +2,23 @@
 
 All notable changes to documentation will be documented in this file.
 
+## [1.9.0] - 2026-11-13
+
+### Added
+- **Flujos completos de la app**: nuevo documento canónico
+  [`Contexto/Flujos_Completos_App.md`](Contexto/Flujos_Completos_App.md) con los
+  23 flujos E2E de los 3 roles, panel staff, mapa/perfil público, chambas,
+  disputas, soporte y cobros.
+- **Cobros en monedas**: al firmar contrato cada parte paga
+  `max(10, trunc((monto × 3%) ÷ 100) + 1)` monedas; publicar anuncio cuesta
+  10 y reactivarlo 5. El superadmin edita tarifas en `/superadmin/cobros`.
+- **Pago directo**: la plataforma no intermedia el pago del trabajo; se retira
+  la comisión COP del 12% y la acreditación en billetera.
+
+### Changed
+- `Contexto/Flujo_Aplicacion.md` queda marcado como **histórico**: las
+  modalidades y planes que describe ya no están vigentes.
+
 ## [1.8.2] - 2026-09-26
 
 ### Security

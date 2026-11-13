@@ -12,7 +12,7 @@ real de `Chambeapp_backend`, `Chambeapp_frontend` y `Chambeapp_admin_frontend`.
 
 | Carpeta | Contenido |
 |---|---|
-| [Contexto/](Contexto/) | Problema, tesis, flujo de aplicación, monetización, KYC, T&C, contrato de servicio, landing brief |
+| [Contexto/](Contexto/) | Problema, tesis, flujo de aplicación, **flujos completos**, monetización, KYC, T&C, contrato de servicio, landing brief |
 | [Requerimientos/](Requerimientos/) | RF-01..RF-75, historias de usuario, módulos, roles y UI |
 | [Arquitectura/](Arquitectura/) | Arquitectura de software, plan, pruebas, contratos API, modelo de datos, estado, diagramas |
 | [Branding/](Branding/) | Manual de marca, sistema de diseño, tokens, design system (tokens/componentes/reglas/CSS/iconos/decisiones) |
@@ -21,6 +21,9 @@ real de `Chambeapp_backend`, `Chambeapp_frontend` y `Chambeapp_admin_frontend`.
 | [AgentsWorkFlows/](AgentsWorkFlows/) | Configuración AUP/OpenCode: agentes, prompts, skills y flujos UI/UX |
 | [GUIA_DESPLIEGUE.md](GUIA_DESPLIEGUE.md) | Despliegue dev/prod (backend + 2 frontends) |
 | [CHANGELOG.md](CHANGELOG.md) | Historial de cambios de la documentación |
+
+**Flujos vigentes de la app:** [Contexto/Flujos_Completos_App.md](Contexto/Flujos_Completos_App.md)
+(actualizado 2026-11-13; incluye el modelo de pago directo y cobros en monedas).
 
 ## 📄 Requerimientos (RF-01..RF-75)
 

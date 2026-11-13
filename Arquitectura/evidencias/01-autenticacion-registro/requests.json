@@ -1,0 +1,177 @@
+[
+  {
+    "method": "POST",
+    "endpoint": "http://localhost:5173/api/v1/auth/login",
+    "status": 401
+  },
+  {
+    "method": "POST",
+    "endpoint": "http://localhost:5173/api/v1/auth/login",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/auth/me",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/documentos-requeridos",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/documentos/mios?_ts=1794571287903",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/notifications/no-leidas",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/contracts/mine",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/documentos/mios?_ts=1794571287905",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/profile",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/solicitudes/?page=1&per_page=20&elegibles=1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/coins",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/documentos-requeridos",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/notifications/no-leidas",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/contracts/mine",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/profile",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/coins",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/solicitudes/?page=1&per_page=20&elegibles=1",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/ai/solicitudes-for-provider",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/ai/solicitudes-for-provider",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/notifications/no-leidas",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/profile",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/metodos-pago",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/auth/2fa",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/mis-documentos?_ts=1794571291522",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/kyc/mis-documentos?_ts=1794571291523",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/notifications/no-leidas",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/profile",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/wallet/",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/metodos-pago",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/auth/2fa",
+    "status": 200
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/preferences",
+    "status": 500
+  },
+  {
+    "method": "GET",
+    "endpoint": "http://localhost:5173/api/v1/users/me/preferences",
+    "status": 500
+  }
+]

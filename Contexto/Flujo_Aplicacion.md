@@ -1,4 +1,8 @@
-# Flujo de la Aplicación — ChambeApp (v2.0)
+# Flujo de la Aplicación - ChambeApp (v2.0)
+
+> ⚠️ **Documento histórico (v2.0).** Las modalidades, comisiones COP y planes
+> de suscripción descritos aquí **ya no están vigentes**. Los flujos actuales
+> están en [Flujos_Completos_App.md](Flujos_Completos_App.md).
 
 > Descripción detallada del flujo completo de la aplicación, desde el registro hasta la finalización del servicio, incluyendo el nuevo modelo de billetera virtual y modalidades de cobro.
 > Este documento complementa los requerimientos funcionales y describe la experiencia del usuario paso a paso.
