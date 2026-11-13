@@ -45,14 +45,20 @@ rectangle "Plataforma ChambeApp" {
     SOL -- (Pagar servicio: digital/efectivo + conformidad)
     PDS -- (Recibir saldo neto + gestionar wallet)
     SOL -- (Comprar paquetes Coins modalidad B)
+    SOL -- (Comprar paquete de monedas con bonus/oferta)
+    SOL -- (Pagar tarifa de contrato en monedas)
+    PDS -- (Consultar movimientos y saldo de monedas)
     PDS -- (Retirar a Nequi/Bancolombia + Escrow)
     SOL -- (Descargar certificado ingresos Ley 527)
+    SUP -- (Configurar tarifas de cobro en monedas)
   }
 
   package "Negocios y Empleo" {
     MER -- (Crear Negocio + horarios + imágenes MinIO)
+    MER -- (Definir rutas de negocio ambulante)
     MER -- (Gestionar payment methods + preferencias)
     MER -- (Publicar AnuncioLaboral + moderar postulaciones)
+    MER -- (Elegir anuncio modalidad contacto o contrato)
     PDS -- (Postularse a anuncio + contactar negocio)
     SOL -- (Explorar directorio negocios Mapbox + filtros)
   }
@@ -68,16 +74,21 @@ rectangle "Plataforma ChambeApp" {
     VER -- (Revisar KYC 11 docs + multi-instancia)
     VER -- (Aprobar/rechazar verificación identidad)
     SOP -- (Atender tickets regionales + disputas)
+    SOP -- (Usar plantillas de respuesta y veredicto)
     ADM -- (Panel stats scoped: users, solicitudes, contratos, disputas)
     ADM -- (Suspender usuarios + resolver disputas región)
     SUP -- (Feature flags calientes + auditoría forense)
     SUP -- (Gestionar regiones + reindex match + admins globales)
+    SUP -- (Gestionar paquetes de monedas)
+    SUP -- (Editar plantillas de KYC, tickets y disputas)
   }
 
   package "Comunicación Tiempo Real" {
     SOL -- (Chat 1:1 con PDS + acciones contractuales ⟦c:⟧)
     PDS -- (Recibir notificaciones push/in-app cascada)
+    PDS -- (Suscribir dispositivo a Web Push)
     SOL -- (Centro notificaciones persistente RF-10)
+    SOL -- (Activar 2FA + códigos de recuperación)
   }
 }
 
@@ -89,6 +100,8 @@ note right of SOL
   • Firma contrato digital SHA256
   • Ejecuta chamba: 6 hitos GPS + evidencias
   • Pago dual conformidad + calificación bilateral
+  • Compra paquetes de monedas y paga tarifas de contrato
+  • Activa 2FA con códigos de recuperación
   • Lanza maranas desde adendas
 end note
 
@@ -100,6 +113,7 @@ note right of PDS
   • Check-in/out GPS < 100m + hash evidencias
   • Pago dual → saldo wallet inmediato
   • Certificación habilidades (quiz + certificado)
+  • Consulta saldo/movimientos de monedas y suscribe Web Push
   • Endosos clientes + TrustScore recálculo nocturno
 end note
 
@@ -118,6 +132,8 @@ note right of SUP
   • Audit logs inmutables (hash chain, 10 años)
   • CRUD regiones + departamentos JSON + reindex
   • Crear/editar admins globales + asignar region_scope
+  • Tarifas de cobro y paquetes de monedas
+  • Plantillas de KYC, tickets y veredictos de disputa
   • Bypass region_scope (region_scope_id = NULL)
 end note
 

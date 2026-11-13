@@ -1,4 +1,4 @@
-# Diagrama de Componentes — Figura 1: Arquitectura General (36 Blueprints + ML + Socket.IO + MinIO)
+# Diagrama de Componentes — Figura 1: Arquitectura General (38 Blueprints + ML + Socket.IO + MinIO)
 
 > **Módulo:** Visión General de Componentes Backend/Frontend  
 > **Fuente:** `01_componentes.puml` (Figura 1)  
@@ -10,33 +10,33 @@
 
 ```plantuml
 @startuml
-title Figura 1 - Diagrama de Componentes: 36 Blueprints + ML + Socket.IO + MinIO
+title Figura 1 - Diagrama de Componentes: 38 Blueprints + ML + Socket.IO + MinIO
 
 actor "Usuario\n(PDS/Solicitante/Merchant/Admin)" as User
-participant "PWA\nReact 18 + Vite 6 + Zustand + Socket.IO" as PWA
+participant "PWA\nReact 18 + Vite + Zustand + Socket.IO" as PWA
 
-== MÓDULOS BACKEND (36 Blueprints Flask-Smorest) ==
+== MÓDULOS BACKEND (38 Blueprints Flask-Smorest + 1 handler Socket.IO) ==
 
-participant "IDENTIDAD (4)" as MOD_AUTH
+participant "IDENTIDAD (9)" as MOD_AUTH
 participant "MERCADO (6)" as MOD_MERCADO
-participant "OPERACIONES (5)" as MOD_OPS
-participant "FINANZAS (6)" as MOD_FIN
-participant "GOBERNANZA (5)" as MOD_GOB
-participant "IA/ML (3)" as MOD_ML
-participant "TIEMPO REAL (3)" as MOD_WS
+participant "OPERACIONES (3)" as MOD_OPS
+participant "FINANZAS (5)" as MOD_FIN
+participant "GOBERNANZA (6)" as MOD_GOB
+participant "IA/ML (2)" as MOD_ML
+participant "TIEMPO REAL (2 + handler)" as MOD_WS
 participant "ALMACENAMIENTO (1)" as MOD_S3
-participant "UTILIDADES (6)" as MOD_UTIL
+participant "UTILIDADES (4)" as MOD_UTIL
 
 User -> PWA: Interacciones UI (HTTPS/WSS)
-PWA -> MOD_AUTH: REST API (auth, 2FA, users, KYC)
+PWA -> MOD_AUTH: REST API (auth, 2FA, usuarios, preferencias, KYC, legal)
 PWA -> MOD_MERCADO: REST API (solicitudes, ofertas, contratos, marañas, habilidades, anuncios)
-PWA -> MOD_OPS: REST API (chambas, evidencias, adendas, novedades, calificaciones)
-PWA -> MOD_FIN: REST API (wallet, payments, coins, precios, retiros, reportes)
-PWA -> MOD_GOB: REST API (admin, superadmin, verificador, soporte, regiones)
-PWA -> MOD_ML: REST API (recommendations, metrics, training)
-PWA <-> MOD_WS: WebSocket WSS (chat, notificaciones, presence)
-PWA -> MOD_S3: Upload/Download MinIO (evidencias, 360°, KYC)
-PWA -> MOD_UTIL: REST API (health, config, search, notifications, upload, utils)
+PWA -> MOD_OPS: REST API (chambas, disputas, tickets)
+PWA -> MOD_FIN: REST API (wallet, payments, metodos-pago, prices, subscriptions)
+PWA -> MOD_GOB: REST API (admin, superadmin, regiones, negocios, merchant, plantillas)
+PWA -> MOD_ML: REST API (recommendations, metrics)
+PWA <-> MOD_WS: WebSocket WSS (chat, notificaciones, push)
+PWA -> MOD_S3: Upload/Download MinIO (portfolio, KYC, evidencias)
+PWA -> MOD_UTIL: REST API (notifications, onboarding, providers, trust)
 
 MOD_AUTH --> MOD_MERCADO: Auth middleware (JWT + role_version)
 MOD_AUTH --> MOD_OPS: Auth middleware
@@ -49,79 +49,79 @@ MOD_GOB --> MOD_WS: Feature flags → Socket.IO handlers
 MOD_WS --> MOD_ML: Eventos tiempo real → Feature extractor
 
 note right of MOD_AUTH
-  IDENTIDAD (4 blueprints):
-  • auth.py           → login, register, refresh, logout, health
-  • two_factor.py     → 2FA TOTP setup, verify, disable (RFC 6238)
-  • users.py          → perfil, preferencias, onboarding, foto, región
-  • kyc.py            → 11 docs, 4 grupos, multi-instancia, base64 MVP
+  IDENTIDAD (9 blueprints):
+  • auth.py               → login, register, refresh, logout, health
+  • auth_password.py      → recuperar/resetear contraseña
+  • two_factor.py         → 2FA TOTP setup, verify, disable, recovery codes
+  • email_verification.py → verificación de correo
+  • otp.py                → códigos OTP SMS/telefono
+  • users.py              → perfil, foto, región, onboarding
+  • user_preferences.py   → preferencias de UI/notificaciones
+  • kyc.py                → documentos requeridos, multi-instancia
+  • legal.py              → T&C y aceptación legal
 end note
 
 note right of MOD_MERCADO
   MERCADO (6 blueprints):
-  • solicitudes.py    → CRUD chambas, geocerca PostGIS, panorama 360°
-  • ofertas.py        → postulación, negociación, contraofertas, límites
-  • contratos.py      → firma digital SHA256, FSM 6 estados, adendas
-  • marañas.py        → derivación adendas, micro-trabajos, pago dual
-  • habilidades.py    → oficios catálogo, certificaciones quiz/cert, endosos
-  • anuncios.py       → empleo proximidad, negocios, postulaciones
+  • solicitudes.py        → CRUD solicitudes, geocerca PostGIS, panorama 360°
+  • ofertas.py            → postulación, negociación, contraofertas, límites
+  • contracts.py          → firma digital SHA256, FSM 6 estados, adendas
+  • maranas.py            → derivación adendas, micro-trabajos, pago dual
+  • habilidades.py        → oficios catálogo, certificaciones quiz/cert, endosos
+  • anuncios.py           → empleo proximidad, negocios, postulaciones
 end note
 
 note right of MOD_OPS
-  OPERACIONES (5 blueprints):
-  • chambas.py        → ciclo 6 hitos, check-in/out GPS <100m
-  • evidencias.py     → fotos MinIO, EXIF, hash SHA256, cadenas custodia
-  • adendas.py        → cambios alcance/precio, notificaciones push
-  • novedades.py      → incidencias, partes trabajo, reportes campo
-  • calificaciones.py → 360° bilateral, TrustScore, badges
+  OPERACIONES (3 blueprints):
+  • chambas.py            → ciclo 6 hitos, check-in/out GPS <100m
+  • disputes.py           → disputas, decisión de soporte, chat
+  • tickets.py            → tickets con categoría, prioridad, plantillas
 end note
 
 note right of MOD_FIN
-  FINANZAS (6 blueprints):
-  • wallet.py         → billetera partida doble, saldo disponible/bloqueado
-  • payments.py       → dual digital/efectivo, conformidad dual, Escrow
-  • coins.py          → 3 tipos (COMPRADA/PROMO/GANADA), paquetes, modalidad A/B
-  • precios.py        → sugeridos 10 categorías, histórico, percentiles
-  • retiros.py        → bancarios, Nequi, Escrow, saldo_bloqueado
-  • reportes.py       → certificado ingresos Ley 527, CSV/PDF export
+  FINANZAS (5 blueprints):
+  • wallet.py             → saldo COP, monedas, paquetes, movimientos, hitos
+  • payments.py           → pago dual digital/efectivo, conformidad dual, Escrow
+  • payment_methods.py    → cuentas banco/Nequi del usuario/negocio
+  • prices.py             → precios sugeridos por categoría
+  • subscriptions.py      → planes free/basico/profesional
 end note
 
 note right of MOD_GOB
-  GOBERNANZA (5 blueprints):
-  • admin.py          → users, suspensión, roles, region_scoping
-  • superadmin.py     → flags calientes, auditoría, multi-región, reindex
-  • verificador.py    → KYC review, 11 docs, aprobación/rechazo
-  • soporte.py        → tickets, disputas, moderación contenido
-  • regiones.py       → scoping, catálogo DANE, HA config, asignación staff
+  GOBERNANZA (6 blueprints):
+  • admin.py              → users, suspensión, roles, region_scoping, stats
+  • superadmin.py         → flags, auditoría, regiones, T&C, overrides, IA, cobros
+  • regions.py            → scoping regional, catálogo y asignación de staff
+  • negocios.py           → CRUD negocios, horarios, rutas ambulantes, ratings
+  • merchant.py           → preferencias y métodos de pago del negocio
+  • plantillas.py         → plantillas KYC, tickets y veredictos de disputa
 end note
 
 note right of MOD_ML
-  IA/ML (3 blueprints):
-  • ai_recommendations.py → retrieval PostGIS + ranking LightGBM 2-etapas
-  • ai_metrics.py      → transparencia SHAP, bias audit, A/B testing
-  • ai_training.py     → batch nocturno, versionado modelos, pgvector
+  IA/ML (2 blueprints):
+  • ai.py                 → recomendaciones (retrieval PostGIS + ranking ML)
+  • ai_metrics.py         → transparencia SHAP, bias audit, A/B testing
 end note
 
 note right of MOD_WS
-  TIEMPO REAL (3 handlers Socket.IO):
-  • chat_socket.py     → mensajería 1:1, protocolo ⟦c:action⟧, salas privadas
-  • notification_socket.py → push/in-app, centro alertas RF-10, salas user:<id>
-  • presence_socket.py → online/offline, typing, heartbeat 30s
+  TIEMPO REAL (2 blueprints + handler):
+  • chat.py               → historial REST de conversaciones/mensajes
+  • push.py               → suscripciones Web Push por dispositivo
+  • chat_socket.py        → handler Socket.IO: mensajería 1:1, salas privadas
 end note
 
 note right of MOD_S3
-  ALMACENAMIENTO:
-  • MinIO S3 → bucket chambeapp (evidencias, panorámicas 360°, KYC docs, portfolio)
-  • Prefijo regional: /region/<clave>/...
+  ALMACENAMIENTO (1 blueprint):
+  • portfolio.py          → portafolio PDS en MinIO/S3 con moderación
+  • MinIO S3              → evidencias, panorámicas 360°, KYC docs, portfolio
 end note
 
 note right of MOD_UTIL
-  UTILIDADES (6 blueprints):
-  • health.py          → /health, /ready, dependencias check
-  • config.py          → SystemConfig tipado (int/float/bool/json)
-  • search.py          → búsqueda unificada, filtros geo
-  • notifications.py   → centro notificaciones persistente
-  • upload.py          → presigned URLs MinIO, validación MIME
-  • utils.py           → helpers, paginación, export CSV/PDF
+  UTILIDADES (4 blueprints):
+  • notifications.py      → centro de notificaciones persistente
+  • onboarding.py         → pasos de onboarding por rol
+  • providers.py          → búsqueda de proveedores/PDS
+  • trust.py              → TrustScore recalculado
 end note
 
 @enduml
@@ -136,81 +136,83 @@ end note
 |------------|------------|-------------|
 | **PWA** | React 18 + Vite 6 + Zustand + Socket.IO | Single Page Application, Service Worker offline, responsive |
 
-### Backend - 36 Blueprints Agrupados en 9 Módulos
+### Backend - 38 Blueprints Agrupados en 9 Módulos
 
-#### IDENTIDAD (4)
+#### IDENTIDAD (9)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
-| `auth.py` | `/auth/login`, `/auth/register`, `/auth/refresh`, `/auth/logout`, `/health` | Autenticación JWT, registro, refresh tokens |
-| `two_factor.py` | `/2fa/setup`, `/2fa/verify`, `/2fa/disable` | 2FA TOTP (RFC 6238), Google Authenticator compatible |
-| `users.py` | `/users/me/profile`, `/users/me/preferences`, `/users/me/onboarding`, `/users/me/region` | Perfil, preferencias, onboarding, foto, región |
-| `kyc.py` | `/kyc/documentos-requeridos`, `/kyc/documentos`, `/kyc/documentos/:id/verificar` | 11 docs, 4 grupos, multi-instancia, base64 MVP |
+| `auth.py` | `/auth/login`, `/auth/register`, `/auth/refresh`, `/auth/logout` | Autenticación JWT, registro, refresh tokens |
+| `auth_password.py` | `/auth/forgot-password`, `/auth/reset-password` | Recuperación de contraseña |
+| `two_factor.py` | `/auth/2fa/setup`, `/auth/2fa/verify`, `/auth/2fa/disable` | 2FA TOTP + códigos de recuperación |
+| `email_verification.py` | `/auth/verify-email` | Verificación de correo |
+| `otp.py` | `/auth/otp/send`, `/auth/otp/verify` | Códigos OTP SMS/teléfono |
+| `users.py` | `/users/me`, `/users/me/foto`, `/users/me/region` | Perfil, foto, región |
+| `user_preferences.py` | `/users/me/preferences` | Preferencias de UI/notificaciones |
+| `kyc.py` | `/kyc/documentos-requeridos`, `/kyc/documentos` | Documentos requeridos y multi-instancia |
+| `legal.py` | `/legal/tyc`, `/legal/aceptar` | Términos y condiciones |
 
 #### MERCADO (6)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
 | `solicitudes.py` | CRUD `/solicitudes`, geocerca PostGIS, `imagen_360` | Publicación chambas, radio_km, panorama 360° |
 | `ofertas.py` | `/solicitudes/:id/ofertas`, negociación, contraofertas | Postulación PDS, límites por plan, negociación bilateral |
-| `contratos.py` | `/contracts`, firma SHA256, FSM 6 estados, adendas | Formalización, adendas, estado contractual |
-| `marañas.py` | `/chambas/:id/marana`, `/maranas`, micro-trabajos | Derivación adendas, rebusques, pago dual ágil |
+| `contracts.py` | `/contracts`, firma SHA256, FSM 6 estados, adendas | Formalización, adendas, estado contractual |
+| `maranas.py` | `/chambas/:id/marana`, `/maranas`, micro-trabajos | Derivación adendas, rebusques, pago dual ágil |
 | `habilidades.py` | `/habilidades`, `/certificaciones`, `/endosos` | Catálogo oficios, quiz/cert, endosos clientes |
 | `anuncios.py` | `/anuncios`, postulaciones, contactos directos | Empleo barrial, negocios, no vinculante |
 
-#### OPERACIONES (5)
+#### OPERACIONES (3)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
 | `chambas.py` | `/chambas`, check-in/out GPS, 6 hitos | Ciclo ejecución, validación Haversine <100m |
-| `evidencias.py` | `/evidencias/upload`, EXIF, hash SHA256 | Fotos MinIO, cadena custodia, antes/después |
-| `adendas.py` | `/chambas/:id/adenda`, cambios alcance/precio | Modificaciones en obra, notificaciones push |
-| `novedades.py` | `/chambas/:id/novedad`, incidencias, reportes | Bitácora campo, partes trabajo |
-| `calificaciones.py` | `/ratings`, 360° bilateral, TrustScore | Reputación, badges, recálculo nocturno |
+| `disputes.py` | `/contracts/:id/disputes`, decisión soporte | Disputas, chat y veredicto |
+| `tickets.py` | `/tickets`, `/tickets/mios`, categorías | Soporte con categoría, prioridad y plantillas |
 
-#### FINANZAS (6)
+#### FINANZAS (5)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
-| `wallet.py` | `/wallet`, saldo, transacciones, partida doble | Billetera virtual, DEBE/HABER invariante |
+| `wallet.py` | `/wallet`, `/wallet/withdraw`, `/wallet/coins/buy`, `/wallet/admin/paquetes` | Saldo COP, monedas, paquetes, movimientos, hitos |
 | `payments.py` | `/payments`, conformidad dual, Escrow 72h | Pago dual, comisiones 12%/8%, modalidad A/B |
-| `coins.py` | `/wallet/coins`, 3 tipos, paquetes, FIFO | ChambeCoins COMPRADA/PROMO/GANADA |
-| `precios.py` | `/precios/sugeridos`, histórico, percentiles | Referencias 10 categorías, mercado |
-| `retiros.py` | `/retiros`, Nequi/Bancolombia, saldo_bloqueado | Dispersión ACH, escrow preventivo |
-| `reportes.py` | `/reportes/certificado-ingresos`, PDF/CSV | Ley 527, formalización laboral |
+| `payment_methods.py` | `/metodos-pago` | Cuentas banco/Nequi del usuario/negocio |
+| `prices.py` | `/prices/sugeridos`, histórico, percentiles | Referencias por categoría, mercado |
+| `subscriptions.py` | `/subscriptions`, planes | Suscripción free/basico/profesional |
 
-#### GOBERNANZA (5)
+#### GOBERNANZA (6)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
-| `admin.py` | `/admin/stats`, `/admin/users`, `/admin/disputes` | KPIs scoped, suspensión, region_scoping |
-| `superadmin.py` | `/superadmin/flags`, `/superadmin/audit-logs`, `/superadmin/regions` | Feature flags, auditoría, multi-región |
-| `verificador.py` | `/kyc/pendientes`, `/verifications`, approve/reject | KYC review 11 docs, aprobación |
-| `soporte.py` | `/tickets`, `/moderation`, disputas | Mesa ayuda, moderación contenido |
-| `regiones.py` | `/regions`, `/detectar`, scoping, catálogo DANE | RBAC regional, HA config |
+| `admin.py` | `/admin/stats`, `/admin/users`, `/admin/disputes`, `/admin/cobros` | KPIs scoped, suspensión, region_scoping |
+| `superadmin.py` | `/superadmin/flags`, `/superadmin/audit-logs`, `/superadmin/regions`, `/superadmin/ai/params` | Flags, auditoría, multi-región, T&C, overrides |
+| `regions.py` | `/regions`, scoping, catálogo DANE | RBAC regional, asignación staff |
+| `negocios.py` | `/negocios`, horarios, rutas ambulantes, ratings | Directorio y gestión de negocios |
+| `merchant.py` | `/merchant/preferences`, `/merchant/payment-methods` | Preferencias y métodos del negocio |
+| `plantillas.py` | `/plantillas`, `/plantillas/<tipo>` | Plantillas KYC, tickets y veredictos |
 
-#### IA/ML (3)
+#### IA/ML (2)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
-| `ai_recommendations.py` | `/recommendations`, retrieval + ranking | Pipeline 2 etapas: PostGIS + LightGBM |
-| `ai_metrics.py` | `/metrics`, SHAP, bias audit, A/B | Transparencia, métricas producción |
-| `ai_training.py` | `/training`, batch nocturno, pgvector | Versionado modelos, embeddings 384-dim |
+| `ai.py` | `/ai/recommendations`, `/ai/solicitudes-for-provider` | Pipeline 2 etapas: PostGIS + LightGBM |
+| `ai_metrics.py` | `/ai/metrics`, `/ai/metrics/feature-importance` | Transparencia, SHAP, A/B |
 
-#### TIEMPO REAL (3 Handlers Socket.IO)
-| Handler | Salas/Eventos | Responsabilidad |
-|---------|---------------|-----------------|
-| `chat_socket.py` | `conversation:<id>`, `⟦c:action⟧` | Mensajería 1:1, negociación estructurada |
-| `notification_socket.py` | `user:<id>`, `notificacion:nueva` | Push/in-app, centro alertas RF-10 |
-| `presence_socket.py` | `presence:<id>`, heartbeat 30s | Online/offline, typing indicators |
+#### TIEMPO REAL (2 Blueprints + 1 Handler Socket.IO)
+| Componente | Salas/Eventos | Responsabilidad |
+|------------|---------------|-----------------|
+| `chat.py` | REST `/chat/hilos`, historial | Conversaciones y mensajes |
+| `push.py` | `/push/subscribe`, `/push/unsubscribe` | Suscripciones Web Push |
+| `chat_socket.py` | `user:<id>`, `conversation_<id>`, `mapa`, `anuncios` | Único handler Socket.IO: chat, feeds, notificaciones |
 
 #### ALMACENAMIENTO (1)
-- **MinIO S3**: Bucket `chambeapp` con prefijos regionales `/region/<clave>/evidencias|kyc|portfolio|360|anuncios`
-- Erasure Coding 2+2 (4 nodos/región), versioning, Object Lock (WORM KYC)
-
-#### UTILIDADES (6)
 | Blueprint | Endpoints Principales | Responsabilidad |
 |-----------|----------------------|-----------------|
-| `health.py` | `/health`, `/ready` | Liveness/readiness probes (DB+Redis+MinIO) |
-| `config.py` | `/config`, SystemConfig tipado | Feature flags, parámetros globales |
-| `search.py` | `/search`, filtros geo, unificada | Búsqueda global, PostGIS |
+| `portfolio.py` | `/portfolio`, subida y moderación | Portafolio PDS en MinIO/S3 |
+| **MinIO S3** | Buckets/prefijos | Evidencias, KYC, portfolio, 360° |
+
+#### UTILIDADES (4)
+| Blueprint | Endpoints Principales | Responsabilidad |
+|-----------|----------------------|-----------------|
 | `notifications.py` | `/notifications`, centro alertas | Persistencia, marcación leída |
-| `upload.py` | `/upload/presigned`, validación MIME | URLs firmadas MinIO, seguridad |
-| `utils.py` | Helpers, paginación, export | Utilidades transversales |
+| `onboarding.py` | `/onboarding`, pasos por rol | Onboarding de usuarios |
+| `providers.py` | `/providers`, búsqueda PDS | Descubrimiento de proveedores |
+| `trust.py` | `/trust`, recálculo | TrustScore y componentes |
 
 ---
 
@@ -227,7 +229,7 @@ end note
 
 ## 4. Notas de Arquitectura
 
-- **36 Blueprints Flask-Smorest**: OpenAPI 3 automático, validación Marshmallow, error handling unificado
+- **38 Blueprints Flask-Smorest**: OpenAPI 3 automático, validación Marshmallow, error handling unificado
 - **RBAC por `role_version`**: Revocación inmediata de sesión sin blacklist (incrementa version en BD)
 - **Multi-región**: `region_scope_id` en JWT claims, middleware inyecta `WHERE region_id = scope`
 - **Feature Flags Hot Reload**: Tabla `feature_flags` + cache memoria + invalidación Redis pub/sub (5s)

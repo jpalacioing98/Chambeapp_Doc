@@ -2,7 +2,7 @@
 
 > **Módulo:** Flujo End-to-End: Publicación, Recomendación ML, Cascada Geoespacial, Negociación, Contrato, Ejecución 6 Hitos, Pago Dual  
 > **Fuente:** `03_flujo_orden_pago.puml` (Figura 3)  
-> **Referencias de Código:** `backend/app/controllers/solicitudes.py`, `backend/app/services/ai/recommender.py`, `backend/app/services/cascade.py`, `backend/app/handlers/notification_socket.py`, `backend/app/controllers/contracts.py`, `backend/app/handlers/chat_socket.py`, `backend/app/controllers/payments.py`, `backend/app/controllers/wallet.py`
+> **Referencias de Código:** `backend/app/controllers/solicitudes.py`, `backend/app/ai/recommender.py`, `backend/app/services/cascade.py`, `backend/app/services/realtime.py`, `backend/app/controllers/contracts.py`, `backend/app/controllers/chat_socket.py`, `backend/app/controllers/payments.py`, `backend/app/controllers/wallet.py`
 
 ---
 
@@ -17,10 +17,11 @@ actor "PDS" as P
 participant "Solicitud\n(solicitudes blueprint)" as SOL
 participant "Recomendador ML\nget_recommender()" as REC
 participant "Cascade Manager\nservices/cascade.py" as CAS
-participant "Socket.IO\n(notification_socket)" as SIO
+participant "realtime.safe_emit\n(services/realtime.py)" as SIO
 participant "Contrato\n(contracts blueprint)" as CON
 participant "Chat\n(chat_socket)" as CH
 participant "Pago Dual\n(payments blueprint)" as PAY
+participant "Cobros\n(services/cobros.py)" as COB
 participant "Wallet\n(wallet blueprint)" as WAL
 
 == PUBLICACIÓN Y RECOMENDACIÓN ==
@@ -43,6 +44,22 @@ CON -> CH: habilita conversación (protocolo ⟦c:action⟧)
 CH -> S: emit 'message' (contrato_perfeccionado)
 CH -> P: emit 'message' (contrato_perfeccionado)
 
+== COBRO EN MONEDAS (PRE-FIRMA) ==
+S -> CON: GET /contracts/:id/cobro
+CON -> COB: calcular_monedas_contrato(monto)
+COB -> COB: pct_contrato + monedas_fijas (mínimo configurable)
+COB --> CON: monedas_requeridas por cada parte
+S -> CON: Firma contrato (solicitante)
+CON -> COB: cobrar_monedas(SOL, monedas, ref=contract)
+P -> CON: Firma contrato (PDS)
+CON -> COB: cobrar_monedas(PDS, monedas, ref=contract)
+COB -> WAL: MovimientoMonedas tipo=gasto (−monedas)
+WAL --> COB: saldo_resultante / OK
+alt Monedas insuficientes
+    COB --> CON: MONEDAS_INSUFICIENTES
+    CON --> S: 400 recarga monedas para firmar
+end
+
 == EJECUCIÓN CHAMBA (6 HITOS) ==
 P -> CON: POST /chambas/checkin_entrada {lat, lng, evidencias[]}
 CON -> CON: Valida GPS < 100m (Haversine) + hash SHA256 evidencias
@@ -63,6 +80,16 @@ alt Ambas conformidades OK
 else Una parte no confirma
     PAY -> CAS: Escrow 72h → mediación automática
 end
+
+note right of COB
+  COBRO EN MONEDAS (services/cobros.py):
+  • Tarifas en TarifaCobro: pct_contrato, precio_moneda_cop,
+    monedas_fijas, min_monedas_contrato (configurables por superadmin)
+  • monedas = trunc((monto * % / 100) / precio_moneda) + monedas_fijas
+  • Cobro idempotente por referencia (contract) a solicitante y PDS
+  • Si el contrato no se activa, reembolso con reembolsar_monedas()
+  • GET /contracts/:id/cobro expone la estimación al frontend
+end note
 
 note right of REC
   PIPELINE ML 2 ETAPAS:
@@ -94,7 +121,7 @@ note right of PAY
   • Ambas requeridas → liberación inmediata (Escrow 0s)
   • Comisión: 12% PDS + 8% Solicitante = 20% plataforma
   • Modalidad B (monedas): usa Coin COMPRADA, sin comisión
-  • Partida doble: WalletTransaction DEBE/HABER invariante
+  • Partida doble: Transaction/MovimientoMonedas (ΣDEBE = ΣHABER)
 end note
 
 @enduml
@@ -174,7 +201,8 @@ end note
 | `chambas` | `contract_id UK`, `estado[7]`, 6 hitos, `evidencias JSON`, `adendas JSON` | Ejecución operativa |
 | `payments` | `contract_id UK`, `monto`, `comision_pds(12%)`, `comision_solicitante(8%)`, `conformidad_dual`, `pasarela` | Liquidación |
 | `wallets` | `user_id UK`, `saldo`, `saldo_bloqueado` | Billetera partida doble |
-| `wallet_transactions` | `wallet_id`, `tipo[5]`, `monto`, `DEBE/HABER`, `saldo_resultante` | Libro contable |
+| `transactions` | `wallet_id`, `tipo[5]`, `monto`, `descripcion`, `referencia` | Libro contable COP |
+| `movimientos_monedas` | `user_id`, `wallet_id`, `tipo[6]`, `cantidad`, `saldo_resultante` | Libro de monedas |
 | `notifications` | `user_id`, `tipo`, `titulo`, `mensaje`, `leida` | Centro alertas RF-10 |
 
 ---
@@ -226,7 +254,7 @@ end note
 - **Conformidad dual obligatoria**: Ambas firmas digitales SHA256 + timestamp
 - **Comisión**: 12% PDS + 8% Solicitante = 20% plataforma
 - **Modalidad B**: Usa Coin COMPRADA, 0% comisión, conformidad dual
-- **Partida doble**: `WalletTransaction` DEBE/HABER invariante (ΣDEBE = ΣHABER)
+- **Partida doble**: `Transaction`/`MovimientoMonedas` invariante (ΣDEBE = ΣHABER)
 - **Escrow 72h**: Si una parte no conforma → mediación soporte automática
 
 ---

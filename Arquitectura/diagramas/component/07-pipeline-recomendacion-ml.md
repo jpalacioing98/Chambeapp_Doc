@@ -2,7 +2,7 @@
 
 > **Módulo:** Motor de Recomendaciones IA/ML - Pipeline Híbrido Geoespacial + LightGBM  
 > **Fuente:** `07_pipeline_recomendacion.puml` (Figura 7)  
-> **Referencias de Código:** `backend/app/services/ai/recommender.py`, `backend/app/services/ai/hybrid.py`, `backend/app/services/ai/ab_test.py`, `backend/app/controllers/ai_recommendations.py`, `backend/app/controllers/ai_training.py`
+> **Referencias de Código:** `backend/app/ai/recommender.py`, `backend/app/ai/features.py`, `backend/app/ai/ml_ranker.py`, `backend/app/ai/geo.py`, `backend/app/ai/ab_testing.py`, `backend/app/ai/bandit.py`, `backend/app/ai/train.py`, `backend/app/controllers/ai.py`, `backend/app/controllers/ai_metrics.py`
 
 ---
 
@@ -13,16 +13,16 @@
 title Figura 7 - Pipeline de Recomendación ML (2 Etapas: Retrieval + Ranking)
 
 actor "Solicitante" as S
-participant "get_recommender()\nservices/ai/recommender.py" as GR
-participant "HybridRecommender\nservices/ai/hybrid.py" as HR
-participant "Retrieval Geo\nPostGIS ST_DWithin" as GEO
-participant "FeatureExtractor\n22 features" as FE
-participant "MLRanker\nLightGBM v1" as MR
-participant "ABTest\nservices/ai/ab_test.py" as AB
-participant "ShadowRecommender\n(heuristic logging)" as SR
-participant "HeuristicRecommender\n(fallback)" as HER
-participant "ThompsonBandit\n(exploración)" as TB
-database "PostgreSQL + pgvector" as DB
+participant "get_recommender()\napp/ai/recommender.py" as GR
+participant "HybridRecommender\napp/ai/recommender.py" as HR
+participant "Retrieval Geo\napp/ai/geo.py (ST_DWithin/Haversine)" as GEO
+participant "FeatureExtractor\napp/ai/features.py" as FE
+participant "MLRanker\napp/ai/ml_ranker.py (LightGBM)" as MR
+participant "ABTest\napp/ai/ab_testing.py" as AB
+participant "ShadowRecommender\napp/ai/recommender.py" as SR
+participant "HeuristicRecommender\napp/ai/recommender.py" as HER
+participant "ThompsonBandit\napp/ai/bandit.py" as TB
+database "PostgreSQL + PostGIS" as DB
 
 S -> GR: recommendations(solicitud_id)
 GR -> HR: rank(solicitud)
@@ -75,20 +75,20 @@ note right of FE
   17.   Disputas historial (count)
   18.   Tiempo respuesta promedio ofertas (min)
   19.   Tasa aceptación ofertas (%)
-  20.   Embedding cosine similarity (pgvector 384-dim)
+  20.   Similitud de embeddings (VectorRecommender STUB futuro)
   21.   Hora del día / día semana (contextual)
   22.   Urgencia solicitud (hoy/semana/flexible)
 end note
 
 note right of MR
   MLRANKER (LightGBM v1):
-  • Entrenamiento: batch nocturno Celery (ai_training blueprint)
+  • Entrenamiento: app/ai/train.py (batch Celery)
   • Datos: recommendation_logs (clicked=1, contratado=1) + features snapshot
   • Objetivo: binary classification (contratado ~ features)
   • Métricas: AUC, Precision@K, NDCG@10
   • SHAP: TreeExplainer → explicación por feature por recomendación
   • Versionado: modelo_version en recommendation_logs + feature_flags
-  • pgvector: embeddings 384-dim (sentence-transformers all-MiniLM-L6-v2)
+  • VectorRecommender: STUB futuro (sentence-transformers + pgvector)
 end note
 
 note right of AB
@@ -119,15 +119,15 @@ end note
 
 | Componente | Archivo/Clase | Responsabilidad |
 |------------|---------------|-----------------|
-| **get_recommender()** | `services/ai/recommender.py` | Entry point, orquesta pipeline, retorna ranking final |
-| **HybridRecommender** | `services/ai/hybrid.py` | Coordinador: retrieval → feature extraction → ranking → fallbacks |
+| **get_recommender()** | `app/ai/recommender.py` | Entry point, orquesta pipeline, retorna ranking final |
+| **HybridRecommender** | `app/ai/recommender.py` | Coordinador: retrieval → feature extraction → ranking → fallbacks |
 | **Retrieval Geo (PostGIS)** | `ST_DWithin` | Búsqueda geoespacial: PDS activos en radio 15km, top 50 |
-| **FeatureExtractor** | `services/ai/features.py` | 22 features: TrustScore, distancia, skills, historial, embeddings pgvector |
-| **MLRanker (LightGBM v1)** | `services/ai/ranker.py` | Ranking ML, SHAP explanations, versionado modelos |
-| **ABTest** | `services/ai/ab_test.py` | A/B testing: Grupo A (ML) vs Grupo B (Heuristic) |
-| **ShadowRecommender** | `services/ai/shadow.py` | Logging heurístico sin servir (shadow mode) |
-| **HeuristicRecommender** | `services/ai/heuristic.py` | Fallback: `score = trust * 0.7 + 1/dist * 0.3` |
-| **ThompsonBandit** | `services/ai/bandit.py` | Multi-armed bandit para exploración/explotación |
+| **FeatureExtractor** | `app/ai/features.py` | 22 features: TrustScore, distancia, skills, historial |
+| **MLRanker (LightGBM v1)** | `app/ai/ml_ranker.py` | Ranking ML, SHAP explanations, versionado modelos |
+| **ABTest** | `app/ai/ab_testing.py` | A/B testing: Grupo A (ML) vs Grupo B (Heuristic) |
+| **ShadowRecommender** | `app/ai/recommender.py` | Logging heurístico sin servir (shadow mode) |
+| **HeuristicRecommender** | `app/ai/recommender.py` | Fallback: `score = trust * 0.7 + 1/dist * 0.3` |
+| **ThompsonBandit** | `app/ai/bandit.py` | Multi-armed bandit para exploración/explotación |
 
 ---
 
@@ -198,7 +198,7 @@ end note
 
 | Aspecto | Detalle |
 |---------|---------|
-| **Entrenamiento** | Batch nocturno Celery (`ai_training` blueprint), schedule configurable |
+| **Entrenamiento** | `app/ai/train.py` (batch/Celery), schedule configurable |
 | **Datos entrenamiento** | `recommendation_logs` (clicked=1, contratado=1) + features snapshot JSON |
 | **Objetivo** | Binary classification: `contratado ~ features` |
 | **Métricas** | AUC, Precision@K, NDCG@10 |

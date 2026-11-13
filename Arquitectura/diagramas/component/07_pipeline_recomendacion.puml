@@ -2,16 +2,16 @@
 title Figura 7 - Pipeline de Recomendación ML (2 Etapas: Retrieval + Ranking)
 
 actor "Solicitante" as S
-participant "get_recommender()\nservices/ai/recommender.py" as GR
-participant "HybridRecommender\nservices/ai/hybrid.py" as HR
-participant "Retrieval Geo\nPostGIS ST_DWithin" as GEO
-participant "FeatureExtractor\n22 features" as FE
-participant "MLRanker\nLightGBM v1" as MR
-participant "ABTest\nservices/ai/ab_test.py" as AB
-participant "ShadowRecommender\n(heuristic logging)" as SR
-participant "HeuristicRecommender\n(fallback)" as HER
-participant "ThompsonBandit\n(exploración)" as TB
-database "PostgreSQL + pgvector" as DB
+participant "get_recommender()\napp/ai/recommender.py" as GR
+participant "HybridRecommender\napp/ai/recommender.py" as HR
+participant "Retrieval Geo\napp/ai/geo.py (ST_DWithin/Haversine)" as GEO
+participant "FeatureExtractor\napp/ai/features.py" as FE
+participant "MLRanker\napp/ai/ml_ranker.py (LightGBM)" as MR
+participant "ABTest\napp/ai/ab_testing.py" as AB
+participant "ShadowRecommender\napp/ai/recommender.py" as SR
+participant "HeuristicRecommender\napp/ai/recommender.py" as HER
+participant "ThompsonBandit\napp/ai/bandit.py" as TB
+database "PostgreSQL + PostGIS" as DB
 
 S -> GR: recommendations(solicitud_id)
 GR -> HR: rank(solicitud)
@@ -64,20 +64,20 @@ note right of FE
   17.   Disputas historial (count)
   18.   Tiempo respuesta promedio ofertas (min)
   19.   Tasa aceptación ofertas (%)
-  20.   Embedding cosine similarity (pgvector 384-dim)
+  20.   Similitud de embeddings (VectorRecommender STUB futuro)
   21.   Hora del día / día semana (contextual)
   22.   Urgencia solicitud (hoy/semana/flexible)
 end note
 
 note right of MR
   MLRANKER (LightGBM v1):
-  • Entrenamiento: batch nocturno Celery (ai_training blueprint)
+  • Entrenamiento: app/ai/train.py (batch Celery)
   • Datos: recommendation_logs (clicked=1, contratado=1) + features snapshot
   • Objetivo: binary classification (contratado ~ features)
   • Métricas: AUC, Precision@K, NDCG@10
   • SHAP: TreeExplainer → explicación por feature por recomendación
   • Versionado: modelo_version en recommendation_logs + feature_flags
-  • pgvector: embeddings 384-dim (sentence-transformers all-MiniLM-L6-v2)
+  • VectorRecommender: STUB futuro (sentence-transformers + pgvector)
 end note
 
 note right of AB

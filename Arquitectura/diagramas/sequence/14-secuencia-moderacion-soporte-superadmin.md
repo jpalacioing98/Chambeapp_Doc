@@ -25,6 +25,8 @@ end box
 box "API Gateway (Flask-Smorest + Blueprints)" #FFF3E0
   participant "/api/v1/contracts/:id/disputes\n(contracts blueprint)" as API_DISP
   participant "/api/v1/tickets/\n(tickets blueprint)" as API_TICK
+  participant "/api/v1/plantillas\n(plantillas blueprint)" as API_PLAN
+  participant "/api/v1/wallet/admin\n(tarifas y paquetes)" as API_COBRO
   participant "/api/v1/admin/stats\n(admin blueprint)" as API_STATS
   participant "/api/v1/admin/disputes/:id/resolve\n(admin blueprint)" as API_RES
   participant "/api/v1/superadmin/flags\n(superadmin blueprint)" as API_FLAGS
@@ -37,7 +39,9 @@ end box
 
 box "PostgreSQL 16 + PostGIS" #E8F5E9
   database "disputes\n(estado, resolucion, resuelto_por)" as DB_DISP
-  database "tickets\n(tipo, prioridad, estado, asignado_a)" as DB_TICK
+  database "tickets\n(categoria, prioridad, estado, asignado_a)" as DB_TICK
+  database "system_configs\n(plantillas_soporte JSON)" as DB_PLAN
+  database "tarifas_cobro\n(clave, valor, actualizado_por)" as DB_COBRO
   database "feature_flags\n(nombre, habilitado, descripcion)" as DB_FLAGS
   database "audit_logs\n(actor, accion, entidad, snapshot_diff, timestamp)\nINMUTABLE APPEND-ONLY (RNF-AUD)" as DB_AUDIT
 end box
@@ -50,9 +54,20 @@ API_DISP --> FE_DISP: 201 {dispute_id, estado=abierta}
 FE_DISP --> SOL: Disputa radicada #DISP-001
 
 == TICKET: ASISTENCIA FORMALIZACIÓN ==
-PDS -> API_TICK: POST /tickets/ {tipo=SOPORTE, prioridad=high, body}
+PDS -> API_TICK: POST /tickets/ {category=PAGOS, prioridad=high, body}
 API_TICK -> DB_TICK: INSERT ticket (estado=open, asignado_a=NULL)
 API_TICK --> PDS: 201 {ticket_id, estado=open}
+
+== SOPORTE: CATEGORÍA + PLANTILLA DE RESPUESTA ==
+SOP -> API_TICK: GET /tickets?category=pagos&status=open
+API_TICK -> DB_TICK: SELECT tickets por categoría/estado (scope)
+API_TICK --> SOP: 200 [ticket_id, categoria, prioridad]
+SOP -> API_PLAN: GET /plantillas
+API_PLAN -> DB_PLAN: SELECT system_configs.key=plantillas_soporte
+API_PLAN --> SOP: 200 {ticket_respuesta[], kyc_rechazo[], disputa_veredicto[]}
+SOP -> API_TICK: PATCH /tickets/1 {status=pending, assigned_to=SOP}
+API_TICK -> DB_TICK: UPDATE ticket + INSERT thread de respuesta
+API_TICK -> DB_AUDIT: INSERT audit_log {action=TICKET_UPDATE}
 
 == ADMIN REGIONAL: GESTIÓN SCOPED ==
 ADM -> FE_ADM: Abre panel Admin (JWT: rol=admin, region_scope=1)
@@ -82,6 +97,19 @@ FE_ADM -> API_FLAGS: PATCH /flags/ml_ranking_enabled {habilitado: false}
 API_FLAGS -> DB_FLAGS: UPDATE feature_flags SET habilitado=false, actualizado_por=SUP, actualizado_en=NOW()
 API_FLAGS -> DB_AUDIT: INSERT audit_log {actor=SUP, action=FLAG_UPDATE, entity=feature_flag, entity_id=ml_ranking_enabled, before_json={habilitado:true}, after_json={habilitado:false}, timestamp}
 API_FLAGS --> FE_ADM: 200 {flag: ml_ranking_enabled, habilitado: false}
+
+FE_ADM -> API_PLAN: PUT /plantillas/disputa_veredicto {items[]}
+API_PLAN -> DB_PLAN: UPSERT system_configs (plantillas_soporte)
+API_PLAN -> DB_AUDIT: INSERT audit_log {action=PLANTILLA_UPDATE}
+API_PLAN --> FE_ADM: 200 {disputa_veredicto[]}
+
+FE_ADM -> API_COBRO: GET /wallet/admin/paquetes
+API_COBRO -> DB_COBRO: SELECT paquetes_monedas ORDER BY orden
+API_COBRO --> FE_ADM: 200 [paquetes_monedas]
+FE_ADM -> API_COBRO: PUT /cobros {pct_contrato, precio_moneda_cop, ...}
+API_COBRO -> DB_COBRO: UPSERT tarifas_cobro + recalcula precio_cop de paquetes
+API_COBRO -> DB_AUDIT: INSERT audit_log {action=COBROS_UPDATE}
+API_COBRO --> FE_ADM: 200 {tarifas}
 
 FE_ADM -> API_AUDIT: GET /superadmin/audit-logs?actor=SUP&desde=2024-01-01
 API_AUDIT -> DB_AUDIT: SELECT * FROM audit_logs WHERE actor_id=SUP ORDER BY timestamp DESC
@@ -114,6 +142,24 @@ note right of API_FLAGS
   • Frontend: polling /api/v1/config/flags cada 30s
   • Cambio Superadmin → broadcast Redis → todos pods invalidan cache
   • Auditoría automática en audit_logs (diff before/after)
+end note
+
+note right of API_PLAN
+  PLANTILLAS DE SOPORTE (system_configs):
+  • kyc_rechazo      → motivos de rechazo de documentos
+  • ticket_respuesta → respuestas rápidas de tickets
+  • disputa_veredicto→ textos de laudo/veredicto
+  • GET /plantillas y PUT /plantillas/<tipo> (superadmin)
+  • Lectura para verificador/soporte; defaults si no existe config
+end note
+
+note right of API_COBRO
+  COBROS Y PAQUETES (monedas):
+  • tarifas_cobro: pct_contrato, precio_moneda_cop, monedas_fijas,
+    min_monedas_contrato, costo_publicar_anuncio, costo_reactivar_anuncio
+  • GET/PUT /cobros (superadmin); recalcula precio_cop de paquetes
+  • paquetes_monedas: cantidad, bonus, precio_cop, oferta, orden, activo
+  • Cobro de contrato: cobrar_monedas() por ambas partes (idempotente)
 end note
 
 @enduml

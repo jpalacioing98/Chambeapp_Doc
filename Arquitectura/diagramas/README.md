@@ -49,7 +49,7 @@ graph TD
         API_SOL[controllers/solicitudes.py & ofertas.py]
         API_OPS[controllers/chambas.py & contracts.py]
         API_FIN[controllers/wallet.py & payments.py]
-        API_SIO[controllers/oferta_socket.py & notification_socket.py]
+        API_SIO[controllers/chat_socket.py & services/realtime.py]
         API_ADM[controllers/admin.py & superadmin.py]
     end
 

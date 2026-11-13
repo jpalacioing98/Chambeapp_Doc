@@ -1,4 +1,4 @@
-# Diagrama de Clases / ER — Figura 4: Modelo de Datos Relacional Unificado (35 Entidades + PostGIS)
+# Diagrama de Clases / ER — Figura 4: Modelo de Datos Relacional Unificado (54 Entidades + PostGIS)
 
 > **Módulo:** Modelo Entidad-Relacional Normalizado 3FN con PostGIS  
 > **Fuente:** `04_modelo_datos.puml` (Figura 4)  
@@ -10,7 +10,7 @@
 
 ```plantuml
 @startuml
-title Figura 4 - Modelo de Datos Relacional Unificado: 35 Entidades SQLAlchemy + PostGIS
+title Figura 4 - Modelo de Datos Relacional Unificado: 54 Entidades SQLAlchemy + PostGIS
 
 actor "DBA / Arquitecto" as DBA
 participant "CORE USUARIOS (6)" as CORE
@@ -18,13 +18,13 @@ participant "SOLICITUDES Y NEGOCIACIÓN (3)" as SOL
 participant "CONTRATOS Y EJECUCIÓN (5)" as CON
 participant "MARAÑAS / REBUSQUE (2)" as MAR
 participant "ANUNCIOS LABORALES (2)" as ANU
-participant "NEGOCIOS / MERCHANT (4)" as NEG
-participant "FINANZAS / WALLET (7)" as FIN
+participant "NEGOCIOS / MERCHANT (5)" as NEG
+participant "FINANZAS / WALLET (11)" as FIN
 participant "KYC Y DOCUMENTOS (2)" as KYC
 participant "HABILIDADES Y CERTIFICACIONES (4)" as HAB
 participant "PORTAFOLIO Y CONFIANZA (3)" as POR
-participant "MENSAJERÍA Y NOTIFICACIONES (4)" as COM
-participant "ADMIN Y SISTEMA (3)" as ADM
+participant "MENSAJERÍA Y NOTIFICACIONES (6)" as COM
+participant "ADMIN Y SISTEMA (4)" as ADM
 participant "ML Y RECOMENDACIONES (1)" as ML
 
 DBA -> CORE: Diseño normalizado 3FN + índices compuestos
@@ -48,14 +48,14 @@ note right of CORE
   3. regions                    → PK id, clave UK, nombre, descripcion, departamentos JSON
   4. legal_acceptances          → PK id, user_id FK, version_tyc, fecha, ip (Ley 527/1999 clickwrap)
   5. verifications              → PK id, user_id FK, doc_type, doc_number, status[3], reviewed_by FK, reviewed_at
-  6. user_badges                → PK id, usuario_id FK, tipo[9], activo, otorgado_en
+  6. two_factor_recovery_codes  → PK id, user_id FK, code_hash, usado, usado_en, creado_en (códigos de respaldo 2FA hasheados)
 end note
 
 note right of SOL
   SOLICITUDES Y NEGOCIACIÓN (3):
   7. solicitudes                → PK id, solicitante_id FK, titulo, categoria, descripcion, ubicacion, lat/lng, direccion, presupuesto, fecha_deseada, urgencia[3], estado[8], especificaciones JSON, imagen_360, imagenes JSON, radio_km, created_at/updated_at
   8. ofertas                    → PK id, solicitud_id FK, pds_id FK, monto, mensaje, fecha_deseada, horario, estado[5], contra_monto/mensaje/fecha/horario, created_at/updated_at
-  9. ratings_solicitud          → PK id, service_id FK, autor_id FK, calificado_id FK, puntaje[1-5], comentario, reportado, created_at (UNIQUE service_id, autor_id)
+  9. ratings                    → PK id, service_id FK, autor_id FK, calificado_id FK, puntaje[1-5], comentario, reportado, created_at (UNIQUE service_id, autor_id)
 end note
 
 note right of CON
@@ -70,77 +70,85 @@ end note
 note right of MAR
   MARAÑAS / REBUSQUE (2):
   15. maranas                   → PK id, chamba_id FK, adenda_idx, solicitante_id FK, titulo, categoria, descripcion, presupuesto, ubicacion, fecha_deseada, horario, estado[5], pago_dual Boolean, pds_asignado_id FK, fechas (asignacion/entrega/pago), created_at/updated_at
-  16. marana_ofertas            → PK id, marana_id FK, pds_id FK, monto, mensaje, estado[4], contra_monto/mensaje, created_at/updated_at
+  16. maranas_ofertas           → PK id, marana_id FK, pds_id FK, monto, mensaje, estado[4], contra_monto/mensaje, created_at/updated_at
 end note
 
 note right of ANU
   ANUNCIOS LABORALES (2):
-  17. anuncios_laborales        → PK id, negocio_id FK, titulo, descripcion, categoria, ubicacion, lat/lng, vacantes, estado[2], created_at/updated_at
-  18. anuncios_postulaciones    → PK id, anuncio_id FK, pds_id FK, mensaje, telefono_contacto, email_contacto, estado[3], created_at/updated_at
+  17. anuncios_laborales        → PK id, negocio_id FK, titulo, descripcion, categoria, tipo[empleo], visible_mapa, ubicacion, lat/lng, vacantes, modalidad[contacto/contrato], presupuesto, fecha_deseada, horario, contract_ids JSON, estado[2], created_at/updated_at
+  18. anuncios_postulaciones    → PK id, anuncio_id FK, pds_id FK, mensaje, telefono_contacto, email_contacto, estado[4: pendiente/contactado/descartado/contratado], contract_id, created_at/updated_at
 end note
 
 note right of NEG
-  NEGOCIOS / MERCHANT (4):
-  19. negocios                  → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[4], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_km, geom Point, categoria_principal, categorias/servicios/palabras JSON, redes sociales JSON, rating_promedio, total_calificaciones, verificado, estado[5], motivo_rechazo, created_at/updated_at
+  NEGOCIOS / MERCHANT (5):
+  19. negocios                  → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[4], modalidad[estatico/ambulante], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_km, geom Point, categoria_principal, categorias/servicios/palabras JSON, redes sociales JSON, rating_promedio, total_calificaciones, verificado, estado[5], motivo_rechazo, created_at/updated_at
   20. negocio_horarios          → PK id, negocio_id FK, dia_semana[0-6], abierto, hora_apertura/cierre (UNIQUE negocio_id, dia_semana)
   21. negocio_ratings           → PK id, negocio_id FK, autor_id FK, puntaje[1-5], comentario, reportado, created_at (UNIQUE negocio_id, autor_id)
   22. negocio_reportes          → PK id, negocio_id FK, reporter_id FK, tipo[5], descripcion, estado[4], ticket_id FK, created_at
+  23. negocio_rutas             → PK id, negocio_id FK, nombre, descripcion, puntos JSON, calles JSON, color, activa, en_curso, progreso[0-1], created_at/updated_at (negocio ambulante)
 end note
 
 note right of FIN
-  FINANZAS / WALLET (7):
-  23. wallets                   → PK id, user_id FK UK, saldo, saldo_bloqueado, created_at/updated_at
-  24. transactions              → PK id, wallet_id FK, tipo[5], monto (COP +/−), descripcion, referencia, created_at
-  25. coins                     → PK id, user_id FK, cantidad, tipo[3], vence_en (promocionales), created_at
-  26. payments                  → PK id, contract_id FK UK, monto, comision_pds(12%), comision_solicitante(8%), estado[4], pasarela[mock/nequi], referencia_pasarela, motivo_reembolso, created_at/updated_at
-  27. metodos_pago              → PK id, user_id FK, tipo[billetera/banco], banco, numero_cuenta, es_principal, created_at
-  28. merchant_payment_methods  → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON, principal, activo, created_at
-  29. merchant_preferences      → PK id, user_id FK UK, notif_* Boolean, push_enabled, email_digest[daily/weekly/never], idioma, tema[system/light/dark], creado_en/actualizado_en
+  FINANZAS / WALLET (11):
+  24. wallets                   → PK id, user_id FK UK, saldo, saldo_bloqueado, monedas_saldo, created_at/updated_at
+  25. transactions              → PK id, wallet_id FK, tipo[5], monto (COP +/−), descripcion, referencia, created_at
+  26. coins                     → PK id, user_id FK, cantidad, tipo[3], vence_en (promocionales), created_at
+  27. payments                  → PK id, contract_id FK UK, monto, comision_pds(12%), comision_solicitante(8%), estado[4], pasarela[mock/nequi], referencia_pasarela, motivo_reembolso, created_at/updated_at
+  28. metodos_pago              → PK id, user_id FK, tipo[billetera/banco], banco, numero_cuenta, es_principal, created_at
+  29. merchant_payment_methods  → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON, principal, activo, created_at
+  30. merchant_preferences      → PK id, user_id FK UK, notif_* Boolean, push_enabled, email_digest[daily/weekly/never], idioma, tema, mapa_preferido[2d/3d], formulario_solicitud[paso_a_paso/completo]
+  31. paquetes_monedas          → PK id, nombre, descripcion, cantidad, bonus, precio_cop, activo, en_oferta, precio_oferta_cop, oferta_desde/hasta, orden, creado_por FK, created_at/updated_at
+  32. compras_paquetes          → PK id, user_id FK, paquete_id FK, monedas, precio_cop, pasarela, estado, referencia, creado_en
+  33. movimientos_monedas       → PK id, user_id FK, wallet_id FK, tipo[6: compra/gasto/promocional/ganada/vencimiento/ajuste], cantidad (+/−), saldo_resultante, descripcion, referencia, paquete_id FK, vence_en, creado_en
+  34. suscripciones             → PK id, user_id FK UK, plan[free/basico/profesional], estado[activa/cancelada/vencida], inicio_en, fin_en, monto, metodo_pago, created_at/updated_at
 end note
 
 note right of KYC
   KYC Y DOCUMENTOS (2):
-  30. documentos_requeridos     → PK id, rol[pds/solicitante], clave, nombre, descripcion, obligatorio, grupo[4], multi_instancia, orden (UNIQUE rol, clave)
-  31. documentos_usuario        → PK id, user_id FK, documento_requerido_id FK, documento_clave, instancia, rol, estado[4], url, archivo_base64, nombre_archivo, mime_type, fecha_envio, revisado_en, revisor_id FK, nota (UNIQUE user_id, documento_clave, instancia)
+  35. documentos_requeridos     → PK id, rol[pds/solicitante], clave, nombre, descripcion, obligatorio, grupo[4], multi_instancia, orden (UNIQUE rol, clave)
+  36. documentos_usuario        → PK id, user_id FK, documento_requerido_id FK, documento_clave, instancia, rol, estado[4], url, archivo_base64, nombre_archivo, mime_type, fecha_envio, revisado_en, revisor_id FK, nota (UNIQUE user_id, documento_clave, instancia)
 end note
 
 note right of HAB
   HABILIDADES Y CERTIFICACIONES (4):
-  32. habilidades               → PK id, nombre UK, descripcion, categoria[5], habilidades JSON (competencias), niveles JSON (quiz/cert), activa, created_at
-  33. habilidad_niveles         → PK id, user_id FK, habilidad_id FK, nivel_index, metodo[quiz/cert], evidencia_url, fecha (UNIQUE user_id, habilidad_id, nivel_index)
-  34. endoso_habilidades        → PK id, contract_id FK, pds_id FK, solicitante_id FK, habilidad_id FK, competencia, created_at (UNIQUE contract, pds, habilidad, competencia)
-  35. certificaciones_tecnicas  → PK id, user_id FK, habilidad_id FK, institucion, titulo, anio, codigo_verificacion, documento_url, estado[3], created_at
+  37. habilidades               → PK id, nombre UK, descripcion, categoria[5], habilidades JSON (competencias), niveles JSON (quiz/cert), activa, created_at
+  38. habilidad_niveles         → PK id, user_id FK, habilidad_id FK, nivel_index, metodo[quiz/cert], evidencia_url, fecha (UNIQUE user_id, habilidad_id, nivel_index)
+  39. endoso_habilidades        → PK id, contract_id FK, pds_id FK, solicitante_id FK, habilidad_id FK, competencia, created_at (UNIQUE contract, pds, habilidad, competencia)
+  40. certificaciones_tecnicas  → PK id, user_id FK, habilidad_id FK, institucion, titulo, anio, codigo_verificacion, documento_url, estado[3], created_at
 end note
 
 note right of POR
   PORTAFOLIO Y CONFIANZA (3):
-  36. portfolio_items           → PK id, pds_id FK, titulo, descripcion, tipo[foto/video/doc], categoria, s3_key, url, file_size, mime_type, estado[3], verificado_por FK, verificado_en, vistas, created_at
-  37. trust_scores              → PK id, pds_id FK UK, kyc_verificado, portfolio_calidad, rating_score, contratos_completados, referidos_count, puntuacion[0-1], nivel[nuevo/confiable/verificado/experto], componentes_json, calculado_en, version (Pesos: KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%)
-  38. badges                    → PK id, usuario_id FK, tipo[9], activo, otorgado_en
+  41. portfolio_items           → PK id, pds_id FK, titulo, descripcion, tipo[foto/video/doc], categoria, s3_key, url, file_size, mime_type, estado[3], verificado_por FK, verificado_en, vistas, created_at
+  42. trust_scores              → PK id, pds_id FK UK, kyc_verificado, portfolio_calidad, rating_score, contratos_completados, referidos_count, puntuacion[0-1], nivel[nuevo/confiable/verificado/experto], componentes_json, calculado_en, version (Pesos: KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%)
+  43. badges                    → PK id, usuario_id FK, tipo[9], activo, otorgado_en
 end note
 
 note right of COM
-  MENSAJERÍA Y NOTIFICACIONES (4):
-  39. conversations             → PK id, user_a_id FK, user_b_id FK, creado_en (UNIQUE user_a, user_b normalizado)
-  40. messages                  → PK id, conversation_id FK, sender_id FK, contenido, leido, creado_en
-  41. notifications             → PK id, user_id FK, tipo[40], titulo, mensaje, datos JSON, leida, creado_en
-  42. tickets                   → PK id, user_id FK, subject, body, status[3], priority[3], assigned_to, created_at, resolved_at
+  MENSAJERÍA Y NOTIFICACIONES (6):
+  44. conversations             → PK id, user_a_id FK, user_b_id FK, creado_en (UNIQUE user_a, user_b normalizado)
+  45. messages                  → PK id, conversation_id FK, sender_id FK, contenido, leido, creado_en
+  46. notifications             → PK id, user_id FK, tipo[40], titulo, mensaje, datos JSON, leida, creado_en
+  47. tickets                   → PK id, user_id FK, subject, body, category[8], status[3], priority[3], assigned_to, created_at, resolved_at
+  48. notification_cascades     → PK id, solicitud_id FK UK, fase_actual, config_json JSON, estado[4], enviados_total, respondidos_total, timer_expira, started_at, completed_at, log_json JSON
+  49. push_subscriptions        → PK id, user_id FK, endpoint UK, p256dh, auth, user_agent, created_at/updated_at (Web Push por dispositivo)
 end note
 
 note right of ADM
-  ADMIN Y SISTEMA (3):
-  43. audit_logs                → PK id, actor_id, action, entity_type, entity_id, before_json, after_json, ip, created_at (inmutable append-only)
-  44. system_configs            → PK id, key UK, value, value_type[int/float/string/bool/json], description, updated_by, updated_at
-  45. feature_flags             → PK id, key UK, enabled, description
+  ADMIN Y SISTEMA (4):
+  50. audit_logs                → PK id, actor_id, action, entity_type, entity_id, before_json, after_json, ip, created_at (inmutable append-only)
+  51. system_configs            → PK id, key UK, value, value_type[int/float/string/bool/json], description, updated_by, updated_at
+  52. feature_flags             → PK id, key UK, enabled, description
+  53. tarifas_cobro             → PK clave, valor, descripcion, actualizado_en, actualizado_por FK (precios en monedas configurables por superadmin)
 end note
 
 note right of ML
   ML Y RECOMENDACIONES (1):
-  46. recommendation_logs       → PK id, solicitud_id FK, pds_id FK, puntuacion, ranking_pos, features_snapshot JSON, modelo_nombre[lightgbm_v1/heuristic], modelo_version, notificado, respondio, aceptado, experiment_group[A/B], created_at
+  54. recommendation_logs       → PK id, solicitud_id FK, pds_id FK, puntuacion, ranking_pos, features_snapshot JSON, modelo_nombre[lightgbm_v1/heuristic], modelo_version, notificado, respondio, aceptado, experiment_group[A/B], created_at
 end note
 
 note over CON, ML
-  TOTAL: 35 entidades principales + enums (RolUsuario, EstadoSolicitud, EstadoOferta, EstadoContrato, EstadoChamba, EstadoMarana, EstadoMaranaOferta, EstadoAnuncio, EstadoPostulacionAnuncio, TipoNegocio, EstadoNegocio, EstadoReporte, TipoReporte, TipoModalidad, EstadoHito, UrgenciaSolicitud, TipoTransaccion, TipoMoneda, EstadoPago, BadgeType) + PostGIS geometry(Point,4326) en users.profiles.geom, solicitudes, negocios, anuncios_laborales
+  TOTAL: 54 entidades principales + enums (RolUsuario, EstadoSolicitud, EstadoOferta, EstadoContrato, EstadoChamba, EstadoMarana, EstadoMaranaOferta, EstadoAnuncio, EstadoPostulacionAnuncio, TipoNegocio, EstadoNegocio, ModalidadNegocio, EstadoReporte, TipoReporte, TipoModalidad, ModalidadAnuncio, EstadoHito, UrgenciaSolicitud, TipoTransaccion, TipoMoneda, TipoMovimientoMonedas, EstadoPago, BadgeType) + PostGIS geometry(Point,4326) en users.profiles.geom, solicitudes, negocios, anuncios_laborales
 end note
 
 @enduml
@@ -148,7 +156,7 @@ end note
 
 ---
 
-## 2. Resumen de Entidades (35 total)
+## 2. Resumen de Entidades (54 total)
 
 ### Core Usuarios (6)
 | # | Entidad | Descripción | PK / UK / FK Clave |
@@ -158,14 +166,14 @@ end note
 | 3 | `regions` | Divisiones administrativas DANE para RBAC regional | `id PK`, `clave UK` |
 | 4 | `legal_acceptances` | Clickwrap Términos y Condiciones (Ley 527/1999) | `id PK`, `user_id FK` |
 | 5 | `verifications` | Solicitudes KYC revisadas por Verificadores | `id PK`, `user_id FK`, `reviewed_by FK` |
-| 6 | `user_badges` | Logros: 9 tipos (primer_contrato, diez_contratos, etc.) | `id PK`, `usuario_id FK` |
+| 6 | `two_factor_recovery_codes` | Códigos de recuperación 2FA hasheados (HMAC-SHA256), un solo uso | `id PK`, `user_id FK`, `code_hash` |
 
 ### Solicitudes y Negociación (3)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
 | 7 | `solicitudes` | Publicaciones con geocerca PostGIS, radio_km, imagen_360, 8 estados, urgencia[3] | `id PK`, `solicitante_id FK`, `geom Point` |
 | 8 | `ofertas` | Propuestas PDS con negociación bilateral (contraofertas precio/fecha/horario) | `id PK`, `solicitud_id FK`, `pds_id FK` |
-| 9 | `ratings_solicitud` | Calificaciones mutuas 1-5 post-completado | `id PK`, `service_id FK`, `autor_id FK`, `calificado_id FK`, `UNIQUE(service_id, autor_id)` |
+| 9 | `ratings` | Calificaciones mutuas 1-5 post-completado | `id PK`, `service_id FK`, `autor_id FK`, `calificado_id FK`, `UNIQUE(service_id, autor_id)` |
 
 ### Contratos y Ejecución (5)
 | # | Entidad | Descripción | PK / UK / FK Clave |
@@ -180,7 +188,7 @@ end note
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
 | 15 | `maranas` | Micro-tareas derivadas de adendas, ciclo ágil 5 estados | `id PK`, `chamba_id FK`, `solicitante_id FK`, `pds_asignado_id FK` |
-| 16 | `marana_ofertas` | Postulaciones PDS a Maranas con negociación | `id PK`, `marana_id FK`, `pds_id FK` |
+| 16 | `maranas_ofertas` | Postulaciones PDS a Maranas con negociación | `id PK`, `marana_id FK`, `pds_id FK` |
 
 ### Anuncios Laborales (2)
 | # | Entidad | Descripción | PK / UK / FK Clave |
@@ -188,65 +196,73 @@ end note
 | 17 | `anuncios_laborales` | Ofertas empleo no vinculantes de Negocios | `id PK`, `negocio_id FK`, `estado[2]` |
 | 18 | `anuncios_postulaciones` | Postulaciones PDS con contacto directo tel/email | `id PK`, `anuncio_id FK`, `pds_id FK`, `estado[3]` |
 
-### Negocios / Merchant (4)
+### Negocios / Merchant (5)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
 | 19 | `negocios` | Establecimientos merchant geolocalizados (PostGIS Point), reputación, redes sociales | `id PK`, `owner_id FK`, `slug UK`, `geom Point` |
 | 20 | `negocio_horarios` | Horarios semanales (0=Lun..6=Dom) | `id PK`, `negocio_id FK`, `UNIQUE(negocio_id, dia_semana)` |
 | 21 | `negocio_ratings` | Calificaciones clientes 1-5 | `id PK`, `negocio_id FK`, `autor_id FK`, `UNIQUE(negocio_id, autor_id)` |
 | 22 | `negocio_reportes` | Reportes/quejas comunitarias [5 tipos], estado[4] | `id PK`, `negocio_id FK`, `reporter_id FK`, `ticket_id FK` |
+| 23 | `negocio_rutas` | Rutas de negocio ambulante: puntos JSON, calles, color, activa/en_curso/progreso | `id PK`, `negocio_id FK` |
 
-### Finanzas / Wallet (7)
+### Finanzas / Wallet (11)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 23 | `wallets` | Billetera virtual por usuario (saldo COP, saldo_bloqueado) | `id PK`, `user_id FK UK` |
-| 24 | `transactions` | Movimientos partida doble DEBE/HABER, tipo[5] | `id PK`, `wallet_id FK` |
-| 25 | `coins` | Monedas: COMPRADA (no expiran), PROMOCIONAL (vence_en), GANADA (sin expiración) | `id PK`, `user_id FK`, `tipo[3]` |
-| 26 | `payments` | Pagos contratos, comisiones 12%/8%, conformidad dual, pasarela[mock/nequi] | `id PK`, `contract_id FK UK` |
-| 27 | `metodos_pago` | Métodos usuario: tipo[billetera/banco], cuenta principal | `id PK`, `user_id FK` |
-| 28 | `merchant_payment_methods` | Métodos negocio: tipo[nequi/bancolombia/efectivo...], detalle JSON | `id PK`, `user_id FK` |
-| 29 | `merchant_preferences` | Preferencias UI/notif: push, email_digest[daily/weekly/never], tema | `id PK`, `user_id FK UK` |
+| 24 | `wallets` | Billetera virtual por usuario (saldo COP, saldo_bloqueado, monedas_saldo) | `id PK`, `user_id FK UK` |
+| 25 | `transactions` | Movimientos partida doble DEBE/HABER, tipo[5] | `id PK`, `wallet_id FK` |
+| 26 | `coins` | Monedas: COMPRADA (no expiran), PROMOCIONAL (vence_en), GANADA (sin expiración) | `id PK`, `user_id FK`, `tipo[3]` |
+| 27 | `payments` | Pagos contratos, comisiones 12%/8%, conformidad dual, pasarela[mock/nequi] | `id PK`, `contract_id FK UK` |
+| 28 | `metodos_pago` | Métodos usuario: tipo[billetera/banco], cuenta principal | `id PK`, `user_id FK` |
+| 29 | `merchant_payment_methods` | Métodos negocio: tipo[nequi/bancolombia/efectivo...], detalle JSON | `id PK`, `user_id FK` |
+| 30 | `merchant_preferences` | Preferencias UI/notif: push, email_digest, tema, mapa_preferido[2d/3d], formulario_solicitud | `id PK`, `user_id FK UK` |
+| 31 | `paquetes_monedas` | Paquetes configurables: cantidad, bonus, precio_cop, oferta, orden, activo | `id PK`, `creado_por FK` |
+| 32 | `compras_paquetes` | Compras de paquetes con pasarela simulada y referencia | `id PK`, `user_id FK`, `paquete_id FK` |
+| 33 | `movimientos_monedas` | Libro de monedas: tipo[6], cantidad (+/−), saldo_resultante | `id PK`, `user_id FK`, `wallet_id FK`, `paquete_id FK` |
+| 34 | `suscripciones` | Suscripción premium por usuario: plan[free/basico/profesional], estado[3] | `id PK`, `user_id FK UK` |
 
 ### KYC y Documentos (2)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 30 | `documentos_requeridos` | Catálogo docs por rol [pds/solicitante], grupo[4], multi_instancia, orden | `id PK`, `UNIQUE(rol, clave)` |
-| 31 | `documentos_usuario` | Estado doc por usuario, archivo_base64 (MVP), URL MinIO, revisor | `id PK`, `user_id FK`, `documento_requerido_id FK`, `UNIQUE(user_id, documento_clave, instancia)` |
+| 35 | `documentos_requeridos` | Catálogo docs por rol [pds/solicitante], grupo[4], multi_instancia, orden | `id PK`, `UNIQUE(rol, clave)` |
+| 36 | `documentos_usuario` | Estado doc por usuario, archivo_base64 (MVP), URL MinIO, revisor | `id PK`, `user_id FK`, `documento_requerido_id FK`, `UNIQUE(user_id, documento_clave, instancia)` |
 
 ### Habilidades y Certificaciones (4)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 32 | `habilidades` | Catálogo oficios [5 categorías], rutas certificables JSON (quiz/cert) | `id PK`, `nombre UK` |
-| 33 | `habilidad_niveles` | Progreso usuario por nivel: metodo[quiz/cert], evidencia_url | `id PK`, `user_id FK`, `habilidad_id FK`, `UNIQUE(user_id, habilidad_id, nivel_index)` |
-| 34 | `endoso_habilidades` | Endosos clientes a competencias PDS al cerrar contrato | `id PK`, `contract_id FK`, `pds_id FK`, `solicitante_id FK`, `habilidad_id FK`, `UNIQUE(contract, pds, habilidad, competencia)` |
-| 35 | `certificaciones_tecnicas` | Certificaciones formales (SENA, instituciones), codigo_verificacion | `id PK`, `user_id FK`, `habilidad_id FK`, `estado[3]` |
+| 37 | `habilidades` | Catálogo oficios [5 categorías], rutas certificables JSON (quiz/cert) | `id PK`, `nombre UK` |
+| 38 | `habilidad_niveles` | Progreso usuario por nivel: metodo[quiz/cert], evidencia_url | `id PK`, `user_id FK`, `habilidad_id FK`, `UNIQUE(user_id, habilidad_id, nivel_index)` |
+| 39 | `endoso_habilidades` | Endosos clientes a competencias PDS al cerrar contrato | `id PK`, `contract_id FK`, `pds_id FK`, `solicitante_id FK`, `habilidad_id FK`, `UNIQUE(contract, pds, habilidad, competencia)` |
+| 40 | `certificaciones_tecnicas` | Certificaciones formales (SENA, instituciones), codigo_verificacion | `id PK`, `user_id FK`, `habilidad_id FK`, `estado[3]` |
 
 ### Portafolio y Confianza (3)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 36 | `portfolio_items` | Items PDS (foto/video/doc), MinIO S3, moderación [3 estados], verificado_por | `id PK`, `pds_id FK` |
-| 37 | `trust_scores` | Score 0-1 ponderado (KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%), niveles[4] | `id PK`, `pds_id FK UK` |
-| 38 | `badges` | (Ver Core #6) | `id PK`, `usuario_id FK` |
+| 41 | `portfolio_items` | Items PDS (foto/video/doc), MinIO S3, moderación [3 estados], verificado_por | `id PK`, `pds_id FK` |
+| 42 | `trust_scores` | Score 0-1 ponderado (KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%), niveles[4] | `id PK`, `pds_id FK UK` |
+| 43 | `badges` | Logros: 9 tipos (primer_contrato, diez_contratos, etc.) | `id PK`, `usuario_id FK` |
 
-### Mensajería y Notificaciones (4)
+### Mensajería y Notificaciones (6)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 39 | `conversations` | Chat 1:1 normalizado (user_a < user_b) | `id PK`, `user_a_id FK`, `user_b_id FK`, `UNIQUE(user_a, user_b)` |
-| 40 | `messages` | Mensajes con protocolo `⟦c:action⟧` | `id PK`, `conversation_id FK`, `sender_id FK` |
-| 41 | `notifications` | Centro alertas persistente (RF-10), tipo[40], datos JSON | `id PK`, `user_id FK` |
-| 42 | `tickets` | Tickets soporte RBAC Fase 2, status[3], priority[3] | `id PK`, `user_id FK`, `assigned_to` |
+| 44 | `conversations` | Chat 1:1 normalizado (user_a < user_b) | `id PK`, `user_a_id FK`, `user_b_id FK`, `UNIQUE(user_a, user_b)` |
+| 45 | `messages` | Mensajes con protocolo `⟦c:action⟧` | `id PK`, `conversation_id FK`, `sender_id FK` |
+| 46 | `notifications` | Centro alertas persistente (RF-10), tipo[40], datos JSON | `id PK`, `user_id FK` |
+| 47 | `tickets` | Tickets soporte con category[8], status[3], priority[3] | `id PK`, `user_id FK`, `assigned_to` |
+| 48 | `notification_cascades` | Cascada geoespacial por fases: fase_actual, config_json, estado[4], log_json | `id PK`, `solicitud_id FK UK` |
+| 49 | `push_subscriptions` | Suscripciones Web Push por dispositivo/navegador | `id PK`, `user_id FK`, `endpoint UK` |
 
-### Admin y Sistema (3)
+### Admin y Sistema (4)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 43 | `audit_logs` | Trazabilidad inmutable (RNF-AUD), append-only, hash chain, snapshot_diff_json | `id PK`, `actor_id`, `entity_type`, `entity_id` |
-| 44 | `system_configs` | Config global tipada: value_type[int/float/string/bool/json] | `id PK`, `key UK` |
-| 45 | `feature_flags` | Toggles calientes sin deploy, cache + Redis pub/sub invalidation | `id PK`, `key UK` |
+| 50 | `audit_logs` | Trazabilidad inmutable (RNF-AUD), append-only, hash chain, snapshot_diff_json | `id PK`, `actor_id`, `entity_type`, `entity_id` |
+| 51 | `system_configs` | Config global tipada: value_type[int/float/string/bool/json] | `id PK`, `key UK` |
+| 52 | `feature_flags` | Toggles calientes sin deploy, cache + Redis pub/sub invalidation | `id PK`, `key UK` |
+| 53 | `tarifas_cobro` | Tarifas configurables por superadmin (contrato, moneda, anuncios) | `clave PK`, `valor`, `actualizado_por FK` |
 
 ### ML y Recomendaciones (1)
 | # | Entidad | Descripción | PK / UK / FK Clave |
 |---|---------|-------------|---------------------|
-| 46 | `recommendation_logs` | Log A/B testing: grupo[A/B], modelo[lightgbm_v1/heuristic], SHAP | `id PK`, `solicitud_id FK`, `pds_id FK` |
+| 54 | `recommendation_logs` | Log A/B testing: grupo[A/B], modelo[lightgbm_v1/heuristic], SHAP | `id PK`, `solicitud_id FK`, `pds_id FK` |
 
 ---
 
@@ -271,11 +287,17 @@ User (1) ── (N) Badge
 User (1) ── (N) Conversation [user_a|user_b]
 User (1) ── (N) Notification
 User (1) ── (N) Ticket
+User (1) ── (N) TwoFactorRecoveryCode
+User (1) ── (N) PushSubscription
+User (1) ── (N) CompraPaquete
+User (1) ── (N) MovimientoMonedas
+User (1) ── (N) TarifaCobro
 
 Solicitud (1) ── (N) Oferta
 Solicitud (1) ── (N) Rating
 Solicitud (1) ── (0..1) Contract [service]
 Solicitud (1) ── (1) Modalidad
+Solicitud (1) ── (0..1) NotificationCascade
 Solicitud (1) ── (N) RecommendationLog
 
 Contract (1) ── (1) Chamba
@@ -290,9 +312,12 @@ Marana (1) ── (N) MaranaOferta
 
 AnuncioLaboral (1) ── (N) AnuncioPostulacion
 
-Negocio (1) ── (N) NegocioHorario / NegocioRating / NegocioReporte
+Negocio (1) ── (N) NegocioHorario / NegocioRating / NegocioReporte / NegocioRuta
 
 Wallet (1) ── (N) Transaction
+Wallet (1) ── (N) MovimientoMonedas
+PaqueteMonedas (1) ── (N) CompraPaquete
+PaqueteMonedas (1) ── (N) MovimientoMonedas
 
 DocumentoRequerido (1) ── (N) DocumentoUsuario
 
@@ -314,7 +339,8 @@ Conversation (1) ── (N) Message
 | `contracts` | `service_id UK`, `proveedor_id`, `solicitante_id` | Un contrato por servicio |
 | `chambas` | `contract_id UK,FK` | Una chamba por contrato |
 | `wallets` | `user_id UK` | Una wallet por usuario |
-| `wallet_transactions` | `wallet_id`, `tipo`, `created_at` | Libro contable ordenado |
+| `transactions` | `wallet_id`, `tipo`, `created_at` | Libro contable ordenado |
+| `movimientos_monedas` | `user_id`, `wallet_id`, `creado_en` | Libro de monedas ordenado |
 | `coins` | `user_id`, `tipo`, `vence_en` | FIFO por expiración |
 | `payments` | `contract_id UK` | Un pago por contrato |
 | `negocios` | `slug UK`, `geom GIST`, `ix_negocios_estado_categoria` | Directorio público |
@@ -336,14 +362,17 @@ Conversation (1) ── (N) Message
 | `EstadoChamba` | programada, en_proceso, en_ejecucion, pausada, pendiente_validacion, liquidacion_confirmada, finalizada |
 | `EstadoMarana` | publicado, asignado, completado, pagado, cancelado |
 | `EstadoAnuncio` | publicado, cerrado |
-| `EstadoPostulacionAnuncio` | pendiente, contactado, descartado |
+| `EstadoPostulacionAnuncio` | pendiente, contactado, descartado, contratado |
 | `TipoNegocio` | comercio, servicio, virtual, hibrido |
 | `EstadoNegocio` | borrador, pendiente_verificacion, activo, suspendido, rechazado |
+| `ModalidadNegocio` | estatico, ambulante |
+| `ModalidadAnuncio` | contacto, contrato |
 | `TipoReporteNegocio` | fraude, spam, contenido_inapropiado, servicio_no_prestado, otro |
 | `TipoModalidad` | A_comision, B_sin_comision |
 | `EstadoHito` | pendiente, aprobado, rechazado |
 | `TipoTransaccion` | comision, monedas, retiro, reembolso, deposito |
 | `TipoMoneda` | comprada, promocional, ganada |
+| `TipoMovimientoMonedas` | compra, gasto, promocional, ganada, vencimiento, ajuste |
 | `EstadoPago` | pendiente, completado, reembolsado, fallido |
 | `EstadoDocumento` | no_enviado, enviado, aprobado, rechazado |
 | `GrupoDocumento` | identidad, antecedentes, financiero, opcional |
@@ -354,11 +383,15 @@ Conversation (1) ── (N) Message
 
 ```
 wallets:
-  user_id UK, saldo_disponible, saldo_bloqueado, total_ingresos, total_egresos
+  user_id UK, saldo (COP), saldo_bloqueado, monedas_saldo
 
-wallet_transactions:
+transactions:
   wallet_id FK, tipo[COMISION/MONEDAS/RETIRO/REEMBOLSO/DEPOSITO],
-  monto (COP +/−), DEBE/HABER, concepto, saldo_resultante, referencia_id/tipo
+  monto (COP +/−), descripcion, referencia, created_at
+
+movimientos_monedas:
+  user_id FK, wallet_id FK, tipo[COMPRA/GASTO/PROMOCIONAL/GANADA/VENCIMIENTO/AJUSTE],
+  cantidad (+/−), saldo_resultante, referencia, creado_en
 
 INVARIANTE: Σ(DEBE) = Σ(HABER) por usuario + plataforma
 Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
@@ -366,4 +399,4 @@ Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
 
 ---
 
-*Generado automáticamente desde `04_modelo_datos.puml` (Figura 4) — 35 entidades + PostGIS geometry(Point,4326)*
+*Generado automáticamente desde `04_modelo_datos.puml` (Figura 4) — 54 entidades + PostGIS geometry(Point,4326)*

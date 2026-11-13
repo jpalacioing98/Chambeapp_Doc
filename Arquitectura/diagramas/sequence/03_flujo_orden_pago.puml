@@ -6,10 +6,11 @@ actor "PDS" as P
 participant "Solicitud\n(solicitudes blueprint)" as SOL
 participant "Recomendador ML\nget_recommender()" as REC
 participant "Cascade Manager\nservices/cascade.py" as CAS
-participant "Socket.IO\n(notification_socket)" as SIO
+participant "realtime.safe_emit\n(services/realtime.py)" as SIO
 participant "Contrato\n(contracts blueprint)" as CON
 participant "Chat\n(chat_socket)" as CH
 participant "Pago Dual\n(payments blueprint)" as PAY
+participant "Cobros\n(services/cobros.py)" as COB
 participant "Wallet\n(wallet blueprint)" as WAL
 
 == PUBLICACIÓN Y RECOMENDACIÓN ==
@@ -32,6 +33,22 @@ CON -> CH: habilita conversación (protocolo ⟦c:action⟧)
 CH -> S: emit 'message' (contrato_perfeccionado)
 CH -> P: emit 'message' (contrato_perfeccionado)
 
+== COBRO EN MONEDAS (PRE-FIRMA) ==
+S -> CON: GET /contracts/:id/cobro
+CON -> COB: calcular_monedas_contrato(monto)
+COB -> COB: pct_contrato + monedas_fijas (mínimo configurable)
+COB --> CON: monedas_requeridas por cada parte
+S -> CON: Firma contrato (solicitante)
+CON -> COB: cobrar_monedas(SOL, monedas, ref=contract)
+P -> CON: Firma contrato (PDS)
+CON -> COB: cobrar_monedas(PDS, monedas, ref=contract)
+COB -> WAL: MovimientoMonedas tipo=gasto (−monedas)
+WAL --> COB: saldo_resultante / OK
+alt Monedas insuficientes
+    COB --> CON: MONEDAS_INSUFICIENTES
+    CON --> S: 400 recarga monedas para firmar
+end
+
 == EJECUCIÓN CHAMBA (6 HITOS) ==
 P -> CON: POST /chambas/checkin_entrada {lat, lng, evidencias[]}
 CON -> CON: Valida GPS < 100m (Haversine) + hash SHA256 evidencias
@@ -52,6 +69,16 @@ alt Ambas conformidades OK
 else Una parte no confirma
     PAY -> CAS: Escrow 72h → mediación automática
 end
+
+note right of COB
+  COBRO EN MONEDAS (services/cobros.py):
+  • Tarifas en TarifaCobro: pct_contrato, precio_moneda_cop,
+    monedas_fijas, min_monedas_contrato (configurables por superadmin)
+  • monedas = trunc((monto * % / 100) / precio_moneda) + monedas_fijas
+  • Cobro idempotente por referencia (contract) a solicitante y PDS
+  • Si el contrato no se activa, reembolso con reembolsar_monedas()
+  • GET /contracts/:id/cobro expone la estimación al frontend
+end note
 
 note right of REC
   PIPELINE ML 2 ETAPAS:
@@ -83,7 +110,7 @@ note right of PAY
   • Ambas requeridas → liberación inmediata (Escrow 0s)
   • Comisión: 12% PDS + 8% Solicitante = 20% plataforma
   • Modalidad B (monedas): usa Coin COMPRADA, sin comisión
-  • Partida doble: WalletTransaction DEBE/HABER invariante
+  • Partida doble: Transaction/MovimientoMonedas (ΣDEBE = ΣHABER)
 end note
 
 @enduml

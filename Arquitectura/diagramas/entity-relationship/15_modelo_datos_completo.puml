@@ -76,6 +76,15 @@ class Verification {
   + created_at: DateTime
 }
 
+class TwoFactorRecoveryCode {
+  + id: Integer PK
+  + user_id: Integer FK
+  + code_hash: String(64)
+  + usado: Boolean
+  + usado_en: DateTime
+  + creado_en: DateTime
+}
+
 ' ── Solicitudes & Negotiation ───────────────────────────────
 class Solicitud {
   + id: Integer PK
@@ -244,10 +253,17 @@ class AnuncioLaboral {
   + titulo: String(200)
   + descripcion: Text
   + categoria: String(120)
+  + tipo: String(12) [empleo]
+  + visible_mapa: Boolean
   + ubicacion: String(160)
   + latitud: Float
   + longitud: Float
   + vacantes: Integer
+  + modalidad: Enum[ModalidadAnuncio] [contacto, contrato]
+  + presupuesto: Float
+  + fecha_deseada: Date
+  + horario: String(80)
+  + contract_ids: JSON
   + estado: Enum[EstadoAnuncio] [publicado, cerrado]
   + creado_en: DateTime
   + actualizado_en: DateTime
@@ -260,7 +276,8 @@ class AnuncioPostulacion {
   + mensaje: Text
   + telefono_contacto: String(40)
   + email_contacto: String(120)
-  + estado: Enum[EstadoPostulacionAnuncio] [pendiente, contactado, descartado]
+  + estado: Enum[EstadoPostulacionAnuncio] [pendiente, contactado, descartado, contratado]
+  + contract_id: Integer
   + created_at: DateTime
   + updated_at: DateTime
 }
@@ -273,6 +290,7 @@ class Negocio {
   + slug: String(170) UK
   + descripcion: Text
   + tipo: String(30) [comercio, servicio, virtual, hibrido]
+  + modalidad: Enum[ModalidadNegocio] [estatico, ambulante]
   + logo_url: String(500)
   + banner_url: String(500)
   + imagenes: JSON
@@ -332,12 +350,28 @@ class NegocioReporte {
   + creado_en: DateTime
 }
 
+class NegocioRuta {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + nombre: String(80)
+  + descripcion: Text
+  + puntos: JSON
+  + calles: JSON
+  + color: String(9)
+  + activa: Boolean
+  + en_curso: Boolean
+  + progreso: Float (0.0-1.0)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
 ' ── Wallet & Payments ──────────────────────────────────────
 class Wallet {
   + id: Integer PK
   + user_id: Integer FK,UK
   + saldo: Integer (COP)
   + saldo_bloqueado: Integer (COP)
+  + monedas_saldo: Integer (monedas virtuales)
   + created_at: DateTime
   + updated_at: DateTime
 }
@@ -359,6 +393,50 @@ class Coin {
   + tipo: Enum[TipoMoneda] [comprada, promocional, ganada]
   + vence_en: DateTime
   + created_at: DateTime
+}
+
+class PaqueteMonedas {
+  + id: Integer PK
+  + nombre: String(80)
+  + descripcion: String(255)
+  + cantidad: Integer
+  + bonus: Integer
+  + precio_cop: Integer
+  + activo: Boolean
+  + en_oferta: Boolean
+  + precio_oferta_cop: Integer
+  + oferta_desde: DateTime
+  + oferta_hasta: DateTime
+  + orden: Integer
+  + creado_por: Integer FK
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class CompraPaquete {
+  + id: Integer PK
+  + user_id: Integer FK
+  + paquete_id: Integer FK
+  + monedas: Integer
+  + precio_cop: Integer
+  + pasarela: String(40) [simulada]
+  + estado: String(20) [completado]
+  + referencia: String(100)
+  + creado_en: DateTime
+}
+
+class MovimientoMonedas {
+  + id: Integer PK
+  + user_id: Integer FK
+  + wallet_id: Integer FK
+  + tipo: Enum[TipoMovimientoMonedas] [compra, gasto, promocional, ganada, vencimiento, ajuste]
+  + cantidad: Integer (+ entra / - sale)
+  + saldo_resultante: Integer
+  + descripcion: String(255)
+  + referencia: String(100)
+  + paquete_id: Integer FK
+  + vence_en: DateTime
+  + creado_en: DateTime
 }
 
 class Payment {
@@ -406,11 +484,13 @@ class MerchantPreference {
   + email_digest: String(10) [daily, weekly, never]
   + idioma: String(5)
   + tema: String(10) [system, light, dark]
+  + mapa_preferido: String(4) [2d, 3d]
+  + formulario_solicitud: String(12) [paso_a_paso, completo]
   + creado_en: DateTime
   + actualizado_en: DateTime
 }
 
-class Subscription {
+class Suscripcion {
   + id: Integer PK
   + user_id: Integer FK,UK
   + plan: String(20) [free, basico, profesional]
@@ -569,11 +649,37 @@ class Notification {
   + creado_en: DateTime
 }
 
+class NotificationCascade {
+  + id: Integer PK
+  + solicitud_id: Integer FK,UK
+  + fase_actual: Integer
+  + config_json: JSON
+  + estado: String(20) [activa, completada, expirada, cancelada]
+  + enviados_total: Integer
+  + respondidos_total: Integer
+  + timer_expira: DateTime
+  + started_at: DateTime
+  + completed_at: DateTime
+  + log_json: JSON
+}
+
+class PushSubscription {
+  + id: Integer PK
+  + user_id: Integer FK
+  + endpoint: Text UK
+  + p256dh: Text
+  + auth: Text
+  + user_agent: String(255)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
 class Ticket {
   + id: Integer PK
   + user_id: Integer FK
   + subject: String(200)
   + body: Text
+  + category: String(40) [cuenta, pagos, chambas, negocio, anuncios, verificacion, tecnico, otro]
   + status: String(20) [open, pending, closed]
   + priority: String(20) [low, normal, high]
   + assigned_to: Integer
@@ -611,6 +717,14 @@ class FeatureFlag {
   + description: Text
 }
 
+class TarifaCobro {
+  + clave: String(50) PK
+  + valor: Float
+  + descripcion: String(255)
+  + actualizado_en: DateTime
+  + actualizado_por: Integer FK
+}
+
 ' ── ML & Recommendations ───────────────────────────────────
 class RecommendationLog {
   + id: Integer PK
@@ -640,7 +754,12 @@ User "1..*" -- "0..1" Region : "N:1"
 User "1" -- "1" Wallet : "1:1"
 User "1" -- "0..*" Coin : "1:N"
 User "1" -- "0..*" MetodoPago : "1:N"
-User "1" -- "1" Subscription : "1:1"
+User "1" -- "1" Suscripcion : "1:1"
+User "1" -- "0..*" TwoFactorRecoveryCode : "1:N"
+User "1" -- "0..*" PushSubscription : "1:N"
+User "1" -- "0..*" CompraPaquete : "1:N"
+User "1" -- "0..*" MovimientoMonedas : "1:N"
+User "1" -- "0..*" TarifaCobro : "actualizado_por"
 User "1" -- "0..*" PortfolioItem : "pds"
 User "1" -- "1" TrustScore : "1:1"
 User "1" -- "0..*" Badge : "1:N"
@@ -661,6 +780,7 @@ Solicitud "1" -- "0..*" Oferta : "1:N"
 Solicitud "1" -- "0..*" Rating : "1:N"
 Solicitud "1" -- "0..1" Contract : "service"
 Solicitud "1" -- "1" Modalidad : "1:1"
+Solicitud "1" -- "0..1" NotificationCascade : "1:1"
 Solicitud "1" -- "0..*" RecommendationLog : "1:N"
 
 User "1" -- "0..*" Oferta : "pds"
@@ -694,11 +814,15 @@ User "1" -- "0..*" Negocio : "owner"
 Negocio "1" -- "0..*" NegocioHorario : "1:N"
 Negocio "1" -- "0..*" NegocioRating : "1:N"
 Negocio "1" -- "0..*" NegocioReporte : "1:N"
+Negocio "1" -- "0..*" NegocioRuta : "1:N"
 User "1" -- "0..*" NegocioRating : "autor"
 User "1" -- "0..*" NegocioReporte : "reporter"
 
 ' Wallet
 Wallet "1" -- "0..*" Transaction : "1:N"
+Wallet "1" -- "0..*" MovimientoMonedas : "1:N"
+PaqueteMonedas "1" -- "0..*" CompraPaquete : "1:N"
+PaqueteMonedas "1" -- "0..*" MovimientoMonedas : "1:N"
 
 ' KYC
 DocumentoRequerido "1" -- "0..*" DocumentoUsuario : "1:N"

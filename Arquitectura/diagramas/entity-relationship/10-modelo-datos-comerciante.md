@@ -15,7 +15,7 @@ title Figura 10 - Modelo de Datos: Módulo Comerciante (Negocios + Merchant)
 actor "DBA / Arquitecto" as DBA
 participant "CONTEXTO USUARIO (1)" as CTX
 participant "NEGOCIO CORE (1)" as NEG
-participant "HORARIOS Y REPUTACIÓN (3)" as HOR
+participant "HORARIOS, RUTAS Y REPUTACIÓN (4)" as HOR
 participant "NUEVAS ENTIDADES MERCHANT (2)" as NEW
 
 DBA -> CTX: Usuario base con rol MERCHANT
@@ -30,20 +30,21 @@ end note
 
 note right of NEG
   NEGOCIO CORE (1):
-  2. negocios                 → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[comercio/servicio/virtual/hibrido], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_cobertura_km, geom Point 4326, categoria_principal, categorias_secundarias/servicios/palabras JSON, whatsapp/instagram/facebook/tiktok/sitio_web, rating_promedio, total_calificaciones, verificado, estado[borrador/pendiente_verificacion/activo/suspendido/rechazado], motivo_rechazo, created_at/updated_at
+  2. negocios                 → PK id, owner_id FK, nombre, slug UK, descripcion, tipo[comercio/servicio/virtual/hibrido], modalidad[estatico/ambulante], logo/banner/imagenes JSON, lat/lng, direccion, ciudad, depto, radio_cobertura_km, geom Point 4326, categoria_principal, categorias_secundarias/servicios/palabras JSON, whatsapp + whatsapp_mensaje_pre/instagram/facebook/tiktok/sitio_web, rating_promedio, total_calificaciones, verificado, estado[borrador/pendiente_verificacion/activo/suspendido/rechazado], motivo_rechazo, created_at/updated_at
 end note
 
 note right of HOR
-  HORARIOS Y REPUTACIÓN (3):
+  HORARIOS, RUTAS Y REPUTACIÓN (4):
   3. negocio_horarios         → PK id, negocio_id FK, dia_semana[0-6], abierto, hora_apertura, hora_cierre (UNIQUE negocio_id, dia_semana, ordenados)
   4. negocio_ratings          → PK id, negocio_id FK, autor_id FK, puntaje[1-5], comentario, reportado, creado_en (UNIQUE negocio_id, autor_id, CHECK puntaje 1-5)
   5. negocio_reportes         → PK id, negocio_id FK, reporter_id FK, tipo[fraude/spam/contenido_inapropiado/servicio_no_prestado/otro], descripcion, estado[abierto/investigando/resuelto/desestimado], ticket_id FK, creado_en
+  6. negocio_rutas            → PK id, negocio_id FK, nombre, descripcion, puntos JSON, calles JSON, color, activa, en_curso, progreso[0-1], created_at/updated_at (trazado del negocio ambulante)
 end note
 
 note right of NEW
   NUEVAS ENTIDADES MERCHANT (2):
-  6. merchant_preferences     → PK id, user_id FK UK, notif_nueva_solicitud, notif_nueva_resena, notif_estado_kyc, notif_pago_recibido, push_enabled, email_digest[daily/weekly/never], idioma, tema[system/light/dark], creado_en/actualizado_en
-  7. merchant_payment_methods → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON (numero, titular, etc.), principal, activo, creado_en
+  7. merchant_preferences     → PK id, user_id FK UK, notif_nueva_solicitud, notif_nueva_resena, notif_estado_kyc, notif_pago_recibido, push_enabled, email_digest[daily/weekly/never], idioma, tema[system/light/dark], mapa_preferido[2d/3d], formulario_solicitud[paso_a_paso/completo], creado_en/actualizado_en
+  8. merchant_payment_methods → PK id, user_id FK, tipo[nequi/bancolombia/efectivo...], detalle JSON (numero, titular, etc.), principal, activo, creado_en
 end note
 
 note right of CTX
@@ -52,6 +53,7 @@ note right of CTX
   Negocio (1) ── (7) NegocioHorario : dia_semana 0-6
   Negocio (1) ── (*) NegocioRating : calificaciones clientes
   Negocio (1) ── (*) NegocioReporte : quejas/reportes
+  Negocio (1) ── (*) NegocioRuta : recorrido negocio ambulante
   User (1) ── (1) MerchantPreference : preferencias notif/UI
   User (1) ── (*) MerchantPaymentMethod : métodos pago negocio
 end note
@@ -64,6 +66,7 @@ note right of NEG
   • ix_negocios_estado_categoria (compuesto para filtros)
   • ix_negocio_horarios_negocio_dia (UK)
   • ix_negocio_ratings_negocio_autor (UK)
+  • ix_negocio_rutas_negocio_en_curso (compuesto ambulante)
 end note
 
 note over CTX, NEW
@@ -72,10 +75,11 @@ note over CTX, NEW
   2. POST /merchant/negocios → crear Negocio (estado=borrador)
   3. Subir logo/banner/imagenes → MinIO → URLs en Negocio
   4. Configurar horarios → NegocioHorario (7 días)
-  5. KYC negocio → NegocioKYCDocumento (docs requeridos)
-  6. Verificador aprueba → Negocio.estado=ACTIVO, verificado=true
-  7. Configurar MerchantPreference + MerchantPaymentMethod
-  8. Publicar AnuncioLaboral / recibir Solicitudes cercanas
+  5. Si modalidad=ambulante → NegocioRuta (puntos JSON, calles, activa/en_curso)
+  6. KYC negocio → DocumentoUsuario (rol merchant, documentos requeridos)
+  7. Verificador aprueba → Negocio.estado=ACTIVO, verificado=true
+  8. Configurar MerchantPreference + MerchantPaymentMethod
+  9. Publicar AnuncioLaboral / recibir Solicitudes cercanas
 end note
 
 @enduml
@@ -83,7 +87,7 @@ end note
 
 ---
 
-## 2. Entidades del Módulo Comerciante (7 total)
+## 2. Entidades del Módulo Comerciante (8 total)
 
 ### Contexto Usuario (1)
 | # | Entidad | Descripción | Campos Clave |
@@ -93,20 +97,21 @@ end note
 ### Negocio Core (1)
 | # | Entidad | Descripción | Campos Clave |
 |---|---------|-------------|--------------|
-| 2 | `negocios` | Establecimiento geolocalizado con reputación | `id PK`, `owner_id FK`, `nombre`, `slug UK`, `descripcion`, `tipo[comercio/servicio/virtual/hibrido]`, `logo/banner/imagenes JSON`, `lat/lng`, `direccion`, `ciudad`, `depto`, `radio_cobertura_km`, `geom Point 4326`, `categoria_principal`, `categorias_secundarias/servicios/palabras JSON`, `whatsapp/instagram/facebook/tiktok/sitio_web`, `rating_promedio`, `total_calificaciones`, `verificado`, `estado[borrador/pendiente_verificacion/activo/suspendido/rechazado]`, `motivo_rechazo`, `created_at/updated_at` |
+| 2 | `negocios` | Establecimiento geolocalizado con reputación | `id PK`, `owner_id FK`, `nombre`, `slug UK`, `descripcion`, `tipo[comercio/servicio/virtual/hibrido]`, `modalidad[estatico/ambulante]`, `logo/banner/imagenes JSON`, `lat/lng`, `direccion`, `ciudad`, `depto`, `radio_cobertura_km`, `geom Point 4326`, `categoria_principal`, `categorias_secundarias/servicios/palabras JSON`, `whatsapp/instagram/facebook/tiktok/sitio_web`, `rating_promedio`, `total_calificaciones`, `verificado`, `estado[borrador/pendiente_verificacion/activo/suspendido/rechazado]`, `motivo_rechazo`, `created_at/updated_at` |
 
-### Horarios y Reputación (3)
+### Horarios, Rutas y Reputación (4)
 | # | Entidad | Descripción | Campos Clave |
 |---|---------|-------------|--------------|
 | 3 | `negocio_horarios` | Horarios semanales de atención | `id PK`, `negocio_id FK`, `dia_semana[0-6]`, `abierto`, `hora_apertura`, `hora_cierre` (UNIQUE `negocio_id`, `dia_semana`) |
 | 4 | `negocio_ratings` | Calificaciones de clientes a negocios | `id PK`, `negocio_id FK`, `autor_id FK`, `puntaje[1-5]`, `comentario`, `reportado`, `creado_en` (UNIQUE `negocio_id`, `autor_id`, CHECK `puntaje 1-5`) |
 | 5 | `negocio_reportes` | Reportes/quejas comunitarias | `id PK`, `negocio_id FK`, `reporter_id FK`, `tipo[fraude/spam/contenido_inapropiado/servicio_no_prestado/otro]`, `descripcion`, `estado[abierto/investigando/resuelto/desestimado]`, `ticket_id FK`, `creado_en` |
+| 6 | `negocio_rutas` | Rutas del negocio ambulante (trazado y calles) | `id PK`, `negocio_id FK`, `nombre`, `descripcion`, `puntos JSON`, `calles JSON`, `color`, `activa`, `en_curso`, `progreso[0-1]`, `creado_en/actualizado_en` |
 
 ### Nuevas Entidades Merchant (2)
 | # | Entidad | Descripción | Campos Clave |
 |---|---------|-------------|--------------|
-| 6 | `merchant_preferences` | Preferencias UI/notificaciones del comerciante | `id PK`, `user_id FK UK`, `notif_nueva_solicitud`, `notif_nueva_resena`, `notif_estado_kyc`, `notif_pago_recibido`, `push_enabled`, `email_digest[daily/weekly/never]`, `idioma`, `tema[system/light/dark]`, `creado_en/actualizado_en` |
-| 7 | `merchant_payment_methods` | Métodos de pago del negocio (Nequi, Bancolombia, efectivo) | `id PK`, `user_id FK`, `tipo[nequi/bancolombia/efectivo...]`, `detalle JSON`, `principal`, `activo`, `creado_en` |
+| 7 | `merchant_preferences` | Preferencias UI/notificaciones del comerciante | `id PK`, `user_id FK UK`, `notif_nueva_solicitud`, `notif_nueva_resena`, `notif_estado_kyc`, `notif_pago_recibido`, `push_enabled`, `email_digest`, `idioma`, `tema`, `mapa_preferido[2d/3d]`, `formulario_solicitud`, `creado_en/actualizado_en` |
+| 8 | `merchant_payment_methods` | Métodos de pago del negocio (Nequi, Bancolombia, efectivo) | `id PK`, `user_id FK`, `tipo[nequi/bancolombia/efectivo...]`, `detalle JSON`, `principal`, `activo`, `creado_en` |
 
 ---
 
@@ -142,7 +147,7 @@ User (1) ── (*) MerchantPaymentMethod : métodos pago negocio
 2. **Crear Negocio**: `POST /merchant/negocios` → `negocios` (estado=`borrador`)
 3. **Subir Media**: Logo/banner/imágenes → **MinIO** → URLs guardadas en `negocios.imagenes JSON`
 4. **Configurar Horarios**: `POST /negocios/:id/horarios` → `negocio_horarios` (7 días, 0=Lun..6=Dom)
-5. **KYC Negocio**: `NegocioKYCDocumento` (docs requeridos: RUT, Cámara Comercio, etc.)
+5. **KYC Negocio**: `DocumentoUsuario` / `DocumentoRequerido` (rol merchant)
 6. **Aprobación Verificador**: `Negocio.estado=ACTIVO`, `verificado=true`
 7. **Configurar Preferencias**: `MerchantPreference` (notifs, push, email_digest, tema)
 8. **Configurar Pagos**: `MerchantPaymentMethod` (Nequi, Bancolombia, efectivo, detalle JSON)

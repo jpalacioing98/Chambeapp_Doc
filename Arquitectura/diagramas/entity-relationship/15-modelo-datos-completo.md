@@ -1,4 +1,4 @@
-# Diagrama ER — Figura 15: Modelo de Datos Completo (46 Entidades)
+# Diagrama ER — Figura 15: Modelo de Datos Completo (54 Entidades)
 
 > **Módulo:** Modelo Entidad-Relación Unificado - ChambeApp  
 > **Fuente:** `15_modelo_datos_completo.puml` (Figura 15)  
@@ -85,6 +85,15 @@ class Verification {
   + reviewed_at: DateTime
   + reason: Text
   + created_at: DateTime
+}
+
+class TwoFactorRecoveryCode {
+  + id: Integer PK
+  + user_id: Integer FK
+  + code_hash: String(64)
+  + usado: Boolean
+  + usado_en: DateTime
+  + creado_en: DateTime
 }
 
 ' ── Solicitudes & Negotiation ───────────────────────────────
@@ -221,8 +230,6 @@ class Marana {
   + descripcion: Text
   + presupuesto: Integer
   + ubicacion: String(120)
-  + latitud: Float
-  + longitud: Float
   + fecha_deseada: Date
   + horario: String(80)
   + estado: Enum[EstadoMarana] [publicado, asignado, completado, pagado, cancelado]
@@ -257,10 +264,17 @@ class AnuncioLaboral {
   + titulo: String(200)
   + descripcion: Text
   + categoria: String(120)
+  + tipo: String(12) [empleo]
+  + visible_mapa: Boolean
   + ubicacion: String(160)
   + latitud: Float
   + longitud: Float
   + vacantes: Integer
+  + modalidad: Enum[ModalidadAnuncio] [contacto, contrato]
+  + presupuesto: Float
+  + fecha_deseada: Date
+  + horario: String(80)
+  + contract_ids: JSON
   + estado: Enum[EstadoAnuncio] [publicado, cerrado]
   + creado_en: DateTime
   + actualizado_en: DateTime
@@ -273,7 +287,8 @@ class AnuncioPostulacion {
   + mensaje: Text
   + telefono_contacto: String(40)
   + email_contacto: String(120)
-  + estado: Enum[EstadoPostulacionAnuncio] [pendiente, contactado, descartado]
+  + estado: Enum[EstadoPostulacionAnuncio] [pendiente, contactado, descartado, contratado]
+  + contract_id: Integer
   + created_at: DateTime
   + updated_at: DateTime
 }
@@ -286,6 +301,7 @@ class Negocio {
   + slug: String(170) UK
   + descripcion: Text
   + tipo: String(30) [comercio, servicio, virtual, hibrido]
+  + modalidad: Enum[ModalidadNegocio] [estatico, ambulante]
   + logo_url: String(500)
   + banner_url: String(500)
   + imagenes: JSON
@@ -345,12 +361,28 @@ class NegocioReporte {
   + creado_en: DateTime
 }
 
+class NegocioRuta {
+  + id: Integer PK
+  + negocio_id: Integer FK
+  + nombre: String(80)
+  + descripcion: Text
+  + puntos: JSON
+  + calles: JSON
+  + color: String(9)
+  + activa: Boolean
+  + en_curso: Boolean
+  + progreso: Float (0.0-1.0)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
 ' ── Wallet & Payments ──────────────────────────────────────
 class Wallet {
   + id: Integer PK
   + user_id: Integer FK,UK
   + saldo: Integer (COP)
   + saldo_bloqueado: Integer (COP)
+  + monedas_saldo: Integer (monedas virtuales)
   + created_at: DateTime
   + updated_at: DateTime
 }
@@ -372,6 +404,50 @@ class Coin {
   + tipo: Enum[TipoMoneda] [comprada, promocional, ganada]
   + vence_en: DateTime
   + created_at: DateTime
+}
+
+class PaqueteMonedas {
+  + id: Integer PK
+  + nombre: String(80)
+  + descripcion: String(255)
+  + cantidad: Integer
+  + bonus: Integer
+  + precio_cop: Integer
+  + activo: Boolean
+  + en_oferta: Boolean
+  + precio_oferta_cop: Integer
+  + oferta_desde: DateTime
+  + oferta_hasta: DateTime
+  + orden: Integer
+  + creado_por: Integer FK
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
+class CompraPaquete {
+  + id: Integer PK
+  + user_id: Integer FK
+  + paquete_id: Integer FK
+  + monedas: Integer
+  + precio_cop: Integer
+  + pasarela: String(40) [simulada]
+  + estado: String(20) [completado]
+  + referencia: String(100)
+  + creado_en: DateTime
+}
+
+class MovimientoMonedas {
+  + id: Integer PK
+  + user_id: Integer FK
+  + wallet_id: Integer FK
+  + tipo: Enum[TipoMovimientoMonedas] [compra, gasto, promocional, ganada, vencimiento, ajuste]
+  + cantidad: Integer (+ entra / - sale)
+  + saldo_resultante: Integer
+  + descripcion: String(255)
+  + referencia: String(100)
+  + paquete_id: Integer FK
+  + vence_en: DateTime
+  + creado_en: DateTime
 }
 
 class Payment {
@@ -419,11 +495,13 @@ class MerchantPreference {
   + email_digest: String(10) [daily, weekly, never]
   + idioma: String(5)
   + tema: String(10) [system, light, dark]
+  + mapa_preferido: String(4) [2d, 3d]
+  + formulario_solicitud: String(12) [paso_a_paso, completo]
   + creado_en: DateTime
   + actualizado_en: DateTime
 }
 
-class Subscription {
+class Suscripcion {
   + id: Integer PK
   + user_id: Integer FK,UK
   + plan: String(20) [free, basico, profesional]
@@ -582,11 +660,37 @@ class Notification {
   + creado_en: DateTime
 }
 
+class NotificationCascade {
+  + id: Integer PK
+  + solicitud_id: Integer FK,UK
+  + fase_actual: Integer
+  + config_json: JSON
+  + estado: String(20) [activa, completada, expirada, cancelada]
+  + enviados_total: Integer
+  + respondidos_total: Integer
+  + timer_expira: DateTime
+  + started_at: DateTime
+  + completed_at: DateTime
+  + log_json: JSON
+}
+
+class PushSubscription {
+  + id: Integer PK
+  + user_id: Integer FK
+  + endpoint: Text UK
+  + p256dh: Text
+  + auth: Text
+  + user_agent: String(255)
+  + creado_en: DateTime
+  + actualizado_en: DateTime
+}
+
 class Ticket {
   + id: Integer PK
   + user_id: Integer FK
   + subject: String(200)
   + body: Text
+  + category: String(40) [cuenta, pagos, chambas, negocio, anuncios, verificacion, tecnico, otro]
   + status: String(20) [open, pending, closed]
   + priority: String(20) [low, normal, high]
   + assigned_to: Integer
@@ -624,6 +728,14 @@ class FeatureFlag {
   + description: Text
 }
 
+class TarifaCobro {
+  + clave: String(50) PK
+  + valor: Float
+  + descripcion: String(255)
+  + actualizado_en: DateTime
+  + actualizado_por: Integer FK
+}
+
 ' ── ML & Recommendations ───────────────────────────────────
 class RecommendationLog {
   + id: Integer PK
@@ -653,7 +765,12 @@ User "1..*" -- "0..1" Region : "N:1"
 User "1" -- "1" Wallet : "1:1"
 User "1" -- "0..*" Coin : "1:N"
 User "1" -- "0..*" MetodoPago : "1:N"
-User "1" -- "1" Subscription : "1:1"
+User "1" -- "1" Suscripcion : "1:1"
+User "1" -- "0..*" TwoFactorRecoveryCode : "1:N"
+User "1" -- "0..*" PushSubscription : "1:N"
+User "1" -- "0..*" CompraPaquete : "1:N"
+User "1" -- "0..*" MovimientoMonedas : "1:N"
+User "1" -- "0..*" TarifaCobro : "actualizado_por"
 User "1" -- "0..*" PortfolioItem : "pds"
 User "1" -- "1" TrustScore : "1:1"
 User "1" -- "0..*" Badge : "1:N"
@@ -674,6 +791,7 @@ Solicitud "1" -- "0..*" Oferta : "1:N"
 Solicitud "1" -- "0..*" Rating : "1:N"
 Solicitud "1" -- "0..1" Contract : "service"
 Solicitud "1" -- "1" Modalidad : "1:1"
+Solicitud "1" -- "0..1" NotificationCascade : "1:1"
 Solicitud "1" -- "0..*" RecommendationLog : "1:N"
 
 User "1" -- "0..*" Oferta : "pds"
@@ -707,11 +825,15 @@ User "1" -- "0..*" Negocio : "owner"
 Negocio "1" -- "0..*" NegocioHorario : "1:N"
 Negocio "1" -- "0..*" NegocioRating : "1:N"
 Negocio "1" -- "0..*" NegocioReporte : "1:N"
+Negocio "1" -- "0..*" NegocioRuta : "1:N"
 User "1" -- "0..*" NegocioRating : "autor"
 User "1" -- "0..*" NegocioReporte : "reporter"
 
 ' Wallet
 Wallet "1" -- "0..*" Transaction : "1:N"
+Wallet "1" -- "0..*" MovimientoMonedas : "1:N"
+PaqueteMonedas "1" -- "0..*" CompraPaquete : "1:N"
+PaqueteMonedas "1" -- "0..*" MovimientoMonedas : "1:N"
 
 ' KYC
 DocumentoRequerido "1" -- "0..*" DocumentoUsuario : "1:N"
@@ -761,9 +883,9 @@ end note
 
 ---
 
-## 2. Resumen de Entidades (46 total)
+## 2. Resumen de Entidades (54 total)
 
-### Core Users & Auth (6)
+### Core Users & Auth (7)
 | Entidad | Descripción |
 |---------|-------------|
 | `User` | Entidad central con 7 roles (PDS, SOLICITANTE, MERCHANT, VERIFICADOR, SOPORTE, ADMIN, SUPERADMIN), RBAC Fase 1-3, `role_version` para revocación de sesión |
@@ -772,6 +894,7 @@ end note
 | `LegalAcceptance` | Trazabilidad clickwrap Términos y Condiciones (Ley 527/1999) |
 | `Verification` | Solicitudes KYC revisadas por Verificadores, estado [pending/approved/rejected] |
 | `Badge` | Logros: primer_contrato, diez_contratos, cien_contratos, verificado, perfil_completo, primer_servicio, top_rated, sin_disputas, monedero_activo |
+| `TwoFactorRecoveryCode` | Códigos de recuperación 2FA hasheados (HMAC-SHA256), un solo uso, `usado`/`usado_en` |
 
 ### Solicitudes & Negotiation (3)
 | Entidad | Descripción |
@@ -799,28 +922,32 @@ end note
 ### Anuncios Laborales (2)
 | Entidad | Descripción |
 |---------|-------------|
-| `AnuncioLaboral` | Ofertas laborales no vinculantes de Negocios (empleo fijo vs chamba escrow) |
-| `AnuncioPostulacion` | Postulaciones de PDS con datos de contacto directo (tel/email) |
+| `AnuncioLaboral` | Ofertas de Negocios: modalidad [contacto/contrato], visible_mapa, presupuesto, fecha_deseada, horario, contract_ids |
+| `AnuncioPostulacion` | Postulaciones de PDS con contacto directo (tel/email), estado [pendiente/contactado/descartado/contratado], contract_id |
 
-### Negocios / Merchant (4)
+### Negocios / Merchant (5)
 | Entidad | Descripción |
 |---------|-------------|
-| `Negocio` | Establecimientos merchant geolocalizados (PostGIS Point), reputación, redes sociales, estado [borrador/pendiente_verificacion/activo/suspendido/rechazado] |
+| `Negocio` | Establecimientos merchant geolocalizados (PostGIS Point), modalidad [estatico/ambulante], reputación, redes sociales, estado [borrador/pendiente_verificacion/activo/suspendido/rechazado] |
 | `NegocioHorario` | Horarios semanales de atención (0=Lun..6=Dom), UNIQUE (negocio_id, dia_semana) |
 | `NegocioRating` | Calificaciones de clientes a Negocios 1-5, UNIQUE (negocio_id, autor_id) |
 | `NegocioReporte` | Reportes/quejas comunitarias [fraude/spam/contenido_inapropiado/servicio_no_prestado/otro], estado [abierto/investigando/resuelto/desestimado] |
+| `NegocioRuta` | Ruta de negocio ambulante: puntos JSON, calles, color, activa, en_curso, progreso [0-1] |
 
-### Wallet & Payments (8)
+### Wallet & Payments (11)
 | Entidad | Descripción |
 |---------|-------------|
-| `Wallet` | Billetera virtual por usuario (saldo COP, saldo_bloqueado para escrow/retiros) |
+| `Wallet` | Billetera virtual por usuario (saldo COP, saldo_bloqueado para escrow/retiros, monedas_saldo) |
 | `Transaction` | Movimientos partida doble: DEBE/HABER, tipo [comision/monedas/retiro/reembolso/deposito], invariante Σ(DEBE)=Σ(HABER) |
 | `Coin` | Monedas usuario: COMPRADA (no expiran, FIFO), PROMOCIONAL (vence_en, uso prioritario), GANADA (sin expiración, uso último) |
 | `Payment` | Pagos de contratos, comision_pds=12%, comision_solicitante=8%, conformidad dual obligatoria |
 | `MetodoPago` | Métodos usuario: tipo [billetera/banco], cuenta principal |
 | `MerchantPaymentMethod` | Métodos negocio: tipo [nequi/bancolombia/efectivo...], detalle JSON |
-| `MerchantPreference` | Preferencias UI/notificaciones: push_enabled, email_digest [daily/weekly/never], tema [system/light/dark] |
-| `Subscription` | Suscripciones premium simuladas: plan [free/basico/profesional], estado [activa/cancelada/vencida] |
+| `MerchantPreference` | Preferencias UI/notificaciones: push_enabled, email_digest, tema, mapa_preferido [2d/3d], formulario_solicitud [paso_a_paso/completo] |
+| `Suscripcion` | Suscripción premium simulada: plan [free/basico/profesional], estado [activa/cancelada/vencida] |
+| `PaqueteMonedas` | Paquete configurable por superadmin: cantidad, bonus, precio_cop, oferta, orden, activo |
+| `CompraPaquete` | Compra de paquete con pasarela simulada, monedas, precio_cop, referencia |
+| `MovimientoMonedas` | Libro de monedas: tipo [compra/gasto/promocional/ganada/vencimiento/ajuste], cantidad (+/−), saldo_resultante |
 
 ### KYC & Documents (2)
 | Entidad | Descripción |
@@ -843,20 +970,23 @@ end note
 | `TrustScore` | Score consolidado 0-1 (KYC 25% + Rating 25% + Contratos 20% + Portfolio 15% + Referidos 15%), niveles [nuevo/confiable/verificado/experto], recálculo nocturno |
 | `Badge` | Ver tabla Core (9 tipos) |
 
-### Messaging & Notifications (4)
+### Messaging & Notifications (6)
 | Entidad | Descripción |
 |---------|-------------|
 | `Conversation` | Chat 1:1 normalizado (user_a_id < user_b_id), UNIQUE |
 | `Message` | Mensajes con protocolo `⟦c:action⟧` para acciones contractuales |
 | `Notification` | Centro alertas persistente (RF-10), tipo[40], datos JSON, leida |
-| `Ticket` | Tickets soporte (RBAC Fase 2), status [open/pending/closed], priority [low/normal/high] |
+| `Ticket` | Tickets soporte: category [cuenta/pagos/chambas/negocio/anuncios/verificacion/tecnico/otro], status [open/pending/closed], priority [low/normal/high] |
+| `NotificationCascade` | Cascada geoespacial por fases: fase_actual, config_json, estado [activa/completada/expirada/cancelada], log_json |
+| `PushSubscription` | Suscripción Web Push por navegador/dispositivo: endpoint UK, p256dh, auth |
 
-### Admin & System (3)
+### Admin & System (4)
 | Entidad | Descripción |
 |---------|-------------|
 | `AuditLog` | Trazabilidad inmutable acciones admin (RNF-AUD), append-only, hash chain, snapshot_diff_json {before/after}, retención 10 años |
 | `SystemConfig` | Config global tipada: value_type [int/float/string/bool/json] |
 | `FeatureFlag` | Toggles calientes sin deploy: cache memoria + invalidación Redis pub/sub (5s) |
+| `TarifaCobro` | Tarifas configurables por superadmin: pct_contrato, precio_moneda_cop, monedas_fijas, anuncios |
 
 ### ML & Recommendations (1)
 | Entidad | Descripción |
@@ -875,7 +1005,7 @@ User (N) ── (1) Region
 User (1) ── (1) Wallet
 User (1) ── (N) Coin
 User (1) ── (N) MetodoPago
-User (1) ── (1) Subscription
+User (1) ── (1) Suscripcion
 User (1) ── (N) PortfolioItem [pds]
 User (1) ── (1) TrustScore
 User (1) ── (N) Badge
@@ -889,12 +1019,18 @@ User (1) ── (N) Conversation [user_b]
 User (1) ── (N) Message [sender]
 User (1) ── (N) Notification
 User (1) ── (N) Ticket
+User (1) ── (N) TwoFactorRecoveryCode
+User (1) ── (N) PushSubscription
+User (1) ── (N) CompraPaquete
+User (1) ── (N) MovimientoMonedas
+User (1) ── (N) TarifaCobro [actualizado_por]
 
 User (1) ── (N) Solicitud [solicitante]
 Solicitud (1) ── (N) Oferta
 Solicitud (1) ── (N) Rating
 Solicitud (1) ── (0..1) Contract [service]
 Solicitud (1) ── (1) Modalidad
+Solicitud (1) ── (0..1) NotificationCascade
 Solicitud (1) ── (N) RecommendationLog
 
 User (1) ── (N) Oferta [pds]
@@ -924,10 +1060,14 @@ User (1) ── (N) Negocio [owner]
 Negocio (1) ── (N) NegocioHorario
 Negocio (1) ── (N) NegocioRating
 Negocio (1) ── (N) NegocioReporte
+Negocio (1) ── (N) NegocioRuta
 User (1) ── (N) NegocioRating [autor]
 User (1) ── (N) NegocioReporte [reporter]
 
 Wallet (1) ── (N) Transaction
+Wallet (1) ── (N) MovimientoMonedas
+PaqueteMonedas (1) ── (N) CompraPaquete
+PaqueteMonedas (1) ── (N) MovimientoMonedas
 
 DocumentoRequerido (1) ── (N) DocumentoUsuario
 
@@ -953,7 +1093,8 @@ Conversation (1) ── (N) Message
 | `contracts` | `service_id UK`, `proveedor_id`, `solicitante_id` | Un contrato por servicio |
 | `chambas` | `contract_id UK,FK` | Una chamba por contrato |
 | `wallets` | `user_id UK` | Una wallet por usuario |
-| `wallet_transactions` | `wallet_id`, `tipo`, `created_at` | Libro contable ordenado |
+| `transactions` | `wallet_id`, `tipo`, `created_at` | Libro contable ordenado |
+| `movimientos_monedas` | `user_id`, `wallet_id`, `creado_en` | Libro de monedas ordenado |
 | `coins` | `user_id`, `tipo`, `vence_en` | FIFO por expiración |
 | `payments` | `contract_id UK` | Un pago por contrato |
 | `negocios` | `slug UK`, `geom GIST`, `ix_negocios_estado_categoria` | Directorio público |
@@ -975,14 +1116,17 @@ Conversation (1) ── (N) Message
 | `EstadoChamba` | programada, en_proceso, en_ejecucion, pausada, pendiente_validacion, liquidacion_confirmada, finalizada |
 | `EstadoMarana` | publicado, asignado, completado, pagado, cancelado |
 | `EstadoAnuncio` | publicado, cerrado |
-| `EstadoPostulacionAnuncio` | pendiente, contactado, descartado |
+| `EstadoPostulacionAnuncio` | pendiente, contactado, descartado, contratado |
 | `TipoNegocio` | comercio, servicio, virtual, hibrido |
 | `EstadoNegocio` | borrador, pendiente_verificacion, activo, suspendido, rechazado |
+| `ModalidadNegocio` | estatico, ambulante |
+| `ModalidadAnuncio` | contacto, contrato |
 | `TipoReporteNegocio` | fraude, spam, contenido_inapropiado, servicio_no_prestado, otro |
 | `TipoModalidad` | A_comision, B_sin_comision |
 | `EstadoHito` | pendiente, aprobado, rechazado |
 | `TipoTransaccion` | comision, monedas, retiro, reembolso, deposito |
 | `TipoMoneda` | comprada, promocional, ganada |
+| `TipoMovimientoMonedas` | compra, gasto, promocional, ganada, vencimiento, ajuste |
 | `EstadoPago` | pendiente, completado, reembolsado, fallido |
 | `EstadoDocumento` | no_enviado, enviado, aprobado, rechazado |
 | `GrupoDocumento` | identidad, antecedentes, financiero, opcional |
@@ -999,4 +1143,4 @@ Conversation (1) ── (N) Message
 
 ---
 
-*Generado automáticamente desde `15_modelo_datos_completo.puml` (Figura 15) — 46 entidades, sintaxis PlantUML válida con `!pragma layout smetana`*
+*Generado automáticamente desde `15_modelo_datos_completo.puml` (Figura 15) — 54 entidades, sintaxis PlantUML válida con `!pragma layout smetana`*

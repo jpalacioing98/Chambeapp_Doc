@@ -14,23 +14,51 @@ title Figura 6 - Billetera Virtual, Monedas y Partida Doble (RF-25, RF-27, RF-08
 
 actor "PDS" as PDS
 actor "Solicitante" as SOL
+actor "Superadmin" as SUP
 actor "Plataforma" as PLAT
 
 participant "Wallet\n(wallets table)" as W
-participant "WalletTransaction\n(partida doble DEBE/HABER)" as WT
+participant "Transaction\n(transactions: saldo COP)" as WT
 participant "Coin\n(3 tipos: COMPRADA/PROMO/GANADA)" as C
+participant "MovimientoMonedas\n(libro de monedas)" as MM
+participant "PaqueteMonedas /\nCompraPaquete" as CP
+participant "TarifaCobro\n(tarifas configurables)" as TC
 participant "Payment\n(pagos table + conformidad dual)" as PAY
 participant "MetodoPago\n(billetera + cuentas banco)" as MP
 participant "Pasarela\n(Nequi / PSE / MercadoPago)" as GW
-participant "CoinPackage\n(paquetes monetizados)" as CP
 
-== RECARGAS Y COMPRA MONEDAS ==
-SOL -> GW: POST /wallet/topup {monto, metodo=NEQUI}
-GW -> W: WalletTransaction DEBE (plataforma) / HABER (usuario)
-GW --> SOL: Checkout URL Nequi
-SOL -> GW: Completa pago en app Nequi
-GW -> W: WalletTransaction confirma (webhook)
-W -> C: Compra CoinPackage → Coin COMPRADA (cantidad, no expira)
+== COMPRA DE PAQUETES DE MONEDAS ==
+SOL -> W: GET /wallet/paquetes
+W -> CP: Lee paquetes activos (cantidad, bonus, precio_cop/oferta)
+SOL -> W: POST /wallet/coins/buy {paquete_id}
+W -> CP: Crea CompraPaquete (pasarela=simulada, estado=completado)
+W -> TC: Consulta precio_moneda_cop vigente
+W -> MM: MovimientoMonedas tipo=compra (+cantidad + bonus)
+MM -> W: Actualiza monedas_saldo (saldo_resultante)
+W -> C: Registra Coin COMPRADA (cantidad comprada)
+W --> SOL: 201 {compra, saldo_monedas}
+
+== USO DE MONEDAS ==
+SOL -> W: POST /wallet/coins/use {cantidad, motivo}
+W -> MM: MovimientoMonedas tipo=gasto (−cantidad)
+MM -> W: Actualiza monedas_saldo
+W -> C: Descuenta Coin (COMPRADA/PROMOCIONAL/GANADA)
+W --> SOL: 200 {mensaje}
+
+== COBRO DE CONTRATO EN MONEDAS ==
+SOL -> PAY: Acepta oferta → firma contrato
+PAY -> TC: calcular_monedas_contrato(monto)
+TC --> PAY: monedas_requeridas (mínimo configurable)
+PAY -> W: cobrar_monedas(SOL, monedas_requeridas, ref=contract)
+PAY -> W: cobrar_monedas(PDS, monedas_requeridas, ref=contract)
+alt Monedas suficientes en ambas partes
+    W -> MM: MovimientoMonedas tipo=gasto (−monedas)
+    MM -> W: Actualiza monedas_saldo
+    PAY -> PAY: Continúa firma / liberación
+else Saldo insuficiente
+    W --> PAY: ValueError (saldo insuficiente)
+    PAY --> SOL: 400 monedas insuficientes
+end
 
 == MODALIDAD A: COMISIÓN (DEFAULT) ==
 SOL -> PAY: Acepta oferta → genera Payment {modalidad=A_comision}
@@ -38,7 +66,7 @@ PAY -> W: Bloquea monto + comisiones (saldo_bloqueado)
 PAY -> SOL: Solicita conformidad_solicitante (firma SHA256)
 PAY -> PDS: Solicita conformidad_pds (firma SHA256)
 alt Ambas conformidades OK
-    PAY -> W: WalletTransaction (liquidación partida doble)
+    PAY -> W: Transaction (liquidación partida doble)
     note right of W: Modalidad A - Liquidación\nDEBE: SOL (monto_total) → HABER: PDS (monto_neto=88%)\nDEBE: SOL (comision_solicitante=8%) → HABER: PLAT\nDEBE: PDS (comision_pds=12%) → HABER: PLAT
     W -> PDS: Saldo disponible inmediato
     PAY -> SOL: Recibo PDF (Ley 527) + Transaction log
@@ -49,19 +77,21 @@ end
 == MODALIDAD B: SIN COMISIÓN (MONEDAS) ==
 SOL -> PAY: Acepta oferta → genera Payment {modalidad=B_sin_comision, monedas_requeridas}
 PAY -> C: Verifica Coin COMPRADA suficiente (saldo_actual ≥ requeridas)
-PAY -> C: Descuenta Coin COMPRADA (saldo_actual - requeridas)
-PAY -> W: WalletTransaction (liquidación sin comisión)
+PAY -> W: cobrar_monedas(SOL, monedas_requeridas) vía servicio cobros
+PAY -> MM: MovimientoMonedas tipo=gasto (monedas quemadas)
+PAY -> W: Transaction (liquidación sin comisión)
 note right of W: Modalidad B - Liquidación\nDEBE: SOL (0 COP) → HABER: PDS (monto_total COP)\nDEBE: SOL (monedas) → HABER: PLAT (monedas quemadas)
 PAY -> PDS: Saldo disponible 100% (sin comisión)
 PAY -> SOL: 0 COP cobrados, solo monedas consumidas
 
 == RETIROS PDS ==
 PDS -> MP: GET /metodos-pago (lista: billetera + Nequi + Bancolombia)
-PDS -> GW: POST /retiros {monto, metodo=NEQUI, cuenta}
-GW -> W: Valida saldo_disponible ≥ monto + fee
-GW -> W: WalletTransaction DEBE: PDS / HABER: PLAT (saldo_bloqueado)
-GW -> GW: Procesa transferencia Nequi (async Celery)
-GW -> W: WalletTransaction confirma (webhook) → libera bloqueo
+PDS -> W: POST /wallet/withdraw {monto, cuenta_destino}
+W -> W: Valida saldo_disponible ≥ monto + fee
+W -> WT: Transaction tipo=retiro (−monto)
+WT -> W: Actualiza saldo / saldo_bloqueado
+W -> GW: Procesa transferencia Nequi (async Celery)
+GW -> W: Confirma (webhook) → libera bloqueo
 GW -> PDS: Notificación retiro completado + comprobante
 
 == COIN PROMOCIONAL Y GANADA ==
@@ -70,10 +100,17 @@ PLAT -> C: Logro (PRIMER_CONTRATO, TOP_RATED) → Coin GANADA (sin expiración)
 SOL -> C: Usa Coin PROMOCIONAL primero (vence_en más cercano)
 SOL -> C: Luego Coin COMPRADA (FIFO por expiración)
 
+== SUPERADMIN: TARIFAS Y PAQUETES ==
+SUP -> TC: GET/PUT /admin/cobros (6 tarifas)
+TC -> CP: Si cambia precio_moneda_cop → recalcula precio_cop de paquetes
+SUP -> CP: GET/POST/PATCH/DELETE /wallet/admin/paquetes
+SUP -> CP: POST /wallet/admin/paquetes/reordenar
+
 note right of W
   WALLET (partida doble invariante):
-  • wallets: user_id UK, saldo_disponible, saldo_bloqueado, total_ingresos, total_egresos
-  • wallet_transactions: DEBE/HABER, concepto, monto, saldo_resultante, referencia_id/tipo
+  • wallets: user_id UK, saldo (COP), saldo_bloqueado, monedas_saldo
+  • transactions: tipo[5], monto (COP +/−), descripcion, referencia
+  • movimientos_monedas: tipo[6], cantidad (+/−), saldo_resultante
   • INVARIANTE: Σ(DEBE) = Σ(HABER) por usuario + plataforma
   • Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
 end note
@@ -83,14 +120,21 @@ note right of C
   • COMPRADA:    usuario paga COP → monedas, NO expiran, FIFO uso
   • PROMOCIONAL: plataforma regala → vence_en (ej. 30d), uso prioritario
   • GANADA:      logros/badges → sin expiración, uso último
-  • coins table: user_id, tipo, cantidad, saldo_actual, origen, expira_en
-  • coin_packages: nombre, monedas, precio_cop, modalidad(A/B), activo
+  • coins table: user_id, tipo, cantidad, vence_en
+  • paquetes_monedas: nombre, cantidad, bonus, precio_cop, en_oferta, orden
+end note
+
+note right of MM
+  MOVIMIENTO MONEDAS:
+  • TipoMovimientoMonedas: compra | gasto | promocional | ganada | vencimiento | ajuste
+  • Guarda saldo_resultante para auditoría
+  • referencia: contrato, anuncio, compra o ajuste
+  • Reembolsos usan tipo=ajuste (services/cobros.py)
 end note
 
 note right of PAY
   PAYMENT (RF-08 + RF-23):
   • payments: contract_id UK, monto, comision_pds(12%), comision_solicitante(8%), estado, pasarela, conformidad_dual
-  • pagos_checkin: GPS entrada/salida + distancia_m + evidencias (validación <100m)
   • Modalidad A (comisión): 20% total plataforma, conformidad dual obligatoria
   • Modalidad B (monedas): 0% comisión, consume Coin COMPRADA, conformidad dual
   • Escrow 72h si una parte no conforma → mediación soporte
@@ -112,28 +156,31 @@ end note
 
 | Actor/Participante | Tipo | Responsabilidad |
 |--------------------|------|-----------------|
-| **Solicitante (SOL)** | Actor | Recarga wallet, compra Coins, paga servicios (Modalidad A/B) |
+| **Solicitante (SOL)** | Actor | Compra paquetes de monedas, paga tarifas de contrato y servicios (Modalidad A/B) |
 | **PDS** | Actor | Recibe pagos, retira a banco/Nequi, gestiona métodos de pago |
 | **Plataforma (PLAT)** | Actor | Emite Coins promocionales/ganadas, recibe comisiones |
 | **Wallet (W)** | Tabla/Entidad | Billetera virtual, partida doble DEBE/HABER, saldo disponible/bloqueado |
-| **WalletTransaction (WT)** | Tabla/Entidad | Libro contable: DEBE/HABER, concepto, monto, saldo_resultante, referencia |
+| **Transaction (WT)** | Tabla/Entidad | Libro contable COP: tipo[5], monto, descripcion, referencia |
+| **MovimientoMonedas (MM)** | Tabla/Entidad | Libro de monedas: tipo[6], cantidad (+/−), saldo_resultante |
 | **Coin (C)** | Tabla/Entidad | 3 tipos: COMPRADA/PROMOCIONAL/GANADA, FIFO por expiración |
 | **Payment (PAY)** | Tabla/Entidad | Pagos contratos, comisiones 12%/8%, conformidad dual, Escrow 72h |
 | **MetodoPago (MP)** | Tabla/Entidad | Métodos usuario (billetera/banco) + negocio (Nequi/Bancolombia/efectivo) |
 | **Pasarela (GW)** | Servicio Externo | Nequi / PSE / MercadoPago, webhooks async |
-| **CoinPackage (CP)** | Entidad | Paquetes monetizados: nombre, monedas, precio COP, modalidad A/B |
+| **PaqueteMonedas / CompraPaquete (CP)** | Entidad | Paquetes configurables: cantidad, bonus, precio COP, oferta; compras con pasarela simulada |
+| **TarifaCobro (TC)** | Entidad | Tarifas configurables: pct_contrato, precio_moneda_cop, monedas_fijas, anuncios |
 
 ---
 
 ## 3. Flujos Principales
 
-### A. Recargas y Compra de Monedas
-1. `SOL → GW`: `POST /wallet/topup {monto, metodo=NEQUI}`
-2. `GW → W`: `WalletTransaction` DEBE (plataforma) / HABER (usuario)
-3. `GW → SOL`: Checkout URL Nequi
-4. `SOL → GW`: Completa pago en app Nequi
-5. `GW → W`: `WalletTransaction` confirma (webhook)
-6. `W → C`: Compra `CoinPackage` → `Coin COMPRADA` (cantidad, no expira)
+### A. Compra de Paquetes de Monedas
+1. `SOL → W`: `GET /wallet/paquetes` (paquetes activos, bonus, oferta)
+2. `SOL → W`: `POST /wallet/coins/buy {paquete_id}`
+3. `W → CP`: Crea `CompraPaquete` (pasarela=simulada, estado=completado)
+4. `W → TC`: Consulta `precio_moneda_cop` vigente
+5. `W → MM`: `MovimientoMonedas` tipo=compra (+cantidad + bonus)
+6. `W → C`: Registra `Coin COMPRADA` (cantidad comprada)
+7. `MM → W`: Actualiza `monedas_saldo` (saldo_resultante)
 
 ### B. Modalidad A: Comisión (Default - 20% plataforma)
 1. `SOL → PAY`: `POST /contracts/{id}/accept` → genera `Payment {modalidad=A_comision}`
@@ -141,7 +188,7 @@ end note
 3. `PAY → SOL`: Solicita `conformidad_solicitante` (firma digital SHA256)
 4. `PAY → PDS`: Solicita `conformidad_pds` (firma digital SHA256)
 5. **Si ambas OK**:
-   - `PAY → W`: `WalletTransaction` (liquidación partida doble)
+   - `PAY → W`: `Transaction` (liquidación)
      - DEBE: SOL (monto_total) → HABER: PDS (monto_neto = 88%)
      - DEBE: SOL (comision_solicitante = 8%) → HABER: PLAT
      - DEBE: PDS (comision_pds = 12%) → HABER: PLAT
@@ -153,7 +200,7 @@ end note
 1. `SOL → PAY`: `POST /contracts/{id}/accept` → genera `Payment {modalidad=B_sin_comision, monedas_requeridas}`
 2. `PAY → C`: Verifica `Coin COMPRADA` suficiente (`saldo_actual ≥ requeridas`)
 3. `PAY → C`: Descuenta `Coin COMPRADA` (`saldo_actual - requeridas`)
-4. `PAY → W`: `WalletTransaction` (liquidación sin comisión)
+4. `PAY → W`: `Transaction` + `MovimientoMonedas` (liquidación sin comisión)
    - DEBE: SOL (0 COP) → HABER: PDS (monto_total COP)
    - DEBE: SOL (monedas) → HABER: PLAT (monedas quemadas)
 5. `PAY → PDS`: Saldo disponible 100% (sin comisión)
@@ -161,11 +208,11 @@ end note
 
 ### D. Retiros PDS
 1. `PDS → MP`: `GET /metodos-pago` (lista: billetera + Nequi + Bancolombia)
-2. `PDS → GW`: `POST /retiros {monto, metodo=NEQUI, cuenta}`
+2. `PDS → W`: `POST /wallet/withdraw {monto, cuenta_destino}`
 3. `GW → W`: Valida `saldo_disponible ≥ monto + fee`
-4. `GW → W`: `WalletTransaction` DEBE: PDS / HABER: PLAT (`saldo_bloqueado`)
+4. `W → WT`: `Transaction` tipo=retiro (−monto)
 5. `GW → GW`: Procesa transferencia Nequi (async Celery)
-6. `GW → W`: `WalletTransaction` confirma (webhook) → libera bloqueo
+6. `GW → W`: Confirma (webhook) → libera bloqueo
 7. `GW → PDS`: Notificación retiro completado + comprobante
 
 ### E. Coins Promocional y Ganada
@@ -180,11 +227,14 @@ end note
 
 | Tabla | Campos Clave | Descripción |
 |-------|-------------|-------------|
-| `wallets` | `id PK`, `user_id FK UK`, `saldo`, `saldo_bloqueado`, `created_at/updated_at` | Billetera por usuario |
-| `wallet_transactions` | `id PK`, `wallet_id FK`, `tipo[5]`, `monto (COP +/-)`, `DEBE/HABER`, `concepto`, `saldo_resultante`, `referencia_id/tipo`, `created_at` | Libro contable partida doble |
-| `coins` | `id PK`, `user_id FK`, `cantidad`, `tipo[COMPRADA/PROMOCIONAL/GANADA]`, `saldo_actual`, `origen`, `expira_en`, `created_at` | Ledger de monedas por tipo |
-| `coin_packages` | `id PK`, `nombre`, `monedas`, `precio_cop`, `modalidad[A/B]`, `activo` | Paquetes monetizados |
-| `payments` | `id PK`, `contract_id FK UK`, `monto`, `comision_pds(12%)`, `comision_solicitante(8%)`, `estado[4]`, `pasarela[mock/nequi]`, `referencia_pasarela`, `motivo_reembolso`, `conformidad_dual`, `created_at/updated_at` | Pagos de contratos |
+| `wallets` | `id PK`, `user_id FK UK`, `saldo`, `saldo_bloqueado`, `monedas_saldo`, `created_at/updated_at` | Billetera por usuario |
+| `transactions` | `id PK`, `wallet_id FK`, `tipo[5]`, `monto (COP +/-)`, `descripcion`, `referencia`, `created_at` | Libro contable COP |
+| `movimientos_monedas` | `id PK`, `user_id FK`, `wallet_id FK`, `tipo[6]`, `cantidad (+/-)`, `saldo_resultante`, `referencia`, `paquete_id FK`, `creado_en` | Libro de monedas |
+| `coins` | `id PK`, `user_id FK`, `cantidad`, `tipo[COMPRADA/PROMOCIONAL/GANADA]`, `vence_en`, `created_at` | Monedas por usuario |
+| `paquetes_monedas` | `id PK`, `nombre`, `cantidad`, `bonus`, `precio_cop`, `en_oferta`, `precio_oferta_cop`, `orden`, `activo` | Paquetes configurables |
+| `compras_paquetes` | `id PK`, `user_id FK`, `paquete_id FK`, `monedas`, `precio_cop`, `pasarela`, `estado`, `referencia` | Compras de paquetes |
+| `tarifas_cobro` | `clave PK`, `valor`, `descripcion`, `actualizado_por FK` | Tarifas de cobro |
+| `payments` | `id PK`, `contract_id FK UK`, `monto`, `comision_pds(12%)`, `comision_solicitante(8%)`, `estado[4]`, `pasarela[mock/nequi]`, `referencia_pasarela`, `motivo_reembolso`, `created_at/updated_at` | Pagos de contratos |
 | `metodos_pago` | `id PK`, `user_id FK`, `tipo[billetera/banco]`, `banco`, `numero_cuenta`, `es_principal`, `created_at` | Métodos usuario |
 | `merchant_payment_methods` | `id PK`, `user_id FK`, `tipo[nequi/bancolombia/efectivo...]`, `detalle JSON`, `principal`, `activo`, `created_at` | Métodos negocio |
 
@@ -194,15 +244,19 @@ end note
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/api/v1/wallet/topup` | Recarga wallet vía Nequi/PSE |
-| POST | `/api/v1/wallet/coins/buy` | Compra paquete Coins (COMPRADA) |
+| GET | `/api/v1/wallet/paquetes` | Paquetes de monedas activos |
+| POST | `/api/v1/wallet/coins/buy` | Compra paquete de monedas |
+| POST | `/api/v1/wallet/coins/use` | Usa monedas (gasto) |
+| GET | `/api/v1/wallet/coins/movimientos` | Historial de movimientos de monedas |
 | POST | `/api/v1/payments` | Genera payment (modalidad A/B) |
 | POST | `/api/v1/payments/:id/conformidad_solicitante` | Firma digital solicitante |
 | POST | `/api/v1/payments/:id/conformidad_pds` | Firma digital PDS |
-| POST | `/api/v1/retiros` | Solicita retiro Nequi/Bancolombia |
+| POST | `/api/v1/wallet/withdraw` | Solicita retiro Nequi/Bancolombia |
 | GET | `/api/v1/metodos-pago` | Lista métodos pago usuario/negocio |
-| GET | `/api/v1/wallet/transactions` | Historial transacciones (partida doble) |
-| GET | `/api/v1/wallet/coins` | Balance Coins por tipo |
+| GET | `/api/v1/wallet/history` | Historial de transacciones COP |
+| GET | `/api/v1/wallet/coins` | Saldo actual de monedas |
+| GET/PUT | `/api/v1/admin/cobros` | Tarifas de cobro (superadmin) |
+| GET/POST | `/api/v1/wallet/admin/paquetes` | Gestión de paquetes (superadmin) |
 
 ---
 
@@ -210,8 +264,9 @@ end note
 
 ### Partida Doble Invariante (Wallet)
 ```
-wallets: user_id UK, saldo_disponible, saldo_bloqueado, total_ingresos, total_egresos
-wallet_transactions: DEBE/HABER, concepto, monto, saldo_resultante, referencia_id/tipo
+wallets: user_id UK, saldo (COP), saldo_bloqueado, monedas_saldo
+transactions: tipo[5], monto (COP +/−), descripcion, referencia
+movimientos_monedas: tipo[6], cantidad (+/−), saldo_resultante, referencia
 
 INVARIANTE: Σ(DEBE) = Σ(HABER) por usuario + plataforma
 Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
@@ -245,8 +300,9 @@ Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
 ## 7. Notas Técnicas (Extraídas del .puml)
 
 ### Wallet (Partida Doble Invariante)
-- `wallets`: `user_id UK`, `saldo_disponible`, `saldo_bloqueado`, `total_ingresos`, `total_egresos`
-- `wallet_transactions`: `DEBE/HABER`, `concepto`, `monto`, `saldo_resultante`, `referencia_id/tipo`
+- `wallets`: `user_id UK`, `saldo`, `saldo_bloqueado`, `monedas_saldo`
+- `transactions`: `tipo[5]`, `monto (COP +/−)`, `descripcion`, `referencia`
+- `movimientos_monedas`: `tipo[6]`, `cantidad (+/−)`, `saldo_resultante`, `referencia`
 - **INVARIANTE**: `Σ(DEBE) = Σ(HABER)` por usuario + plataforma
 - **Saldo disponible** = `Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado`
 
@@ -254,12 +310,13 @@ Saldo disponible = Σ(HABER usuario) - Σ(DEBE usuario) - saldo_bloqueado
 - **COMPRADA**: usuario paga COP → monedas, NO expiran, FIFO uso
 - **PROMOCIONAL**: plataforma regala → `vence_en` (ej. 30d), uso prioritario
 - **GANADA**: logros/badges → sin expiración, uso último
-- `coins table`: `user_id`, `tipo`, `cantidad`, `saldo_actual`, `origen`, `expira_en`
-- `coin_packages`: `nombre`, `monedas`, `precio_cop`, `modalidad(A/B)`, `activo`
+- `coins`: `user_id`, `tipo`, `cantidad`, `vence_en`
+- `paquetes_monedas`: `nombre`, `cantidad`, `bonus`, `precio_cop`, `en_oferta`, `orden`, `activo`
+- `compras_paquetes`: `user_id`, `paquete_id`, `monedas`, `precio_cop`, `pasarela`, `estado`
 
 ### Payment (RF-08 + RF-23)
 - `payments`: `contract_id UK`, `monto`, `comision_pds(12%)`, `comision_solicitante(8%)`, `estado`, `pasarela`, `conformidad_dual`
-- `pagos_checkin`: GPS entrada/salida + `distancia_m` + evidencias (validación <100m)
+- El cobro de contrato usa `TarifaCobro` y es idempotente por referencia
 - **Modalidad A (comisión)**: 20% total plataforma, conformidad dual obligatoria
 - **Modalidad B (monedas)**: 0% comisión, consume Coin COMPRADA, conformidad dual
 - **Escrow 72h**: si una parte no conforma → mediación soporte

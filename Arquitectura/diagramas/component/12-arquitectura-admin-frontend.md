@@ -10,61 +10,78 @@
 
 ```plantuml
 @startuml
-title Figura 12 - Arquitectura Admin Frontend (React 18 + Vite 6 + Vanilla JS)
+title Figura 12 - Arquitectura Admin Frontend (React 18 + Vite + JS)
 
 actor "Verificador" as VER
 actor "Soporte" as SOP
 actor "Admin Regional" as ADM
 actor "Superadmin" as SUP
 
-box "Admin Frontend (React 18 + Vite 6 + Vanilla JS)" #E3F2FD
+box "Admin Frontend (React 18 + Vite + Vanilla JS)" #E3F2FD
   participant "SPA Admin\nSingle Page Application" as SPA
   participant "RequireAuth\n(HOC Protección Rutas)" as RA
   participant "RequireRole\n(HOC Autorización RBAC)" as RR
   participant "NAV_SIDEBAR\n(Escritorio: menú lateral)" as SB
   participant "NAV_TABBAR\n(Móvil: barra inferior)" as TB
-  participant "services/adminApi\n(axios + interceptors JWT)" as AA
-  participant "services/kycApi\n(axios + multipart/form-data)" as KA
-  participant "services/superadminApi\n(axios + feature flags)" as SA
+  participant "lib/api.js\n(axios + interceptors JWT)" as AX
+  participant "staff/services/adminApi\n+ kycApi + plantillasApi" as AA
+  participant "staff/services/superadminApi\n(flags, auditoría, cobros, paquetes)" as SA
+  participant "soporte/services/ticketsApi\n+ chatApi" as TA
+  participant "notificaciones/services\n+ perfil/services" as NA
 end box
 
 box "API Backend (Flask-Smorest + Blueprints)" #FFF3E0
   participant "/api/v1/admin\n(admin blueprint)" as B_ADM
   participant "/api/v1/kyc\n(kyc blueprint)" as B_KYC
+  participant "/api/v1/tickets\n(tickets blueprint)" as B_TICK
+  participant "/api/v1/plantillas\n(plantillas blueprint)" as B_PLAN
   participant "/api/v1/superadmin\n(superadmin blueprint)" as B_SUP
+  participant "/api/v1/wallet/admin\n(paquetes y tarifas)" as B_WALLET
+  participant "/api/v1/chat\n+ Socket.IO" as B_CHAT
 end box
 
 database "PostgreSQL 16 + PostGIS\n+ Audit Logs" as DB
 
 VER --> SPA: Acceso panel verificación KYC
-SOP --> SPA: Acceso tickets + moderación
+SOP --> SPA: Acceso tickets + chats + disputas
 ADM --> SPA: Acceso stats + usuarios + disputas (scoped)
-SUP --> SPA: Acceso global + flags + auditoría + regiones
+SUP --> SPA: Acceso global + flags + auditoría + regiones + cobros
 
-SPA --> RA: Protege todas las rutas /admin/*
+SPA --> RA: Protege todas las rutas privadas
 RA --> RR: Verifica rol en JWT (claims: rol, region_scope_id)
 RR --> SB: Render menú según rol (verificador/soporte/admin/superadmin)
 RR --> TB: Render tabbar móvil según rol
-SB --> AA: Admin stats, users, disputes, contracts
-SB --> KA: KYC review, docs, approve/reject
-SB --> SA: Flags, audit-logs, regions, reindex
-TB --> AA: Mismo API (responsive)
-TB --> KA: Mismo API
+SB --> AX: Adjunta Bearer token + manejo 401/403
+SB --> AA: Admin stats, users, KYC, verifications, plantillas
+SB --> SA: Flags, audit-logs, regions, admins, T&C, IA, cobros, paquetes
+SB --> TA: Tickets por categoría, chats de soporte, disputas
+SB --> NA: Notificaciones y perfil
+TB --> AX: Mismo API (responsive)
+TB --> AA: Mismo API
 TB --> SA: Mismo API
+TB --> TA: Mismo API
 
-AA --> B_ADM: JWT + region_scope_id header
-KA --> B_KYC: JWT + multipart (docs KYC)
-SA --> B_SUP: JWT (superadmin, sin region_scope)
+AX --> B_ADM: JWT + region_scope_id header
+AX --> B_KYC: JWT + multipart (docs KYC)
+AX --> B_TICK: JWT (tickets + categorías)
+AX --> B_PLAN: JWT (plantillas KYC/ticket/disputa)
+AX --> B_SUP: JWT (superadmin, sin region_scope)
+AX --> B_WALLET: JWT superadmin (paquetes/tarifas)
+AX --> B_CHAT: JWT + WebSocket (chat soporte)
 
 B_ADM --> DB: Scoping automático por region_scope_id
-B_KYC --> DB: KYC docs + verifications
-B_SUP --> DB: Global (feature_flags, audit_logs, regions, system_configs)
+B_KYC --> DB: KYC docs + verifications + plantillas
+B_TICK --> DB: tickets + disputas + mensajes
+B_PLAN --> DB: SystemConfig (plantillas_soporte)
+B_SUP --> DB: feature_flags, audit_logs, regions, system_configs
+B_WALLET --> DB: paquetes_monedas, tarifas_cobro
+B_CHAT --> DB: conversations, messages
 
 note right of RR
   REQUIRE ROLE (RBAC FASE 1-3):
   • Lee claims JWT: {rol, region_scope_id, role_version}
-  • Verificador: solo /kyc, /verifications
-  • Soporte: solo /tickets, /moderation
+  • Verificador: /verificador (KYC)
+  • Soporte: /soporte (tickets, chats, disputas)
   • Admin: /admin/* scoped a region_scope_id
   • Superadmin: /superadmin/* (sin scope, global)
   • 403 si rol no autorizado para ruta
@@ -79,30 +96,55 @@ note right of B_ADM
   • GET /contracts       → contracts.solicitante.region_id = scope
   • GET /disputes        → disputes.contract.solicitante.region_id = scope
   • GET /tickets         → tickets.user.region_id = scope
+  • GET /cobros          → tarifas de cobro (solo lectura admin)
   • PATCH /users/:id     → suspensión/roles (solo scope)
   • POST /disputes/:id/resolve → laudo (solo scope)
 end note
 
 note right of B_KYC
-  KYC BLUEPRINT (verificador):
+  KYC + PLANTILLAS:
   • GET /documents/pending      → docs estado=enviado (scope)
   • GET /documents/:id          → detalle + base64/URL MinIO
   • POST /documents/:id/approve → estado=aprobado, revisado_por=verificador
-  • POST /documents/:id/reject  → estado=rechazado, nota
+  • POST /documents/:id/reject  → estado=rechazado + plantilla kyc_rechazo
   • GET /verifications/pending  → identity verifications
   • POST /verifications/:id/approve|reject
+  • GET/PUT /plantillas         → kyc_rechazo, ticket_respuesta, disputa_veredicto
+end note
+
+note right of B_TICK
+  TICKETS + SOPORTE:
+  • POST /tickets/              → crear con category[8], status, priority
+  • GET /tickets/mios           → bandeja del usuario
+  • GET /admin/tickets          → cola scoped con filtros
+  • PATCH /tickets/:id          → asignar, cambiar estado/prioridad
+  • GET /chat/hilos             → conversaciones de soporte
+  • POST /disputes/:id/decision → decisión + veredicto (soporte)
 end note
 
 note right of B_SUP
   SUPERADMIN BLUEPRINT (global):
   • GET /flags              → feature_flags (hot reload)
-  • PATCH /flags/:name      → activar/desactivar caliente
+  • PATCH /flags/:key       → activar/desactivar caliente
   • GET /audit-logs         → audit_logs inmutables (filtros actor, entidad, fecha)
   • GET /regions            → CRUD regions + departamentos JSON
   • POST /regions/reindex   → reindex match_region_from_text
-  • GET /admins             → users con rol admin/verificador/soporte
-  • POST /admins            → crear admin + asignar region_scope
-  • PATCH /admins/:id       → cambiar region_scope / rol
+  • GET/POST/PATCH /admins  → crear/editar admins + region_scope
+  • GET/PATCH /config       → SystemConfig tipado
+  • GET/POST /legal/tyc     → publicar/versionar T&C
+  • GET/PATCH /ai/params    → pesos del recomendador
+  • POST /override/user|contract → overrides auditados
+end note
+
+note right of B_WALLET
+  WALLET ADMIN:
+  • GET /wallet/admin/paquetes           → paquetes_monedas (todos)
+  • POST /wallet/admin/paquetes          → crear paquete
+  • PATCH /wallet/admin/paquetes/:id     → editar paquete
+  • DELETE /wallet/admin/paquetes/:id    → desactivar
+  • POST /wallet/admin/paquetes/reordenar
+  • POST /wallet/admin/paquetes/:id/activar
+  • GET/PUT /cobros                      → TarifaCobro (6 claves)
 end note
 
 @enduml
