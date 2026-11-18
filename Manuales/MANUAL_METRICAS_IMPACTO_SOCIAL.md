@@ -188,11 +188,12 @@ Cada métrica tiene seis lecturas:
 - **Objetivo:** > 15% y ≥ 3 entidades.
 - **Bandas:** `<5%` sin validación · `5–15%` pilotos · `>15%` estándar de facto.
 
-### D3.5 · Anuncio → contrato
-- **Definición:** conversión del canal Merchant a empleo formal.
-- **Fórmula:** `COUNT(anuncio contrato contratado) / COUNT(postulaciones)`.
-- **Objetivo:** > 10% y modalidad contrato > 50%.
-- **Bandas:** `<5%` decorativos · `5–10%` funcional · `>10%` motor de empleo formal.
+### D3.5 · Anuncio → contacto
+- **Definición:** anuncios que el comercio cierra con al menos un seleccionado (PDS o solicitante). El anuncio no termina en contrato: termina en contacto.
+- **Fórmula:** `anuncios cerrados con al menos un seleccionado / anuncios publicados`.
+- **Objetivo:** > 60% con contacto y < 20% cerrados sin postulaciones.
+- **Bandas:** `<40%` vitrina fría · `40–60%` conexión parcial · `>60%` canal efectivo.
+- **Cierre:** con 1, con varios, o sin seleccionados (sin postulaciones o el comercio encontró por otro medio).
 
 ### D3.6 · PDS → Merchant
 - **Definición:** transición de trabajador a empleador formal.

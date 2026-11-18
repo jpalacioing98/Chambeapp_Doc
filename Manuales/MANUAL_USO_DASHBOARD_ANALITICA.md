@@ -117,7 +117,7 @@ Al abrir una métrica verás:
 | D3.2 | Alerta → afiliación | Funnel | ¿La alerta convierte en protección? |
 | D3.3 | Certificados emitidos | Contratos vs solicitudes | ¿Se usa el certificado de ingresos? |
 | D3.4 | Créditos bancarios externos | Tiempo KYC | ¿Los bancos aceptan el certificado? |
-| D3.5 | Anuncio → contrato | Regiones | ¿El canal Merchant genera empleo? |
+| D3.5 | Anuncio → contacto | Regiones | ¿Los anuncios conectan al comercio con trabajadores? |
 | D3.6 | PDS → Merchant | Funnel | ¿Hay movilidad a empresario? |
 | D3.7 | Prima de formalidad | Contratos vs solicitudes | ¿Formalizarse paga más? |
 | D3.8 | Retención 12 meses | Actividad | ¿Se quedan los formalizados? |
