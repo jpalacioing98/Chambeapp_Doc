@@ -2,6 +2,20 @@
 
 All notable changes to documentation will be documented in this file.
 
+## [1.11.1] - 2026-11-20
+
+### Added
+- **Manual de Usuario Extensivo estructurado en Word**
+  (`Manuales/MANUAL_USUARIO_CHAMBEAPP_EXTENSIVO.docx`): portada, control del
+  documento, convenciones visuales, índice automático, 12 portadillas de parte,
+  47 secciones renumeradas, 130 tablas, 35 bloques de código y 30 callouts.
+- **Generador reproducible** `Manuales/build_docx.py` (python-docx): reconstruye
+  el DOCX desde el Markdown con estilos, tablas, código, callouts y numeración.
+
+### Fixed
+- Numeración de partes del manual (I–XII) y de secciones (1–47) sin duplicados
+  ni saltos; subsecciones renumeradas automáticamente.
+
 ## [1.11.0] - 2026-11-18
 
 ### Added
