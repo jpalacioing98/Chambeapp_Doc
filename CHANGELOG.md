@@ -8,13 +8,18 @@ All notable changes to documentation will be documented in this file.
 - **Manual de Usuario Extensivo estructurado en Word**
   (`Manuales/MANUAL_USUARIO_CHAMBEAPP_EXTENSIVO.docx`): portada, control del
   documento, convenciones visuales, índice automático, 12 portadillas de parte,
-  47 secciones renumeradas, 130 tablas, 35 bloques de código y 30 callouts.
+  47 secciones renumeradas, 131 tablas, 35 bloques de código y 30 callouts.
 - **Generador reproducible** `Manuales/build_docx.py` (python-docx): reconstruye
   el DOCX desde el Markdown con estilos, tablas, código, callouts y numeración.
+- **Página “Documentos relacionados”** con los 10 documentos canónicos (IA, API,
+  flujos, cobros, KYC, notificaciones, 2FA, requerimientos, modelo de datos y
+  despliegue).
 
 ### Fixed
 - Numeración de partes del manual (I–XII) y de secciones (1–47) sin duplicados
   ni saltos; subsecciones renumeradas automáticamente.
+- Referencia rota `API_REFERENCE.md` reemplazada por
+  `Arquitectura/Contratos_API.md`.
 
 ## [1.11.0] - 2026-11-18
 

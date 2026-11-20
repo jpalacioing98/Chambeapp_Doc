@@ -626,6 +626,43 @@ def add_toc_page(doc: Document) -> None:
     doc.add_page_break()
 
 
+def add_related_docs_page(doc: Document) -> None:
+    paragraph = doc.add_paragraph(style="Heading 1")
+    paragraph.add_run("Documentos relacionados")
+
+    intro = doc.add_paragraph()
+    add_inline(
+        intro,
+        "Este manual es la guía de usuario. Los siguientes documentos son la "
+        "fuente canónica para profundizar en arquitectura, API, datos y operación. "
+        "Las rutas son relativas a la carpeta `Chambeapp_Doc/`.",
+    )
+
+    rows = [
+        ["Tema", "Documento", "Ruta"],
+        ["Motor de recomendaciones e IA", "MOTOR_RECOMENDACIONES_DETALLADO.md", "Contexto/"],
+        ["Contratos de API y endpoints", "Contratos_API.md", "Arquitectura/"],
+        ["Flujos completos de la aplicación", "Flujos_Completos_App.md", "Contexto/"],
+        ["Cobros, monedas y ChambePay", "Cobros_Monedas_Pasarela_Simulada.md", "Contexto/"],
+        ["Política KYC", "ChambeApp_Politica_KYC.md", "Contexto/"],
+        ["Notificaciones", "ChambeApp_Notificaciones.md", "Contexto/"],
+        ["2FA y seguridad", "ChambeApp_2FA.md", "Contexto/"],
+        ["Requerimientos funcionales", "Requerimientos.md", "Requerimientos/"],
+        ["Modelo de datos", "ERD_MODELOS_DATOS.md", "Chambeapp_Doc/"],
+        ["Guía de despliegue", "GUIA_DESPLIEGUE.md", "Chambeapp_Doc/"],
+        ["Índice general de documentación", "README.md", "Chambeapp_Doc/"],
+    ]
+    add_table(doc, rows)
+
+    note = doc.add_paragraph(style="Chambe Caption")
+    note.add_run(
+        "Regla de mantenimiento: si cambia un flujo, actualiza primero el "
+        "documento canónico y luego este manual."
+    )
+
+    doc.add_page_break()
+
+
 def add_final_page(doc: Document) -> None:
     doc.add_page_break()
     for _ in range(5):
@@ -770,6 +807,7 @@ def build(input_path: Path, output_path: Path) -> None:
     add_cover(doc, meta)
     add_control_page(doc)
     add_toc_page(doc)
+    add_related_docs_page(doc)
 
     # Pre-paso: mapa de numeración antigua -> nueva (primera aparición)
     in_code = False

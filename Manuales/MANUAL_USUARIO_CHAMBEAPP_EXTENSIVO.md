@@ -2646,9 +2646,7 @@ Superadmin → Métricas → "Exportar CSV" (diario/mensual) → O API: `GET /su
 
 ---
 
----
-
 *Manual de Usuario Extensivo ChambeApp v1.11.0 — Noviembre 2026*  
 *Documento vivo — Actualizado con cada release*  
-*Para desarrolladores: Ver `MOTOR_RECOMENDACIONES_DETALLADO.md` y `API_REFERENCE.md`*  
+*Para desarrolladores: ver `Contexto/MOTOR_RECOMENDACIONES_DETALLADO.md` y `Arquitectura/Contratos_API.md`. La lista completa de documentos canónicos está en la página «Documentos relacionados» de este manual.*  
 *© 2026 ChambeApp — Todos los derechos reservados*
