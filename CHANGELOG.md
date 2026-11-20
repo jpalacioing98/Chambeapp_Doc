@@ -2,6 +2,52 @@
 
 All notable changes to documentation will be documented in this file.
 
+## [1.11.0] - 2026-11-18
+
+### Added
+- **Seed único de sustentación** (`Chambeapp_backend/seed.py`): reemplaza al
+  seed mínimo y a `seed_simulacion_valledupar.py` (ambos eliminados). Genera
+  **10 meses / 300 días** de actividad con:
+  522 usuarios (300 PDS, 180 solicitantes, 30 merchants, 12 staff), 30 negocios,
+  900 solicitudes, 2.600 ofertas, 585 contratos, 525 chambas, 420 pagos,
+  665 calificaciones de solicitud, 240 calificaciones de negocio, 93 anuncios,
+  1.593 documentos KYC, 900 trabajos de portafolio, 6.000 notificaciones,
+  500 chats / 4.000 mensajes y 300 días de métricas + 4.880 segmentos mensuales.
+- **Imágenes reales**: `app/services/seed_images.py` descarga fotos de picsum,
+  sube logos/banners/galerías/portafolio/solicitudes a MinIO y genera
+  placeholders PNG si no hay internet. KYC en PDF base64 visible en la UI.
+- **Catálogo de oficios** sincronizado desde el seed (competencias/endosos).
+
+### Changed
+- `metrics_seed` ahora siembra 300 días y 10 meses (antes 180/6).
+- El dashboard histórico usa 300 días y 10 meses por defecto
+  (`/superadmin/metrics/history`).
+- El reset elimina también pagos simulados y métricas para regenerar todo.
+- Seed idempotente frente a `sync_wallets` y al reset con FKs nuevas.
+
+## [1.10.0] - 2026-11-18
+
+### Added
+- **Pasarela simulada de monedas**: nuevo flujo con estados reales
+  (`pendiente → completado | fallido | expirado`), checkout con vigencia de
+  15 minutos y webhook simulado. Documento canónico:
+  [`Contexto/Cobros_Monedas_Pasarela_Simulada.md`](Contexto/Cobros_Monedas_Pasarela_Simulada.md).
+- **Panel superadmin de monedas** (`/superadmin/paquetes`, `/superadmin/tarifas`
+  — alias `/superadmin/cobros` — y `/superadmin/billeteras`): CRUD y orden de
+  paquetes, edición de las 6 tarifas y consulta solo lectura de la billetera de
+  cualquier usuario (ledger COP + monedas + movimientos + compras).
+- **Recarga → reintento automático** al firmar contrato o publicar anuncio si el
+  backend responde `MONEDAS_INSUFICIENTES:<n>`: la acción pendiente se guarda en
+  `sessionStorage`, se compra en `/comprar-monedas` y al volver se reintenta una
+  sola vez (solicitante, PDS y merchant).
+- Migración `035_pago_simulado` y suite `tests/test_pago_simulado.py` (12 casos).
+
+### Changed
+- El cobro por firma de contrato se mantiene en monedas para **ambas partes**;
+  el ledger COP sigue siendo solo métrico (no se retira ni transfiere).
+- La página de firma del PDS ahora muestra el costo en monedas y ofrece recargar
+  con retorno automático, igual que la del solicitante.
+
 ## [1.9.0] - 2026-11-13
 
 ### Added
